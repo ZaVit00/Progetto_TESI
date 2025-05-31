@@ -1,0 +1,1 @@
+# Package entita: contiene le classi di dominio per le misurazioni
