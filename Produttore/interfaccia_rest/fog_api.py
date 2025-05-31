@@ -20,19 +20,3 @@ async def invia_misurazione(
     """
     # Conversione in dizionario secondo il tipo di misurazione
     dati = misurazione.to_dict()
-
-
-
-
-
-
-    """ scopi di debug
-    print("----- MISURAZIONE RICEVUTA -----")
-    print("Dati:", dati)
-    Risposta JSON
-    return JSONResponse(content={
-        "status": "ok",
-        "tipo": misurazione.__class__.__name__,
-        "timestamp": timestamp
-    })
-    """

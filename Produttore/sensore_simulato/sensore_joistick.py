@@ -6,7 +6,7 @@ import requests
 ID_SENSORE = "joy001"
 ENDPOINT = "http://localhost:8000/misurazioni"
 INTERVALLO = 5  # secondi
-RIPETIZIONI = 10  #
+RIPETIZIONI = 40  #
 
 # Loop principale
 i = 0

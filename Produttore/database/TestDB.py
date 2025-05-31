@@ -3,6 +3,7 @@ import random
 import json
 import sqlite3
 from gestore_db import GestoreDatabase
+# script di esempio per testare il database
 
 def genera_dati_joystick():
     return {
@@ -20,7 +21,7 @@ def test_inserimento_dati(db: GestoreDatabase, id_sensore: str, n: int):
         print(f"  [{i+1}] {dati}")
 
 if __name__ == "__main__":
-    db = GestoreDatabase(soglia_batch=5)  # soglia bassa per test
+    db = GestoreDatabase(soglia_batch=6)  # soglia bassa per test
     db.svuota_tabelle()
-    test_inserimento_dati(db, id_sensore="joy_test_001", n=12)
+    test_inserimento_dati(db, id_sensore="joy_test_001", n=19)
     db.chiudi_connessione()
