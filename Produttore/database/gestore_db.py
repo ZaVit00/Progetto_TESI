@@ -111,40 +111,54 @@ class GestoreDatabase:
             print(f"[ERRORE INSERIMENTO SENSORE] {e}")
             return False
 
-    def inserisci_misurazione(self, id_sensore: str, dati: dict) -> bool:
+    def inserisci_misurazione(self, id_sensore: str, dati: dict) -> tuple[bool, int | None]:
         """
         Inserisce una misurazione associata al batch attivo.
-        Se non esiste un batch NON completato, ne crea uno.
-        Dopo l'inserimento, aggiorna il numero di misurazioni nel batch
-        e, se raggiunta la soglia, lo marca come completato.
+        Se non esiste un batch non completato, ne crea uno.
+        Restituisce (True, id_batch_chiuso) se tutto va a buon fine,
+        altrimenti (False, None).
         """
+        id_batch_chiuso = None
+
         try:
             cursor = self.conn.cursor()
+            # 1. Verifica se esiste un batch aperto/attivo (puo' memorizzare una misurazione)
             cursor.execute(self._SQL_BATCH_ATTIVO)
             risultato = cursor.fetchone()
 
             if risultato:
                 id_batch = risultato["id_batch"]
-                num_attuale = risultato["numero_misurazioni"]
+                num_mis_attuale = risultato["numero_misurazioni"]
             else:
                 id_batch = self._crea_batch()
-                num_attuale = 0
-
+                num_mis_attuale = 0
+            # 2. Prepara dati
             json_dati = json.dumps(dati)
             timestamp_locale = datetime.now().isoformat()
-            cursor.execute(self._SQL_INSERISCI_MISURAZIONE, (id_sensore, id_batch, json_dati, timestamp_locale))
+            # 3. Inserisci misurazione
+            cursor.execute(
+                self._SQL_INSERISCI_MISURAZIONE,
+                (id_sensore, id_batch, json_dati, timestamp_locale)
+            )
 
-            nuovo_num = num_attuale + 1
-            cursor.execute(self._SQL_AGGIORNA_BATCH_MISURAZIONI, (nuovo_num, id_batch))
+            # 4. Aggiorna batch
+            nuovo_num_mis = num_mis_attuale + 1
+            cursor.execute(
+                self._SQL_AGGIORNA_BATCH_MISURAZIONI,
+                (nuovo_num_mis, id_batch)
+            )
 
-            if nuovo_num >= self.soglia_batch:
+            # 5. Chiudi batch se necessario
+            if nuovo_num_mis >= self.soglia_batch:
                 cursor.execute(self._SQL_CHIUDI_BATCH, (id_batch,))
+                id_batch_chiuso = id_batch
 
             self.conn.commit()
-            return True
+            return True, id_batch_chiuso
+
         except sqlite3.Error as e:
             print(f"[ERRORE INSERIMENTO MISURAZIONE] {e}")
-            return False
+            return False, None
 
     def _crea_batch(self) -> int:
         """
@@ -159,6 +173,7 @@ class GestoreDatabase:
             print(f"[ERRORE CREAZIONE BATCH] {e}")
             return -1
 
+    # DEBUG ONLY
     def svuota_tabelle(self):
         """
         Elimina tutti i dati da tutte le tabelle del database (reset completo).
@@ -176,6 +191,7 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             print(f"[ERRORE SVUOTAMENTO TABELLE] {e}")
 
+    #DEBUG ONLY
     def drop_tabelle(self):
         """
         Elimina tutte le tabelle del database.

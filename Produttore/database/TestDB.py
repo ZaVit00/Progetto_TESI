@@ -17,11 +17,15 @@ def test_inserimento_dati(db: GestoreDatabase, id_sensore: str, n: int):
     db.inserisci_dati_sensore(id_sensore, "Joystick di test")
     for i in range(n):
         dati = genera_dati_joystick()
-        print(db.inserisci_misurazione(id_sensore=id_sensore, dati=dati))
-        print(f"  [{i+1}] {dati}")
+        successo, id_batch_chiuso = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
+        print(f"  [{i + 1}] {dati}")
+        print(f"[{successo}] | [{id_batch_chiuso}]")
+        if successo and id_batch_chiuso is not None:
+            print(f"  [Batch chiuso] ID batch: {id_batch_chiuso}\n")
+
 
 if __name__ == "__main__":
-    db = GestoreDatabase(soglia_batch=6)  # soglia bassa per test
+    db = GestoreDatabase(soglia_batch=100)  # soglia bassa per test
     db.svuota_tabelle()
-    test_inserimento_dati(db, id_sensore="joy_test_001", n=19)
+    test_inserimento_dati(db, id_sensore="joy_test_001", n=0)
     db.chiudi_connessione()
