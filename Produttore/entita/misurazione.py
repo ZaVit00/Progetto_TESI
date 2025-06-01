@@ -16,3 +16,12 @@ class Misurazione(BaseModel, ABC):
         Deve essere implementato da ogni sottoclasse.
         """
         pass
+
+    def estrai_dati_misurazione(self):
+        """
+        Mantiene solo i campi della misurazione eliminando
+        quelli irrilevanti. Elimino id_sensore
+        """
+        d = self.to_dict()
+        d.pop("id_sensore", None)
+        return d

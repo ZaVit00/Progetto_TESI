@@ -78,7 +78,7 @@ class GestoreDatabase:
 
     def __init__(self, soglia_batch: int = 1024):
         self.conn = sqlite3.connect(self._DBPATH)
-        print("[INFO] Usando database:", os.path.abspath(self._DBPATH))
+        #print("[INFO] Usando database:", os.path.abspath(self._DBPATH))
         self.conn.row_factory = sqlite3.Row
         self._crea_tabelle()
         self.soglia_batch = soglia_batch
@@ -119,7 +119,6 @@ class GestoreDatabase:
         altrimenti (False, None).
         """
         id_batch_chiuso = None
-
         try:
             cursor = self.conn.cursor()
             # 1. Verifica se esiste un batch aperto/attivo (puo' memorizzare una misurazione)
@@ -128,10 +127,10 @@ class GestoreDatabase:
 
             if risultato:
                 id_batch = risultato["id_batch"]
-                num_mis_attuale = risultato["numero_misurazioni"]
+                num_misurazione_attuale = risultato["numero_misurazioni"]
             else:
                 id_batch = self._crea_batch()
-                num_mis_attuale = 0
+                num_misurazione_attuale = 0
             # 2. Prepara dati
             json_dati = json.dumps(dati)
             timestamp_locale = datetime.now().isoformat()
@@ -142,14 +141,14 @@ class GestoreDatabase:
             )
 
             # 4. Aggiorna batch
-            nuovo_num_mis = num_mis_attuale + 1
+            nuovo_num_misurazione = num_misurazione_attuale + 1
             cursor.execute(
                 self._SQL_AGGIORNA_BATCH_MISURAZIONI,
-                (nuovo_num_mis, id_batch)
+                (nuovo_num_misurazione, id_batch)
             )
 
             # 5. Chiudi batch se necessario
-            if nuovo_num_mis >= self.soglia_batch:
+            if nuovo_num_misurazione >= self.soglia_batch:
                 cursor.execute(self._SQL_CHIUDI_BATCH, (id_batch,))
                 id_batch_chiuso = id_batch
 

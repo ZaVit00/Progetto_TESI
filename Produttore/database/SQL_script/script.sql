@@ -3,8 +3,8 @@
    le informazioni della misurazione
    le informazioni sul batch di appartenenza della misurazione
  */
-select m.id_misurazione, m.id_batch, m.timestamp, m.dati
-from batch inner join misurazione as m on batch.id_batch = m.id_batch;
+select m.id_misurazione,m.timestamp,b.id_batch,b.completato, m.dati
+from batch as b inner join misurazione as m on b.id_batch = m.id_batch;
 
 /*
  Effettua il drop di tutte le tabelle

@@ -26,6 +26,6 @@ def test_inserimento_dati(db: GestoreDatabase, id_sensore: str, n: int):
 
 if __name__ == "__main__":
     db = GestoreDatabase(soglia_batch=100)  # soglia bassa per test
-    db.svuota_tabelle()
+    #db.svuota_tabelle()
     test_inserimento_dati(db, id_sensore="joy_test_001", n=0)
     db.chiudi_connessione()
