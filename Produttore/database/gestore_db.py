@@ -22,7 +22,7 @@ class GestoreDatabase:
     _SQL_CREA_TABELLA_BATCH = """
         CREATE TABLE IF NOT EXISTS batch (
             id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp_creazione TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            timestamp_creazione TEXT NOT NULL,
             numero_misurazioni INTEGER NOT NULL DEFAULT 0,
             completato INTEGER NOT NULL DEFAULT 0,
             merkle_root TEXT DEFAULT NULL
@@ -59,22 +59,45 @@ class GestoreDatabase:
         VALUES (?, ?, ?, ?)
     """
 
-    _SQL_AGGIORNA_BATCH_MISURAZIONI = """
+    _SQL_AGGIORNA_BATCH_NUM_MISURAZIONI = """
         UPDATE batch
         SET numero_misurazioni = ?
         WHERE id_batch = ?
     """
 
+    _SQL_AGGIORNA_MERKLE_ROOT_BATCH = """
+        UPDATE batch
+        SET merkle_root = ?
+        WHERE id_batch = ?
+    """
     _SQL_CHIUDI_BATCH = """
         UPDATE batch
         SET completato = 1
         WHERE id_batch = ?
     """
 
-    _SQL_CREA_BATCH = """
-        INSERT INTO batch (numero_misurazioni, completato)
-        VALUES (0, 0)
+    _SQL_ELIMINA_MISURAZIONI = """
+        DELETE FROM misurazione WHERE id_batch = ?
     """
+
+    _SQL_CREA_BATCH = """
+        INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato)
+        VALUES (?, 0, 0)
+    """
+
+    _SQL_ESTRAI_DATI_BATCH = """
+        SELECT m.id_misurazione,
+               m.id_sensore,
+               m.id_batch,
+               m.timestamp,
+               m.dati,
+               b.timestamp_creazione,
+               b.numero_misurazioni
+        FROM misurazione AS m
+        INNER JOIN batch AS b ON m.id_batch = b.id_batch
+        WHERE m.id_batch = ?
+        ORDER BY m.id_misurazione ASC;
+        """
 
     def __init__(self, soglia_batch: int = 1024):
         self.conn = sqlite3.connect(self._DBPATH)
@@ -87,7 +110,7 @@ class GestoreDatabase:
         """
         Crea le tabelle sensore, batch e misurazione nel database, se non esistono.
         """
-        print("[DEBUG] Creo tabelle sensore, batch, misurazione...")
+        #print("[DEBUG] Creo tabelle sensore, batch, misurazione...")
         try:
             cursor = self.conn.cursor()
             cursor.execute(self._SQL_PRAGMA_FK)
@@ -143,7 +166,7 @@ class GestoreDatabase:
             # 4. Aggiorna batch
             nuovo_num_misurazione = num_misurazione_attuale + 1
             cursor.execute(
-                self._SQL_AGGIORNA_BATCH_MISURAZIONI,
+                self._SQL_AGGIORNA_BATCH_NUM_MISURAZIONI,
                 (nuovo_num_misurazione, id_batch)
             )
 
@@ -165,12 +188,57 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_CREA_BATCH)
+            timestamp_locale = datetime.now().isoformat()
+            cursor.execute(self._SQL_CREA_BATCH, (timestamp_locale,))
             self.conn.commit()
             return cursor.lastrowid
         except sqlite3.Error as e:
             print(f"[ERRORE CREAZIONE BATCH] {e}")
             return -1
+
+    def estrai_dati_batch(self, id_batch: int) -> list[dict]:
+        """
+        Estrae tutte le misurazioni associate a un batch ordinandole per ID.
+        Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(self._SQL_ESTRAI_DATI_BATCH, (id_batch,))
+            righe = cursor.fetchall()
+            #converti le righe in dizionari
+            #ogni elemento del dict è una riga estratta
+            return [dict(riga) for riga in righe]
+        except sqlite3.Error as e:
+            print(f"[ERRORE ESTRAZIONE DATI BATCH] {e}")
+            return []
+
+    def aggiorna_merkle_root_batch(self, id_batch_chiuso, merkle_root) -> bool:
+        """
+           Aggiorna la Merkle Root del batch una volta completato.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(self._SQL_AGGIORNA_MERKLE_ROOT_BATCH, (merkle_root, id_batch_chiuso))
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            print(f"[ERRORE AGGIORAMENTO MERKLE ROOT IN BATCH] {e}")
+            return False
+
+    def elimina_misurazioni_batch(self, id_batch: int) -> bool:
+        """
+        Elimina tutte le misurazioni associate a un determinato
+        batch, solo quando il batch è stato chiuso ed è pronto
+        per l'invio
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(self._SQL_ELIMINA_MISURAZIONI, (id_batch,))
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            print(f"[ERRORE ELIMINAZIONE MISURAZIONI] {e}")
+            return False
 
     # DEBUG ONLY
     def svuota_tabelle(self):
@@ -209,3 +277,5 @@ class GestoreDatabase:
     def chiudi_connessione(self):
         """Chiude la connessione al database."""
         self.conn.close()
+
+

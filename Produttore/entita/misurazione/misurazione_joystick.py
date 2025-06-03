@@ -1,4 +1,4 @@
-from misurazione import Misurazione
+from misurazione_base import Misurazione
 from pydantic import Field
 
 

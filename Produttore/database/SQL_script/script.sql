@@ -3,7 +3,7 @@
    le informazioni della misurazione
    le informazioni sul batch di appartenenza della misurazione
  */
-select m.id_misurazione,m.timestamp,b.id_batch,b.completato, m.dati
+select m.id_misurazione,m.timestamp,b.id_batch,b.completato, b.merkle_root,m.dati,
 from batch as b inner join misurazione as m on b.id_batch = m.id_batch;
 
 /*
@@ -32,6 +32,7 @@ SELECT
     batch.id_batch,
     batch.timestamp_creazione,
     batch.completato,
+    batch.merkle_root,
     COUNT(*) AS num_misurazioni
 FROM
     batch

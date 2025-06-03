@@ -4,14 +4,16 @@ from datetime import datetime
 from typing import Union
 
 # Import dei modelli di misurazione specifici
-from entita.misurazione_temperatura import MisurazioneTemperatura
-from entita.misurazione_joystick import MisurazioneJoystick
-from entita.sensore import Sensore
+from entita.misurazione.misurazione_temperatura import MisurazioneTemperatura
+from entita.misurazione.misurazione_joystick import MisurazioneJoystick
+from entita.sensore_simulato.sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
+from fog_api_utils import gestisci_batch_completato
 
 app = FastAPI()
 db = GestoreDatabase(soglia_batch=10)
-
+#Endpoint del cloud service
+ENDPOINT_CLOUD = "http://127.0.0.1:8081"
 
 @app.post("/sensori")
 async def registra_sensore(sensore: Sensore):
@@ -37,19 +39,20 @@ async def ricevi_misurazione(misurazione: Union[MisurazioneJoystick, Misurazione
 
     # Inserimento della misurazione nel database
     successo, id_batch_chiuso = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
-
     if not successo:
         raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione.")
-
+    #creazione del messaggio di risposta
     risposta = {
         "status": "misurazione registrata",
         "sensore": id_sensore,
         "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y")
     }
 
+    # Elaborazione di un batch che può essere inviato al cloud
     if id_batch_chiuso is not None:
         #estendo la risposta con altri due campi
         risposta["batch_completato"] = True
         risposta["id_batch"] = id_batch_chiuso
-    
+        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
+
     return JSONResponse(content=risposta)

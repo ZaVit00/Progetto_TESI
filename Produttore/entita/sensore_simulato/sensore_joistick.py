@@ -6,8 +6,8 @@ import requests
 ID_SENSORE = "joy001"
 ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
 ENDPOINT_SENSORE = "http://localhost:8000/sensori"
-INTERVALLO = 5  # secondi
-RIPETIZIONI = 20 # misurazioni
+INTERVALLO = 2  # secondi
+RIPETIZIONI = 50 # misurazioni
 
 
 """ invio i dati del sensore al server"""

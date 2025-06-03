@@ -5,6 +5,10 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/misurazione" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/sensore_simulato" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/utils" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Storage" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
