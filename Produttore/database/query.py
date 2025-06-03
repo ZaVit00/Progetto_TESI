@@ -1,0 +1,103 @@
+PRAGMA_FK = "PRAGMA foreign_keys = ON"
+
+CREA_TABELLA_SENSORE = """
+    CREATE TABLE IF NOT EXISTS sensore (
+        id_sensore TEXT PRIMARY KEY,
+        descrizione TEXT NOT NULL
+    )
+"""
+
+CREA_TABELLA_BATCH = """
+    CREATE TABLE IF NOT EXISTS batch (
+        id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp_creazione TEXT NOT NULL,
+        numero_misurazioni INTEGER NOT NULL DEFAULT 0,
+        completato INTEGER NOT NULL DEFAULT 0,
+        inviato INTEGER NOT NULL DEFAULT 0,
+        merkle_root TEXT DEFAULT NULL
+    )
+"""
+
+CREA_TABELLA_MISURAZIONE = """
+    CREATE TABLE IF NOT EXISTS misurazione (
+        id_misurazione INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_sensore TEXT NOT NULL,
+        id_batch INTEGER NOT NULL,
+        dati TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        FOREIGN KEY (id_sensore) REFERENCES sensore(id_sensore) ON DELETE CASCADE,
+        FOREIGN KEY (id_batch) REFERENCES batch(id_batch) ON DELETE CASCADE
+    )
+"""
+
+BATCH_NON_INVIATI = """
+    SELECT id_batch
+    FROM batch
+    WHERE completato = 1 AND inviato = 0
+    ORDER BY id_batch ASC
+"""
+
+INSERISCI_SENSORE = """
+    INSERT OR IGNORE INTO sensore (id_sensore, descrizione)
+    VALUES (?, ?)
+"""
+
+BATCH_ATTIVO = """
+    SELECT id_batch, numero_misurazioni
+    FROM batch
+    WHERE completato = 0
+    ORDER BY id_batch DESC
+    LIMIT 1
+"""
+
+INSERISCI_MISURAZIONE = """
+    INSERT INTO misurazione (id_sensore, id_batch, dati, timestamp)
+    VALUES (?, ?, ?, ?)
+"""
+
+AGGIORNA_BATCH_NUM_MISURAZIONI = """
+    UPDATE batch
+    SET numero_misurazioni = ?
+    WHERE id_batch = ?
+"""
+
+AGGIORNA_MERKLE_ROOT_BATCH = """
+    UPDATE batch
+    SET merkle_root = ?
+    WHERE id_batch = ?
+"""
+
+CHIUDI_BATCH = """
+    UPDATE batch
+    SET completato = 1
+    WHERE id_batch = ?
+"""
+
+IMPOSTA_BATCH_INVIATO = """
+    UPDATE batch
+    SET inviato = 1
+    WHERE id_batch = ?
+"""
+
+ELIMINA_MISURAZIONI = """
+    DELETE FROM misurazione WHERE id_batch = ?
+"""
+
+CREA_BATCH = """
+    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato)
+    VALUES (?, 0, 0)
+"""
+
+ESTRAI_DATI_BATCH = """
+    SELECT m.id_misurazione,
+           m.id_sensore,
+           m.id_batch,
+           m.timestamp,
+           m.dati,
+           b.timestamp_creazione,
+           b.numero_misurazioni
+    FROM misurazione AS m
+    INNER JOIN batch AS b ON m.id_batch = b.id_batch
+    WHERE m.id_batch = ?
+    ORDER BY m.id_misurazione ASC;
+"""

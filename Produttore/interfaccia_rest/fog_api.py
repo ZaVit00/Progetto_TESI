@@ -2,18 +2,29 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from datetime import datetime
 from typing import Union
-
+import asyncio
 # Import dei modelli di misurazione specifici
 from entita.misurazione.misurazione_temperatura import MisurazioneTemperatura
 from entita.misurazione.misurazione_joystick import MisurazioneJoystick
 from entita.sensore_simulato.sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
+from retry import retry_invio_batch_periodico
 
 app = FastAPI()
 db = GestoreDatabase(soglia_batch=10)
 #Endpoint del cloud service
-ENDPOINT_CLOUD = "http://127.0.0.1:8081"
+ENDPOINT_CLOUD = "http://localhost:8080/api/invia"
+
+
+@app.on_event("startup")
+async def avvia_retry_batch():
+    """
+    Avvia il task periodico per tentare l'invio dei batch completati ma non ancora inviati.
+    """
+    print("[INFO] Task di retry periodico avviato.")
+    asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD))
+
 
 @app.post("/sensori")
 async def registra_sensore(sensore: Sensore):

@@ -6,7 +6,7 @@ import requests
 ID_SENSORE = "temp001"
 ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
 ENDPOINT_SENSORE = "http://localhost:8000/sensori"
-INTERVALLO = 2  # secondi
+INTERVALLO = 1  # secondi
 RIPETIZIONI = 74  # misurazioni da inviare
 
 # Invio dati di registrazione del sensore

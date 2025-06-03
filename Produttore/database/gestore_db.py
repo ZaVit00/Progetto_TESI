@@ -2,102 +2,13 @@ import os
 import sqlite3
 import json
 from datetime import datetime
+from database import query
 
 class GestoreDatabase:
     # Trova la directory root del progetto (2 livelli sopra gestore_db.py)
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     _DBPATH = os.path.join(BASE_DIR, "dati_temporanei.sqlite")
     _STRING_MAX_LENGTH = 12
-
-    # Query SQL come costanti di classe
-    _SQL_PRAGMA_FK = "PRAGMA foreign_keys = ON"
-
-    _SQL_CREA_TABELLA_SENSORE = """
-        CREATE TABLE IF NOT EXISTS sensore (
-            id_sensore TEXT PRIMARY KEY,
-            descrizione TEXT NOT NULL
-        )
-    """
-
-    _SQL_CREA_TABELLA_BATCH = """
-        CREATE TABLE IF NOT EXISTS batch (
-            id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp_creazione TEXT NOT NULL,
-            numero_misurazioni INTEGER NOT NULL DEFAULT 0,
-            completato INTEGER NOT NULL DEFAULT 0,
-            merkle_root TEXT DEFAULT NULL
-        )
-    """
-
-    _SQL_CREA_TABELLA_MISURAZIONE = """
-        CREATE TABLE IF NOT EXISTS misurazione (
-            id_misurazione INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_sensore TEXT NOT NULL,
-            id_batch INTEGER NOT NULL,
-            dati TEXT NOT NULL,
-            timestamp TEXT NOT NULL,
-            FOREIGN KEY (id_sensore) REFERENCES sensore(id_sensore) ON DELETE CASCADE,
-            FOREIGN KEY (id_batch) REFERENCES batch(id_batch) ON DELETE CASCADE
-        )
-    """
-
-    _SQL_INSERISCI_SENSORE = """
-        INSERT OR IGNORE INTO sensore (id_sensore, descrizione)
-        VALUES (?, ?)
-    """
-
-    _SQL_BATCH_ATTIVO = """
-        SELECT id_batch, numero_misurazioni
-        FROM batch
-        WHERE completato = 0
-        ORDER BY id_batch DESC
-        LIMIT 1
-    """
-
-    _SQL_INSERISCI_MISURAZIONE = """
-        INSERT INTO misurazione (id_sensore, id_batch, dati, timestamp)
-        VALUES (?, ?, ?, ?)
-    """
-
-    _SQL_AGGIORNA_BATCH_NUM_MISURAZIONI = """
-        UPDATE batch
-        SET numero_misurazioni = ?
-        WHERE id_batch = ?
-    """
-
-    _SQL_AGGIORNA_MERKLE_ROOT_BATCH = """
-        UPDATE batch
-        SET merkle_root = ?
-        WHERE id_batch = ?
-    """
-    _SQL_CHIUDI_BATCH = """
-        UPDATE batch
-        SET completato = 1
-        WHERE id_batch = ?
-    """
-
-    _SQL_ELIMINA_MISURAZIONI = """
-        DELETE FROM misurazione WHERE id_batch = ?
-    """
-
-    _SQL_CREA_BATCH = """
-        INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato)
-        VALUES (?, 0, 0)
-    """
-
-    _SQL_ESTRAI_DATI_BATCH = """
-        SELECT m.id_misurazione,
-               m.id_sensore,
-               m.id_batch,
-               m.timestamp,
-               m.dati,
-               b.timestamp_creazione,
-               b.numero_misurazioni
-        FROM misurazione AS m
-        INNER JOIN batch AS b ON m.id_batch = b.id_batch
-        WHERE m.id_batch = ?
-        ORDER BY m.id_misurazione ASC;
-        """
 
     def __init__(self, soglia_batch: int = 1024):
         self.conn = sqlite3.connect(self._DBPATH)
@@ -113,10 +24,10 @@ class GestoreDatabase:
         #print("[DEBUG] Creo tabelle sensore, batch, misurazione...")
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_PRAGMA_FK)
-            cursor.execute(self._SQL_CREA_TABELLA_SENSORE)
-            cursor.execute(self._SQL_CREA_TABELLA_BATCH)
-            cursor.execute(self._SQL_CREA_TABELLA_MISURAZIONE)
+            cursor.execute(query.PRAGMA_FK)
+            cursor.execute(query.CREA_TABELLA_SENSORE)
+            cursor.execute(query.CREA_TABELLA_BATCH)
+            cursor.execute(query.CREA_TABELLA_MISURAZIONE)
             self.conn.commit()
         except sqlite3.Error as e:
             print(f"[ERRORE DATABASE] {e}")
@@ -127,7 +38,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_INSERISCI_SENSORE, (id_sensore, descrizione))
+            cursor.execute(query.INSERISCI_SENSORE, (id_sensore, descrizione))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
@@ -145,7 +56,7 @@ class GestoreDatabase:
         try:
             cursor = self.conn.cursor()
             # 1. Verifica se esiste un batch aperto/attivo (puo' memorizzare una misurazione)
-            cursor.execute(self._SQL_BATCH_ATTIVO)
+            cursor.execute(query.BATCH_ATTIVO)
             risultato = cursor.fetchone()
 
             if risultato:
@@ -158,21 +69,20 @@ class GestoreDatabase:
             json_dati = json.dumps(dati)
             timestamp_locale = datetime.now().isoformat()
             # 3. Inserisci misurazione
-            cursor.execute(
-                self._SQL_INSERISCI_MISURAZIONE,
+            cursor.execute(query.INSERISCI_MISURAZIONE,
                 (id_sensore, id_batch, json_dati, timestamp_locale)
             )
 
             # 4. Aggiorna batch
             nuovo_num_misurazione = num_misurazione_attuale + 1
             cursor.execute(
-                self._SQL_AGGIORNA_BATCH_NUM_MISURAZIONI,
+                query.AGGIORNA_BATCH_NUM_MISURAZIONI,
                 (nuovo_num_misurazione, id_batch)
             )
 
             # 5. Chiudi batch se necessario
             if nuovo_num_misurazione >= self.soglia_batch:
-                cursor.execute(self._SQL_CHIUDI_BATCH, (id_batch,))
+                cursor.execute(query.CHIUDI_BATCH, (id_batch,))
                 id_batch_chiuso = id_batch
 
             self.conn.commit()
@@ -189,7 +99,7 @@ class GestoreDatabase:
         try:
             cursor = self.conn.cursor()
             timestamp_locale = datetime.now().isoformat()
-            cursor.execute(self._SQL_CREA_BATCH, (timestamp_locale,))
+            cursor.execute(query.CREA_BATCH, (timestamp_locale,))
             self.conn.commit()
             return cursor.lastrowid
         except sqlite3.Error as e:
@@ -203,7 +113,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_ESTRAI_DATI_BATCH, (id_batch,))
+            cursor.execute(query.ESTRAI_DATI_BATCH, (id_batch,))
             righe = cursor.fetchall()
             #converti le righe in dizionari
             #ogni elemento del dict è una riga estratta
@@ -218,7 +128,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_AGGIORNA_MERKLE_ROOT_BATCH, (merkle_root, id_batch_chiuso))
+            cursor.execute(query.AGGIORNA_MERKLE_ROOT_BATCH, (merkle_root, id_batch_chiuso))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
@@ -233,12 +143,38 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(self._SQL_ELIMINA_MISURAZIONI, (id_batch,))
+            cursor.execute(query.ELIMINA_MISURAZIONI, (id_batch,))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
             print(f"[ERRORE ELIMINAZIONE MISURAZIONI] {e}")
             return False
+
+    def imposta_batch_inviato(self, id_batch: int) -> bool:
+        """
+        Imposta il flag 'inviato' del batch a 1 dopo l'invio riuscito.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.IMPOSTA_BATCH_INVIATO, (id_batch,))
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            print(f"[ERRORE AGGIORNAMENTO STATO INVIO BATCH] {e}")
+            return False
+
+    def get_batch_non_inviati(self) -> list[dict]:
+        """
+        Restituisce tutti i batch completati (completato = 1) ma non ancora inviati (inviato = 0).
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.BATCH_NON_INVIATI)
+            risultati = cursor.fetchall()
+            return [dict(riga) for riga in risultati]
+        except sqlite3.Error as e:
+            print(f"[ERRORE LETTURA BATCH NON INVIATI] {e}")
+            return []
 
     # DEBUG ONLY
     def svuota_tabelle(self):

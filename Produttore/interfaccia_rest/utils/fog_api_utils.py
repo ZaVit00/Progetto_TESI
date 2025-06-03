@@ -1,18 +1,16 @@
-from fastapi import requests
-
+import requests
 from database.gestore_db import GestoreDatabase
 from utils.hash_utils import calcola_hash
 from merkle_tree import MerkleTree
 import json
+
 
 """
 Funzione che gestisce tutte le operazioni da effettuare quando
 un batch diventa disponibile per la creazione del merkle tree
 e successivo invio al cloud provider storage
 """
-import json
-
-def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoint_cloud: str):
+def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoint_cloud: str) -> None:
     try:
         # 1. Estrai tutte le misurazioni con dati di batch
         dati_batch = db.estrai_dati_batch(id_batch_chiuso)
@@ -80,12 +78,16 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
         # 6. Invia il JSON al cloud
         if invia_payload(payload, endpoint_cloud):
             try:
+                #elimino le misurazioni e marco il batch come INVIATO
                 db.elimina_misurazioni_batch(id_batch_chiuso)
-                print(f"[INFO] Misurazioni del batch {id_batch_chiuso} eliminate dal database locale.")
+                db.imposta_batch_inviato(id_batch_chiuso)
+                print(f"[INFO] Misurazioni del batch {id_batch_chiuso} eliminate dal database"
+                      f"locale.")
             except Exception as e:
                 print(f"[ERRORE] Impossibile eliminare le misurazioni del batch {id_batch_chiuso}: {e}")
         else:
-            print(f"[AVVISO] Il batch {id_batch_chiuso} non è stato eliminato perché l'invio è fallito.")
+            print(f"[AVVISO] Le misurazioni del batch {id_batch_chiuso} non sono state "
+                  f"eliminate perché l'invio è fallito.")
     except Exception as e:
         print(f"[ERRORE GENERALE] Errore imprevisto nella gestione del batch {id_batch_chiuso}: {e}")
 
