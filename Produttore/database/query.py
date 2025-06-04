@@ -13,7 +13,7 @@ CREA_TABELLA_BATCH = """
         timestamp_creazione TEXT NOT NULL,
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
         completato INTEGER NOT NULL DEFAULT 0,
-        inviato INTEGER NOT NULL DEFAULT 0,
+        conferma_ricezione INTEGER NOT NULL DEFAULT 0,
         merkle_root TEXT DEFAULT NULL
     )
 """
@@ -33,7 +33,7 @@ CREA_TABELLA_MISURAZIONE = """
 BATCH_NON_INVIATI = """
     SELECT id_batch
     FROM batch
-    WHERE completato = 1 AND inviato = 0
+    WHERE completato = 1 AND conferma_ricezione = 0
     ORDER BY id_batch ASC
 """
 
@@ -73,10 +73,10 @@ CHIUDI_BATCH = """
     WHERE id_batch = ?
 """
 
-IMPOSTA_BATCH_INVIATO = """
+IMPOSTA_BATCH_CONFERMA_RICEZIONE = """
     UPDATE batch
-    SET inviato = 1
-    WHERE id_batch = ?
+    SET conferma_ricezione = 1
+    WHERE id_batch = ? AND completato = 1
 """
 
 ELIMINA_MISURAZIONI = """
@@ -84,20 +84,21 @@ ELIMINA_MISURAZIONI = """
 """
 
 CREA_BATCH = """
-    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato)
-    VALUES (?, 0, 0)
+    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato, conferma_ricezione)
+    VALUES (?, 0, 0, 0)
 """
 
 ESTRAI_DATI_BATCH = """
-    SELECT m.id_misurazione,
-           m.id_sensore,
-           m.id_batch,
-           m.timestamp,
-           m.dati,
-           b.timestamp_creazione,
-           b.numero_misurazioni
+    SELECT 
+        m.id_misurazione,
+        m.id_sensore,
+        m.timestamp,
+        m.dati,
+        b.id_batch,
+        b.timestamp_creazione,
+        b.numero_misurazioni
     FROM misurazione AS m
     INNER JOIN batch AS b ON m.id_batch = b.id_batch
-    WHERE m.id_batch = ?
+    WHERE b.id_batch = ?
     ORDER BY m.id_misurazione ASC;
 """

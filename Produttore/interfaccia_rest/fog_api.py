@@ -1,8 +1,13 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from datetime import datetime
 from typing import Union
 import asyncio
+
+from uvicorn import lifespan
+
 # Import dei modelli di misurazione specifici
 from entita.misurazione.misurazione_temperatura import MisurazioneTemperatura
 from entita.misurazione.misurazione_joystick import MisurazioneJoystick
@@ -10,20 +15,22 @@ from entita.sensore_simulato.sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
 from retry import retry_invio_batch_periodico
+from stato_ricezione_batch.conferma_batch import ConfermaBatch
 
-app = FastAPI()
-db = GestoreDatabase(soglia_batch=10)
+db = GestoreDatabase(soglia_batch=32)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("[INFO] Avvio del task periodico per il retry dei batch.")
+    asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD))
+    yield  #Applicazione avviata
+    # ✅ Chiusura della connessione in uscita
+    db.chiudi_connessione()
+
+# Istanzia l'app FastAPI con supporto al lifespan
+app = FastAPI(lifespan=lifespan)
 #Endpoint del cloud service
 ENDPOINT_CLOUD = "http://localhost:8080/api/invia"
-
-
-@app.on_event("startup")
-async def avvia_retry_batch():
-    """
-    Avvia il task periodico per tentare l'invio dei batch completati ma non ancora inviati.
-    """
-    print("[INFO] Task di retry periodico avviato.")
-    asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD))
 
 
 @app.post("/sensori")
@@ -67,3 +74,27 @@ async def ricevi_misurazione(misurazione: Union[MisurazioneJoystick, Misurazione
         gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
 
     return JSONResponse(content=risposta)
+
+@app.post("/conferma_batch")
+def conferma_ricezione_batch(batch: ConfermaBatch):
+    """
+    Endpoint chiamato dal cloud provider per confermare la ricezione di un batch.
+    Se la conferma è valida, il campo 'conferma_ricezione' del batch viene aggiornato a 1
+    e le misurazioni locali associate al batch vengono eliminate.
+    """
+    id_batch = batch.id_batch
+    # Aggiorna lo stato del batch solo se esiste ed è completato
+    if not db.imposta_batch_conferma_ricezione(id_batch):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Batch {id_batch} non trovato o non completato."
+        )
+
+    # Elimina le misurazioni ora che la conferma è avvenuta
+    if not db.elimina_misurazioni_batch(id_batch):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Errore nell'eliminazione delle misurazioni per il batch {id_batch}."
+        )
+
+    return {"status": "successo", "id_batch": id_batch, "messaggio": batch.messaggio}
