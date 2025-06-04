@@ -15,7 +15,6 @@ from entita.sensore_simulato.sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
 from retry import retry_invio_batch_periodico
-from stato_ricezione_batch.conferma_batch import ConfermaBatch
 
 db = GestoreDatabase(soglia_batch=32)
 
@@ -75,13 +74,11 @@ async def ricevi_misurazione(misurazione: Union[MisurazioneJoystick, Misurazione
 
     return JSONResponse(content=risposta)
 
+"""
 @app.post("/conferma_batch")
 def conferma_ricezione_batch(batch: ConfermaBatch):
-    """
-    Endpoint chiamato dal cloud provider per confermare la ricezione di un batch.
-    Se la conferma è valida, il campo 'conferma_ricezione' del batch viene aggiornato a 1
-    e le misurazioni locali associate al batch vengono eliminate.
-    """
+    pass
+    
     id_batch = batch.id_batch
     # Aggiorna lo stato del batch solo se esiste ed è completato
     if not db.imposta_batch_conferma_ricezione(id_batch):
@@ -98,3 +95,9 @@ def conferma_ricezione_batch(batch: ConfermaBatch):
         )
 
     return {"status": "successo", "id_batch": id_batch, "messaggio": batch.messaggio}
+"""
+"""
+    Endpoint chiamato dal cloud provider per confermare la ricezione di un batch.
+    Se la conferma è valida, il campo 'conferma_ricezione' del batch viene aggiornato a 1
+    e le misurazioni locali associate al batch vengono eliminate.
+"""

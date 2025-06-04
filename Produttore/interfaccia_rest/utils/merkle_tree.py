@@ -24,6 +24,7 @@ class MerkleTree:
         di due nodi figli.
         In caso di numero dispari di nodi a un livello, l'ultimo viene duplicato.
         """
+        #crea una nuova lista di lavoro
         livello = list(self.hash_foglie)
 
         while len(livello) > 1:
@@ -45,7 +46,9 @@ class MerkleTree:
         In caso il numero di nodi a un livello non sia multiplo di 4, l'ultimo viene
         duplicato fino a raggiungere la lunghezza corretta.
         """
+        # crea una nuova lista di lavoro
         livello = list(self.hash_foglie)
+
         while len(livello) > 1:
             while len(livello) % 4 != 0:
                 livello.append(livello[-1])  # Completa fino a multiplo di 4

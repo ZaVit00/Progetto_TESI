@@ -18,7 +18,7 @@ try:
     }
     response = requests.post(ENDPOINT_SENSORE, json=dati_inviati)
     response.raise_for_status()
-    risultato = response.json()  # recuperi il payload JSON di risposta
+    risultato = response.json()  # recuperi il response JSON di risposta
     print(f"[OK] Inviati dati del sensore: {dati_inviati}\n")
     print(f"[RISPOSTA SERVER]: {risultato}\n")
 except requests.RequestException as e:
@@ -39,7 +39,7 @@ while i < RIPETIZIONI:
     try:
         response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
         response.raise_for_status()
-        risultato = response.json()  # recuperi il payload JSON di risposta
+        risultato = response.json()  # recuperi il response JSON di risposta
         print(f"[OK] Inviati dati misurazione registrata: {dati}\n")
         print(f"[RISPOSTA SERVER]: {risultato}\n")
     except requests.RequestException as e:
