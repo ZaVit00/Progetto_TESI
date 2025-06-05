@@ -1,53 +1,51 @@
 import requests
 import json
-from payload_pacchetto import DataPackage
+from costruttore_payload import CostruttorePayload
+from dati_modellati import DatiPayload
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree
 
+from costruttore_payload import CostruttorePayload  # Assicurati che sia importata
 
 def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoint_cloud: str) -> None:
-    """
-    Gestisce l'intero ciclo di elaborazione di un batch completo:
-    1. Estrae dal database locale le misurazioni associate al batch identificato.
-    2. Costruisce una rappresentazione intermedia (BatchDataPackage) per:
-       - calcolare gli hash di ciascuna misurazione (inclusi metadati di batch);
-       - generare il Merkle Tree e ottenere la Merkle Root;
-       - costruire il response strutturato da inviare al cloud.
-    3. Aggiorna il database locale con la Merkle Root ottenuta.
-    4. Invia il response al cloud provider tramite POST HTTP.
-    5. L’eliminazione delle misurazioni locali avverrà solo dopo conferma
-       esplcita.
-    """
     try:
-        dati_batch = db.estrai_dati_batch(id_batch_chiuso)
+        dati_batch = db.estrai_dati_batch_misurazioni(id_batch_chiuso)
         if not dati_batch:
             print(f"[ERRORE] Nessun dato trovato per il batch {id_batch_chiuso}")
             return
-        pacchetto = DataPackage(dati_batch)
+
+        # 1. Costruzione del pacchetto intermedio
+        payload_intermedio = CostruttorePayload()
+        payload_intermedio.estrai_dati_query(dati_batch)
+
+        # 2. Calcolo Merkle Root
         try:
-            merkle_tree = MerkleTree(pacchetto.get_hashes())
+            merkle_tree = MerkleTree(payload_intermedio.get_hash_foglie())
             merkle_root = merkle_tree.costruisci_binario()
         except Exception as e:
             print(f"[ERRORE] Creazione Merkle Tree fallita: {e}")
             return
 
+        # 3. Aggiorna la Merkle Root nel DB
         try:
-            #aggiorna il record corrispondente al batch con il merkle root nuovo
             db.aggiorna_merkle_root_batch(id_batch_chiuso, merkle_root)
         except Exception as e:
             print(f"[ERRORE] Aggiornamento Merkle Root nel DB fallito: {e}")
             return
 
+        # 4. Costruzione del payload da inviare
         try:
-            #costruisco il response da inviare
-            payload = pacchetto.costruisci_payload(merkle_root)
+            payload_finale = payload_intermedio.costruisci_payload(merkle_root)
             print("[DEBUG] Payload JSON da inviare:")
-            print(json.dumps(payload, indent=2))
+            print("-------------------\n")
+            print(payload_finale.model_dump_json(indent=2))
+            print("-------------------\n")
         except Exception as e:
-            print(f"[ERRORE] Costruzione del response fallita: {e}")
+            print(f"[ERRORE] Costruzione del payload fallita: {e}")
             return
 
-        if invia_payload(payload, endpoint_cloud):
+        # 5. Invio al cloud
+        if invia_payload(payload_finale, endpoint_cloud):
             print(f"[INFO] Batch {id_batch_chiuso} inviato. In attesa conferma ricezione.")
         else:
             print(f"[AVVISO] Invio del batch {id_batch_chiuso} fallito. Dati ancora locali.")
@@ -55,14 +53,15 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
     except Exception as e:
         print(f"[ERRORE GENERALE] Errore batch {id_batch_chiuso}: {e}")
 
+#ATTENZIONE PERCHé DATIPAYLOAD NON é UN DIZIONARIO MA SOLO UNA SEMPLICE CLASSE
 
-def invia_payload(payload: dict, endpoint_cloud: str) -> bool:
+def invia_payload(payload: DatiPayload, endpoint_cloud: str) -> bool:
     """
     Invia il response JSON al servizio cloud specificato tramite una richiesta HTTP POST.
     Ritorna True se la richiesta ha esito positivo (status code 2xx), altrimenti False.
     """
     try:
-        response = requests.post(endpoint_cloud, json=payload)
+        response = requests.post(endpoint_cloud, json=payload.model_dump())
         response.raise_for_status()
         print("[INFO] Invio del response al cloud riuscito.")
         return True

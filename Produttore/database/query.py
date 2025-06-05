@@ -88,7 +88,7 @@ CREA_BATCH = """
     VALUES (?, 0, 0, 0)
 """
 
-ESTRAI_DATI_BATCH = """
+ESTRAI_DATI_BATCH_MISURAZIONI = """
     SELECT 
         m.id_misurazione,
         m.id_sensore,

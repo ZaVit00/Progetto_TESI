@@ -5,7 +5,6 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/misurazione" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/sensore_simulato" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/utils" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider" isTestSource="false" />
@@ -14,6 +13,9 @@
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/interfaccia_rest/utils" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/stato_ricezione_batch" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/response" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/misurazione_in_ingresso" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/test/sensori_simulati" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

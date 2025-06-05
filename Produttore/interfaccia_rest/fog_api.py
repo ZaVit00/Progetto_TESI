@@ -6,12 +6,9 @@ from datetime import datetime
 from typing import Union
 import asyncio
 
-from uvicorn import lifespan
-
-# Import dei modelli di misurazione specifici
-from entita.misurazione.misurazione_temperatura import MisurazioneTemperatura
-from entita.misurazione.misurazione_joystick import MisurazioneJoystick
-from entita.sensore_simulato.sensore_base import Sensore
+# Import dei modelli di misurazione_in_ingresso specifici
+from modelli import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
+from sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
 from retry import retry_invio_batch_periodico
@@ -45,22 +42,22 @@ async def registra_sensore(sensore: Sensore):
         "descrizione": sensore.descrizione
     }
 @app.post("/misurazioni")
-async def ricevi_misurazione(misurazione: Union[MisurazioneJoystick, MisurazioneTemperatura]):
+async def ricevi_misurazione(misurazione: Union[MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura]):
     """
-    Endpoint per ricevere e salvare una misurazione da un sensore registrato.
+    Endpoint per ricevere e salvare una misurazione_in_ingresso da un sensore registrato.
     Restituisce anche l'ID del batch chiuso, se la soglia è stata raggiunta.
     """
     id_sensore = misurazione.id_sensore
-    # Rimuovi i metadata dal JSON per ottenere solo i dati della misurazione
+    # Rimuovi i metadata dal JSON per ottenere solo i dati della misurazione_in_ingresso
     dati = misurazione.estrai_dati_misurazione()
 
-    # Inserimento della misurazione nel database
+    # Inserimento della misurazione_in_ingresso nel database
     successo, id_batch_chiuso = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
     if not successo:
-        raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione.")
+        raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione_in_ingresso.")
     #creazione del messaggio di risposta
     risposta = {
-        "status": "misurazione registrata",
+        "status": "misurazione_in_ingresso registrata",
         "sensore": id_sensore,
         "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y")
     }

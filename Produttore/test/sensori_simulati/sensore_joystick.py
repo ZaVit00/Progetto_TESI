@@ -35,7 +35,7 @@ while i < RIPETIZIONI:
         "pressed": random.choice([True, False])
     }
 
-    # Invia i dati della misurazione al server
+    # Invia i dati della misurazione_in_ingresso al server
     try:
         response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
         response.raise_for_status()

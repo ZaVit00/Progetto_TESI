@@ -19,7 +19,7 @@ class GestoreDatabase:
 
     def crea_tabelle(self):
         """
-        Crea le tabelle sensore, batch e misurazione nel database, se non esistono.
+        Crea le tabelle sensore, batch e misurazione_in_ingresso nel database, se non esistono.
         """
         try:
             cursor = self.conn.cursor()
@@ -46,7 +46,7 @@ class GestoreDatabase:
 
     def inserisci_misurazione(self, id_sensore: str, dati: dict) -> tuple[bool, int | None]:
         """
-        Inserisce una misurazione associata al batch attivo.
+        Inserisce una misurazione_in_ingresso associata al batch attivo.
         Se non esiste un batch non completato, ne crea uno.
         Restituisce (True, id_batch_chiuso) se tutto va a buon fine,
         altrimenti (False, None).
@@ -102,14 +102,14 @@ class GestoreDatabase:
             print(f"[ERRORE QUERY - CREAZIONE BATCH] {e}")
             return -1
 
-    def estrai_dati_batch(self, id_batch: int) -> list[dict]:
+    def estrai_dati_batch_misurazioni(self, id_batch: int) -> list[dict]:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.ESTRAI_DATI_BATCH, (id_batch,))
+            cursor.execute(query.ESTRAI_DATI_BATCH_MISURAZIONI, (id_batch,))
             righe = cursor.fetchall()
             return [dict(riga) for riga in righe]
         except sqlite3.Error as e:
@@ -186,10 +186,10 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM misurazione")
+            cursor.execute("DELETE FROM misurazione_in_ingresso")
             cursor.execute("DELETE FROM batch")
             cursor.execute("DELETE FROM sensore")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='misurazione'")
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name='misurazione_in_ingresso'")
             cursor.execute("DELETE FROM sqlite_sequence WHERE name='batch'")
             self.conn.commit()
             print("[INFO] Tabelle svuotate e contatori ID resettati.")
@@ -203,7 +203,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute("DROP TABLE IF EXISTS misurazione")
+            cursor.execute("DROP TABLE IF EXISTS misurazione_in_ingresso")
             cursor.execute("DROP TABLE IF EXISTS batch")
             cursor.execute("DROP TABLE IF EXISTS sensore")
             self.conn.commit()

@@ -1,6 +1,4 @@
 import hashlib
-import json
-
 
 def calcola_hash(dato: str) -> str:
     """

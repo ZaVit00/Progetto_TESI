@@ -14,7 +14,8 @@ async def retry_invio_batch_periodico(db, endpoint_cloud: str, intervallo: int =
         for batch in batch_non_inviati:
             gestisci_batch_completato(batch["id_batch"], db, endpoint_cloud)
 
-    # Primo invio immediato
+    #attendi 10 secondi e cerca i batch non inviati
+    await asyncio.sleep(10)
     await invia_batch_non_inviati()
     # Esecuzione periodica
     while True:
