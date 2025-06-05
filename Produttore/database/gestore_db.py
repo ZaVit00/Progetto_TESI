@@ -126,7 +126,20 @@ class GestoreDatabase:
             self.conn.commit()
             return True
         except sqlite3.Error as e:
-            print(f"[ERRORE QUERY - AGGIORNAMENTO MERKLE ROOT IN BATCH] {e}")
+            print(f"[ERRORE QUERY - AGGIORNAMENTO PAYLOAD JSON IN BATCH] {e}")
+            return False
+
+    def aggiorna_payload_json_batch(self, id_batch: int, payload_json: str) -> bool:
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                query.AGGIORNA_PAYLOAD_JSON_BATCH,
+                (payload_json, id_batch)  # << ordine corretto dei parametri
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            print(f"[ERRORE QUERY - AGGIORNAMENTO PAYLOAD JSON IN BATCH] {e}")
             return False
 
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:
@@ -160,7 +173,7 @@ class GestoreDatabase:
             print(f"[ERRORE QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
 
-    def get_batch_non_inviati(self) -> list[dict]:
+    def get_payload_batch_non_inviati(self) -> list[dict]:
         """
         Restituisce tutti i batch completati (completato = 1) ma non ancora inviati (inviato = 0).
         Se la connessione al database non è disponibile, restituisce una lista vuota
@@ -173,7 +186,7 @@ class GestoreDatabase:
             cursor = self.conn.cursor()
             cursor.execute(query.BATCH_NON_INVIATI)
             risultati = cursor.fetchall()
-            return [dict(riga) for riga in risultati]
+            return [riga["payload_json"] for riga in risultati]
         except sqlite3.Error as e:
             print(f"[ERRORE QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []

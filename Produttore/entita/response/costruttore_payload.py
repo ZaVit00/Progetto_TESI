@@ -5,7 +5,6 @@ from dati_modellati import DatiBatch, DatiPayload
 from dati_modellati import DatiMisurazione
 from utils.hash_utils import calcola_hash
 
-# === CLASSE PRINCIPALE ===
 class CostruttorePayload:
     """
     Classe che estrae oggetti da una query INNER JOIN batch+misurazione_in_ingresso e
@@ -26,6 +25,7 @@ class CostruttorePayload:
         self.misurazioni.clear()
         self.lista_hash_tuple.clear()
 
+        #estrapola gli elementi della query
         prima_riga = risultati_query[0]
         self.batch = DatiBatch(
             id_batch=prima_riga["id_batch"],
@@ -63,31 +63,24 @@ class CostruttorePayload:
         """
         return self.lista_hash_tuple
 
-    def costruisci_payload(self, merkle_root: str | None = None) -> DatiPayload:
+    def costruisci_payload(self, merkle_root: str) -> DatiPayload:
         """
         Costruisce il payload finale da inviare al cloud.
-        Se viene fornita una Merkle Root, aggiorna il campo nel batch.
-        Solleva un'eccezione se i dati non sono pronti.
+        La Merkle Root è obbligatoria e viene inserita nel campo `batch`.
+        Solleva eccezioni se i dati non sono pronti.
         """
         if self.batch is None:
             raise ValueError("Il batch non è stato inizializzato. Chiama prima 'estrai_dati_query'.")
 
         if not self.misurazioni:
-            raise ValueError("Nessuna misurazione_in_ingresso trovata. Il payload sarebbe vuoto.")
+            raise ValueError("Nessuna misurazione trovata. Il payload sarebbe vuoto.")
 
-        batch_con_root = (
-                self.batch.model_copy(update={"merkle_root": merkle_root})
-                if merkle_root is not None
-                else self.batch
-        )
+        # Crea un nuovo oggetto Pydantic,a partire da self.batch con il campo merkle_root
+        # avvalorato
+        batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
 
+        # Restituisce un oggetto Pydantic
         return DatiPayload(
             batch=batch_con_root,
             misurazioni=self.misurazioni
         )
-
-    #METODO DI DEBUG PER VISUALIZZARE UN PAYLOAD COMPLETO
-    def to_json(self, merkle_root: str | None = None) -> str:
-        dp = self.costruisci_payload(merkle_root=merkle_root)
-        #costruire il JSON a partire dal dizionario
-        return dp.model_dump_json(indent=2)

@@ -18,6 +18,7 @@ class ModelliHashabili(BaseModel, ABC):
         operazioni di debug o logging.
         """
         return json.dumps(
+            # Pydantic --> DICT
             self.model_dump(),
             sort_keys=True,
             separators=(",", ":"),

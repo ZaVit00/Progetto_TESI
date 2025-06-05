@@ -14,7 +14,8 @@ CREA_TABELLA_BATCH = """
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
         completato INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
-        merkle_root TEXT DEFAULT NULL
+        merkle_root TEXT DEFAULT NULL,
+        payload_json TEXT DEFAULT NULL
     )
 """
 
@@ -31,10 +32,15 @@ CREA_TABELLA_MISURAZIONE = """
 """
 
 BATCH_NON_INVIATI = """
-    SELECT id_batch
+    SELECT *
     FROM batch
-    WHERE completato = 1 AND conferma_ricezione = 0
-    ORDER BY id_batch ASC
+    WHERE completato = 1
+    AND conferma_ricezione = 0
+    AND merkle_root IS NOT NULL
+    AND merkle_root != ''
+    AND payload_json IS NOT NULL
+    AND payload_json != ''
+    ORDER BY batch.id_batch;
 """
 
 INSERISCI_SENSORE = """
@@ -67,6 +73,11 @@ AGGIORNA_MERKLE_ROOT_BATCH = """
     WHERE id_batch = ?
 """
 
+AGGIORNA_PAYLOAD_JSON_BATCH = """
+    UPDATE batch
+    SET payload_json = ?
+    WHERE id_batch = ?
+"""
 CHIUDI_BATCH = """
     UPDATE batch
     SET completato = 1

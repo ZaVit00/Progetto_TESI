@@ -22,7 +22,7 @@ DROP TABLE batch;
 DELETE FROM misurazione;
 DELETE FROM batch;
 DELETE FROM sensore;
-DELETE FROM sqlite_sequence WHERE name='misurazione_in_ingresso';
+DELETE FROM sqlite_sequence WHERE name='misurazione';
 DELETE FROM sqlite_sequence WHERE name='batch';
 
 /* conteggio delle misurazioni
