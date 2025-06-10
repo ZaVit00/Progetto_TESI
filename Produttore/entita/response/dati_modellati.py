@@ -17,6 +17,8 @@ class ModelliHashabili(BaseModel, ABC):
         Questa serializzazione viene utilizzata per il calcolo dell'hash e per eventuali
         operazioni di debug o logging.
         """
+        #utilizzo metodo della classe JSON di python
+        # ha più opzioni per la formattazione della stringa JSON
         return json.dumps(
             # Pydantic --> DICT
             self.model_dump(),

@@ -46,11 +46,13 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
 
         # 5. Costruzione del payload finale da inviare
         try:
-            # oggetto Pydantic
+            # oggetto Pydantic (DatiBatch e Lista di DatiMisurazioni)
             payload_finale = payload_intermedio.costruisci_payload(merkle_root)
             # SERIALIZZAZIONE: da oggetto Pydantic → stringa JSON
+            # utilizzare il metodo model_dump_json SOLO per oggetti Pydantic
+            #payload_json è una stringa JSON
             payload_json = payload_finale.model_dump_json(indent=2)
-            # Salvataggio del JSON nel DB per tracciabilità/debug/reinvio
+            # Salvataggio del JSON nel DB per tracciabilità/debug/reinvio di pacchetti
             db.aggiorna_payload_json_batch(id_batch_chiuso, payload_json)
 
             # Debug: stampa il JSON costruito
@@ -63,8 +65,11 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             print(f"[ERRORE] Costruzione del payload fallita: {e}")
             return
 
-        # 6. INVIO: da oggetto Pydantic → dizionario Python → POST HTTP
+
         try:
+            # 6. INVIO: da oggetto Pydantic → dizionario Python → POST HTTP
+            # Metodo model_dump solo per ottenere dizionari da oggetti Pydantic
+            # la conversione è automatica e fatta da Pydantic con il metodo model_dump
             payload_dict = payload_finale.model_dump()  # dict per il client HTTP
             if invia_payload(payload_dict, endpoint_cloud):
                 print(f"[INFO] Batch {id_batch_chiuso} inviato con successo. In attesa conferma ricezione.")

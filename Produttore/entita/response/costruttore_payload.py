@@ -32,6 +32,7 @@ class CostruttorePayload:
             timestamp_creazione=prima_riga["timestamp_creazione"],
             numero_misurazioni=prima_riga["numero_misurazioni"],
         )
+        batch_hash = self.batch.hash()
 
         for riga in risultati_query:
             try:
@@ -48,10 +49,10 @@ class CostruttorePayload:
                     timestamp=riga["timestamp"],
                     dati=riga["dati"]
                 )
-                self.misurazioni.append(mis)
 
+                self.misurazioni.append(mis)
                 # Combinazione hash: hash(batch) + hash(misurazione_in_ingresso)
-                hash_tupla = calcola_hash(self.batch.hash() + mis.hash())
+                hash_tupla = calcola_hash(batch_hash + mis.hash())
                 self.lista_hash_tuple.append(hash_tupla)
 
             except Exception as e:
@@ -79,8 +80,10 @@ class CostruttorePayload:
         # avvalorato
         batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
 
-        # Restituisce un oggetto Pydantic
+        # Restituisce un oggetto Pydantic formato da un oggetto DatiBatch e una
+        # lista di DatiMisurazioni
         return DatiPayload(
             batch=batch_con_root,
-            misurazioni=self.misurazioni
+            # Copia esplicita per evitare alias: impedisce modifiche a self.misurazioni
+            misurazioni= list(self.misurazioni)
         )
