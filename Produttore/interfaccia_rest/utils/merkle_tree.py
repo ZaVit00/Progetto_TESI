@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Tuple
-from utils import Hashing, is_power_of_two
+from interfaccia_rest.utils.hash_utils import  Hashing, is_power_of_two
 
 class MerkleTree:
     def __init__(self, foglie_hash: List[str]):

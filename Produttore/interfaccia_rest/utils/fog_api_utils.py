@@ -1,7 +1,4 @@
 import requests
-import json
-from costruttore_payload import CostruttorePayload
-from dati_modellati import DatiPayload
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree
 
@@ -20,19 +17,23 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
 
     try:
         # 1. Estrai i dati (batch + misurazioni) dal DB
-        dati_batch = db.estrai_dati_batch_misurazioni(id_batch_chiuso)
-        if not dati_batch:
+        dati_query = db.estrai_dati_batch_misurazioni(id_batch_chiuso)
+        if not dati_query:
+            #verifica se la lista contiene almeno un elemento
             print(f"[ERRORE] Nessun dato trovato per il batch {id_batch_chiuso}")
             return
 
         # 2. Costruzione oggetto intermedio (modello Pydantic)
         payload_intermedio = CostruttorePayload()
-        payload_intermedio.estrai_dati_query(dati_batch)
+        payload_intermedio.estrai_dati_da_query(dati_query)
 
         # 3. Calcolo Merkle Root sulle tuple hashate (batch + misurazione)
         try:
-            merkle_tree = MerkleTree(payload_intermedio.get_hash_foglie())
-            merkle_root = merkle_tree.costruisci_binario()
+            foglie_hash = payload_intermedio.get_foglie_hash()
+            merkle_tree = MerkleTree(foglie_hash)
+            # Mappa_id serve per costruire i Merkle Path
+            mappa_id = payload_intermedio.get_id_misurazioni()
+            merkle_root = merkle_tree.costruisci_albero(mappa_id=mappa_id, verbose=True)
         except Exception as e:
             print(f"[ERRORE] Creazione Merkle Tree fallita: {e}")
             return
