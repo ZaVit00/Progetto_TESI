@@ -11,6 +11,10 @@ def calcola_hash_foglia(foglia_raw: str) -> str:
     return hashlib.sha256(foglia_raw.encode()).hexdigest()
 
 
+def is_power_of_two(n: int) -> bool:
+    return n > 0 and (n & (n - 1)) == 0
+
+
 class MerkleTree:
     def __init__(self, foglie_hash: List[str]):
         self.foglie_hash = foglie_hash
@@ -26,6 +30,9 @@ class MerkleTree:
             self.proofs[idx].append((1, elem_sx))  # 1 = left
 
     def costruisci_albero(self, genera_proofs: bool = False, mappa_id: Optional[List[int]] = None) -> str:
+        if not is_power_of_two(len(self.foglie_hash)):
+            raise ValueError("Il numero di foglie deve essere una potenza di due")
+
         if genera_proofs:
             if mappa_id is None:
                 raise ValueError("Se genera_proofs=True, è necessario fornire mappa_id")
@@ -71,82 +78,81 @@ def calcola_hash_batch(batch_dict: dict) -> str:
     return calcola_hash_foglia(json.dumps(batch_dict, sort_keys=True))
 
 
-def verifica_singola_misurazione(id_misurazione, valore, proof, root_attesa):
+def verifica_singola_misurazione(valore: str, path: Dict[str, List[str]], root_attesa: str) -> bool:
+    """
+    Verifica l'integrità di una singola misurazione usando la root attesa e il Merkle Path compatto.
+
+    :param valore: il valore grezzo della misurazione (es. stringa JSON)
+    :param path: dizionario compatto con 'd' = stringa di direzioni, 'h' = lista hash fratelli
+    :param root_attesa: merkle_root_misurazioni salvata su blockchain
+    :return: True se la verifica ha successo, False altrimenti
+    """
     h = calcola_hash_foglia(valore)
-    for direzione, fratello in proof:
-        if direzione == 1:
+    direzioni = path["d"]
+    fratelli = path["h"]
+    #IN py una stringa è una lista di caratteri
+
+    #zip accorpa elemento di ciascuna lista in una tupla
+    for direzione, fratello in zip(direzioni, fratelli):
+        if direzione == "1":
             h = hash_concat(fratello, h)
-        else:
+        else:  # "0"
             h = hash_concat(h, fratello)
     return h == root_attesa
 
 
-def test_casi_verifica_completi():
-    print("\n🔍 TEST COMPLETO DEI CASI DI VERIFICA")
-
-    misurazioni_orig = {
-        10: "temp:20,t:10:00",
-        11: "temp:21,t:10:01",
-        12: "temp:22,t:10:02",
-        13: "temp:23,t:10:03"
+def main():
+    misurazioni = {
+        1025: "temperatura=24.5;timestamp=1620000001",
+        1026: "temperatura=24.7;timestamp=1620000002",
+        1042: "temperatura=25.0;timestamp=1620000003",
+        1099: "temperatura=25.2;timestamp=1620000004"
     }
 
-    lista_id = sorted(misurazioni_orig)
-    foglie_hash = [calcola_hash_foglia(misurazioni_orig[i]) for i in lista_id]
-    tree = MerkleTree(foglie_hash)
-    merkle_root = tree.costruisci_albero(genera_proofs=True, mappa_id=lista_id)
-    proofs = {i: tree.get_proof(i) for i in lista_id}
+    # Ordina le misurazioni per ID
+    misurazioni_ordinate = dict(sorted(misurazioni.items()))
+    foglie_hash = [calcola_hash_foglia(v) for v in misurazioni_ordinate.values()]
+    ids = list(misurazioni_ordinate.keys())
 
-    batch = {
-        "id_batch": 77,
-        "timestamp_creazione": "2025-06-11T15:00:00",
-        "merkle_paths": proofs
+    albero = MerkleTree(foglie_hash)
+    merkle_root_misurazioni = albero.costruisci_albero(genera_proofs=True, mappa_id=ids)
+    proofs = {id_: albero.get_proof(id_) for id_ in ids}
+
+    batch_record = {
+        "id_batch": 99,
+        "timestamp": "2025-06-11T00:00:00",
+        "merkle_root_misurazioni": merkle_root_misurazioni,
+        "merkle_paths": {str(k): {"d": "".join(str(d) for d, _ in v), "h": [h for _, h in v]} for k, v in proofs.items()}
     }
-    hash_batch = calcola_hash_batch(batch)
-    root_finale = hash_concat(merkle_root, hash_batch)
+    hash_batch = calcola_hash_batch(batch_record)
+    print(batch_record["merkle_paths"])
 
-    def analizza_integrità(misure, proofs_usate, batch_usato, root_attesa):
-        foglie_hash_check = [calcola_hash_foglia(misure[i]) for i in lista_id]
-        tree_check = MerkleTree(foglie_hash_check)
-        merkle_root_check = tree_check.costruisci_albero()
-        hash_batch_check = calcola_hash_batch(batch_usato)
-        root_check = hash_concat(merkle_root_check, hash_batch_check)
+    print("Merkle Root delle misurazioni:", merkle_root_misurazioni)
+    print("Hash del batch:", hash_batch)
 
-        print(f"  Merkle Root originale: {merkle_root}")
-        print(f"  Merkle Root testata   : {merkle_root_check}")
-        print(f"  Hash batch originale  : {hash_batch}")
-        print(f"  Hash batch testato    : {hash_batch_check}")
-        print(f"  Root finale attesa    : {root_attesa}")
-        print(f"  Root finale calcolata : {root_check}")
-
-        if merkle_root_check != merkle_root and hash_batch_check != hash_batch:
-            print("  🔴 Modificati sia le misurazioni che il batch.")
-        elif merkle_root_check != merkle_root:
-            print("  🟠 Modificate le misurazioni.")
-        elif hash_batch_check != hash_batch:
-            print("  🟡 Modificato il batch.")
-        else:
-            print("  ✅ Tutto integro.")
-
-    # CASO 1: Tutto integro
-    print("\n✅ CASO 1: Tupla originale + Proof originale + Batch originale")
-    analizza_integrità(misurazioni_orig, proofs, batch, root_finale)
-
-    # CASO 2: Misurazione modificata
-    print("\n❌ CASO 2: Tupla modificata + Proof originale")
-    mis_modificate = misurazioni_orig.copy()
-    mis_modificate[11] = "temp:99,t:10:01"
-    analizza_integrità(mis_modificate, proofs, batch, root_finale)
-
-    # CASO 3: Batch modificato
-    print("\n❌ CASO 3: Batch modificato")
-    batch_modificato = batch.copy()
-    batch_modificato["timestamp_creazione"] = "FAKE_TIMESTAMP"
-    analizza_integrità(misurazioni_orig, proofs, batch_modificato, root_finale)
-
-    # CASO 4: Entrambi modificati
-    print("\n❌ CASO 4: Tupla modificata + Batch modificato")
-    analizza_integrità(mis_modificate, proofs, batch_modificato, root_finale)
+    for id_, valore in misurazioni_ordinate.items():
+        # le chiavi di un dizionario sono sempre stringhe in Py
+        path = batch_record["merkle_paths"][str(id_)]
+        esito = verifica_singola_misurazione(valore, path, merkle_root_misurazioni)
+        print(f"ID {id_} → verifica: {'OK' if esito else 'FALLITA'}")
 
 
-test_casi_verifica_completi()
+if __name__ == "__main__":
+    main()
+
+
+
+""""
+Casi da verificare
+Procedura di verifica prendo i dati del batch precedentemente memorizzati
+(attenzione potrebbero essere stati manomessi) e i dati delle misurazioni (anche questi
+possono essere stati manomessi). Ora in primis verifico l'integrità del batch e capisco
+se le informazioni del batch ma soprattutto i merkle path sono integri.
+Sia se la risposta è sì sia se la risposta è no, procediamo ad effettuare la verifica delle misurazioni
+Ricordati che noi abbiamo a disposizione DUE HASH DISTINTI uno che è il merkle root per le misurazioni
+e l'altro che rappresenta l'hash della tupla batch. Quindi io posso sapere con esattezza che cosa è stato
+modificato se uno o l'altro o entrambi. Inoltre, avendo a disposizione i merkle path se questi sono
+integri posso verificare quale misurazione è stata modificata. Se i merkle path sono stati modificati
+o comunque un qualsiasi campo è stato modificato dobbiamo subito allertare che le informazioni sul batch
+sono state modificate e che ci possono essere errori.
+"""
