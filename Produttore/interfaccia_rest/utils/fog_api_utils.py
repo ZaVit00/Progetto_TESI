@@ -65,7 +65,6 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             print(f"[ERRORE] Costruzione del payload fallita: {e}")
             return
 
-
         try:
             # 6. INVIO: da oggetto Pydantic → dizionario Python → POST HTTP
             # Metodo model_dump solo per ottenere dizionari da oggetti Pydantic

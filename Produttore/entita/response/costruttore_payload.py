@@ -3,7 +3,7 @@ import json
 
 from dati_modellati import DatiBatch, DatiPayload
 from dati_modellati import DatiMisurazione
-from utils.hash_utils import calcola_hash
+from utils.utils import calcola_hash
 
 class CostruttorePayload:
     """

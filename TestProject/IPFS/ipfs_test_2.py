@@ -69,13 +69,7 @@ def test():
     albero = MerkleTree(foglie_hash, ids)
     merkle_root_misurazioni = albero.costruisci()
     # Costruzione Merkle Paths in formato compatto
-    proofs_compatti = {
-        str(k): {
-            #concantenazione di stringhe
-            "d": "".join(str(d) for (d, _) in v),
-            "h": [h for (_, h) in v]
-        } for k, v in albero.proofs.items()
-    }
+
     # === STEP 2: SALVATAGGIO SU IPFS ===
     # Salviamo su file temporaneo
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8") as tmpfile:
