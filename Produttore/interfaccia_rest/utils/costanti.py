@@ -1,0 +1,1 @@
+ID_BATCH_LOGICO = -1

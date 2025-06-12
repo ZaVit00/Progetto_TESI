@@ -1,7 +1,14 @@
-from typing import List, Optional, Dict, Tuple
-from interfaccia_rest.utils.hash_utils import  Hashing, is_power_of_two
+from typing import List, Optional, Dict, Tuple, Union, TypedDict
+from costanti import ID_BATCH_LOGICO
+from interfaccia_rest.utils.hash_utils import Hashing
 
 class MerkleTree:
+
+    class ProofCompatta(TypedDict):
+        # classe interna per la costruzione della proofs compatta
+        direzione: str  # direzioni codificate ("01", "10", ecc.)
+        hash_fratelli: List[str]  # lista degli hash fratelli
+
     def __init__(self, foglie_hash: List[str]):
         self.foglie_hash = foglie_hash
         # proofs dizionario chiave stringa id_misurazione, valori liste di coppie direzione, hash
@@ -27,8 +34,9 @@ class MerkleTree:
     def costruisci_albero(self, mappa_id: Optional[List[int]] = None, verbose: bool = True) -> str:
         if not self.foglie_hash:
             raise ValueError("L'albero non può essere costruito senza foglie.")
-
-        if not is_power_of_two(len(self.foglie_hash)):
+        n = len(self.foglie_hash)
+        # verifica che il numero di foglie è potenza di due
+        if not n > 0 and (n & (n - 1)) == 0:
             raise ValueError("Il numero di foglie deve essere una potenza di due")
 
         if mappa_id is None:
@@ -78,7 +86,7 @@ class MerkleTree:
         self.root = livello_corrente[0]
         return self.root
 
-    def costruisci_proofs_compatti(self) -> Dict[str, Dict[str, List[str]]]:
+    def costruisci_proofs_compatti(self):
         """
         Costruisce una rappresentazione compatta delle Merkle Proofs, utile per
         serializzazione, verifica e archiviazione.
@@ -111,25 +119,43 @@ class MerkleTree:
                 ]
             }
         }
+        proofs_compatti = {
+            <id_logico_str>: {
+                "d": <stringa_direzioni>,
+                "h": <lista_hash_fratelli>
+            },
+        }
+        proofs_compatti: Dict[str, Dict[str, Union[str, List[str]]]]
+        Perché ogni valore del sotto-dizionario può essere una str oppure una List[str].
+        Se h ci associo una lista di stringhe ovvero i fratelli hash
+        Se d ci associo una stringa concatenata ovvero la direzione
         """
         if self.proofs is None:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
         stringa_direzione = ""
-        proofs_compatti = {
-            # (_,elemento) tupla in cui ignoro un elemento della coppia
-            key: {
-                # ogni d la stringa "1" o "0" ed effettuo la concantenazione (join) delle direzioni
-                #ignoro gli hash e prendo solo le direzioni (0,1)
-                "d": stringa_direzione.join(direzione for (direzione, _) in values),
-                #ignoro la direzione e prendo solo gli hash
-                "h": [hash_fratello for (_, hash_fratello) in values]  # lista degli hash fratelli
-            }
-            #k → è un intero, l’ID logico della foglia stringa
-            #v → è una lista di t
-            # uple, ciascuna con due elementi (direzione, hash_fratello)
-            # List[Tuple[str, str]] = v e k è l'indice chiave del dizionario
+        proofs_compatti : dict[str, MerkleTree.ProofCompatta]  = {
+            # CHIAVE
+            "batch" if key == ID_BATCH_LOGICO else key :
+                # VALORE ASSOCIATO ALLA CHIAVE
+                MerkleTree.ProofCompatta(
+                    #ignoro gli hash e prendo solo la direzione
+                    direzione = stringa_direzione.join(direzione for (direzione, _) in values),
+                    #ignoro la direzione e prendo solo gli hash
+                    hash_fratelli = [hash_fratello for (_, hash_fratello) in values]  # lista degli hash fratelli
+                )
             for key, values in self.proofs.items()
         }
+        """
+        VALUES: LISTA DI TUPLE
+        
+        k → è un intero, l’ID logico della foglia stringa
+        v → è una lista di tuple, ciascuna con due elementi (direzione, hash_fratello)
+        List[Tuple[str, str]] = v e k è l'indice chiave del dizionario
+        (_,elemento), (elemento, _) è la tupla in cui ignoro un elemento della coppia (_)
+        ogni d è il carattere "1" o "0" ed effettuo la concantenazione (join) delle direzioni
+        ignorando gli hash e prendendo solo le direzioni (0,1)
+        ogni hash_fratello è un hash estratto dalla tupla in cui sto ignorando la direzione
+        """
         return proofs_compatti
 
     def get_proof_da_id(self, id_logico: int) -> list[tuple[str, str]]:
@@ -206,3 +232,4 @@ class MerkleTree:
     o comunque un qualsiasi campo è stato modificato dobbiamo subito allertare che le informazioni sul batch
     sono state modificate e che ci possono essere errori.
     """
+

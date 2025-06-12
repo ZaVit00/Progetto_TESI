@@ -1,6 +1,7 @@
 from typing import List, Dict
 import json
 from dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
+from interfaccia_rest.utils.costanti import ID_BATCH_LOGICO
 
 class CostruttorePayload:
     """
@@ -40,7 +41,7 @@ class CostruttorePayload:
             numero_misurazioni=prima_riga["numero_misurazioni"],
             merkle_root=""
         )
-        self.hash_batch = self.batch.hash()
+        self.hash_batch = self.batch.to_hash()
 
         for riga in risultati_ordinati:
             try:
@@ -53,9 +54,8 @@ class CostruttorePayload:
                     timestamp=riga["timestamp"],
                     dati=riga["dati"]
                 )
-
                 self.misurazioni.append(mis)
-                self.hash_misurazioni.append(mis.hash())
+                self.hash_misurazioni.append(mis.to_hash())
 
             except Exception as e:
                 print(f"[ERRORE] Errore durante la creazione della misurazione: {e}")
@@ -98,4 +98,6 @@ class CostruttorePayload:
     def get_id_misurazioni(self) -> List[int]:
         if not self.misurazioni:
             raise ValueError("Errore! Nessun id misurazione presente")
-        return [mis.id_misurazione for mis in self.misurazioni]
+        #restitusce la lista degli id della misurazione + ultimo id fittizio per
+        # il batch
+        return [mis.id_misurazione for mis in self.misurazioni] + [ID_BATCH_LOGICO]

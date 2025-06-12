@@ -1,6 +1,5 @@
 import hashlib
 
-
 class Hashing:
     @staticmethod
     def calcola_hash(dato: str) -> str:
@@ -16,6 +15,3 @@ class Hashing:
             la concatenazione di due stringhe
             """
         return Hashing.calcola_hash(elem_sx + elem_dx)
-
-def is_power_of_two(n: int) -> bool:
-    return n > 0 and (n & (n - 1)) == 0

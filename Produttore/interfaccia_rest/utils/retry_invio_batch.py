@@ -20,11 +20,11 @@ async def retry_invio_batch_periodico(db, endpoint_cloud: str, intervallo: int =
             # JSON --> DICT
             payload_dict = json.loads(p)  # dizionario
             id_batch = payload_dict["batch"]["id_batch"]
-
             if invia_payload(payload_dict, endpoint_cloud):
                 print(f"[INFO] Batch {id_batch} reinviato correttamente. In attesa conferma ricezione.")
             else:
                 print(f"[AVVISO] Reinvio fallito per batch {id_batch}. Verrà ritentato più tardi.")
+                break  # esci dal ciclo se un invio fallisce
 
     #attendi 10 secondi e cerca i batch non inviati
     await asyncio.sleep(10)

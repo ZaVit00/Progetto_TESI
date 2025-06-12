@@ -11,9 +11,10 @@ from modelli import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperat
 from sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
-from retry import retry_invio_batch_periodico
+from retry_invio_batch import retry_invio_batch_periodico
 
-db = GestoreDatabase(soglia_batch=32)
+# misurazioni + ultima foglia batch che è la potenza di due
+db = GestoreDatabase(soglia_batch=31)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
