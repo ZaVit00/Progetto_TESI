@@ -12,10 +12,11 @@
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/interfaccia_rest" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/interfaccia_rest/utils" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/stato_ricezione_batch" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/response" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/misurazione_in_ingresso" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test/sensori_simulati" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/IPFSclient" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/payload_richiesta_cloud" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

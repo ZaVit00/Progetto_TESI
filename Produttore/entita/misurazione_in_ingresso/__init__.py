@@ -1,4 +1,4 @@
-from .modelli import (
+from .misurazioni_in_ingresso import (
     MisurazioneInIngresso,
     MisurazioneInIngressoJoystick,
     MisurazioneInIngressoTemperatura

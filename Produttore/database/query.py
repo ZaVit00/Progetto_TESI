@@ -14,8 +14,12 @@ CREA_TABELLA_BATCH = """
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
         completato INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
+        elaborabile BOOLEAN DEFAULT 1,
+        messaggio_errore TEXT DEFAULT NULL,
+        tipo_errore TEXT DEFAULT  NULL,
         merkle_root TEXT DEFAULT NULL,
         payload_json TEXT DEFAULT NULL
+        
     )
 """
 
@@ -36,6 +40,7 @@ BATCH_NON_INVIATI = """
     FROM batch
     WHERE completato = 1
     AND conferma_ricezione = 0
+    AND elaborabile = 1
     AND merkle_root IS NOT NULL
     AND merkle_root != ''
     AND payload_json IS NOT NULL
@@ -112,4 +117,30 @@ ESTRAI_DATI_BATCH_MISURAZIONI = """
     INNER JOIN batch AS b ON m.id_batch = b.id_batch
     WHERE b.id_batch = ?
     ORDER BY m.id_misurazione ASC;
+"""
+
+# 0 = condizione di errore grave
+# 1 = Nessun errore
+IMPOSTA_ERRORE_ELABORAZIONE_BATCH = """
+    UPDATE batch
+    SET elaborabile = 0,
+        messaggio_errore = ?,
+        tipo_errore = ?
+    WHERE id_batch = ?;
+"""
+BATCH_NON_ELABORABILI = """
+    SELECT id_batch, tipo_errore, messaggio_errore, timestamp_creazione
+    FROM batch
+    WHERE elaborabile = 0
+    ORDER BY id_batch;
+"""
+
+BATCH_ELABORALABILI_NON_COMPLETATI = """
+    SELECT id_batch
+    FROM batch
+    WHERE completato = 1
+    AND conferma_ricezione = 0
+    AND elaborabile = 1
+    AND merkle_root IS NULL
+    AND payload_json IS NULL;
 """

@@ -2,7 +2,6 @@ import json
 from abc import ABC, abstractmethod
 from typing import Dict, List
 from pydantic import BaseModel, Field
-
 from interfaccia_rest.utils.hash_utils import Hashing
 
 

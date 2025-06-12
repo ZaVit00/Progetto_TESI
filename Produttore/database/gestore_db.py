@@ -2,6 +2,8 @@ import os
 import sqlite3
 import json
 from datetime import datetime
+from typing import List
+
 from database import query
 
 class GestoreDatabase:
@@ -190,6 +192,34 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             print(f"[ERRORE QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
+
+    def segna_batch_errore(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
+        """
+        Segna un batch come impossibile da elaborare in seguito a errore grave
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.IMPOSTA_ERRORE_ELABORAZIONE_BATCH, (messaggio_errore, tipo_errore, id_batch))
+            self.conn.commit()
+            print(f"[INFO] Batch {id_batch} marcato come non elaborabile. Errore: {tipo_errore}")
+        except sqlite3.Error as e:
+            print(f"[ERRORE QUERY - SEGNA BATCH ERRORE] {e}")
+
+    def estrai_batch_incompleti(self) -> List[int]:
+        """
+        Restituisce gli ID dei batch completati ma interrotti (mancano Merkle Root e payload),
+        che possono essere rielaborati perché ancora marcati come elaborabili.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.BATCH_ELABORALABILI_NON_COMPLETATI)
+            #estrai l'id del batch elaborabile, ma senza merkle root e payload JSON
+            #Gestisci casi in cui si verificano eccezioni con il database
+            return [riga["id_batch"] for riga in cursor.fetchall()]
+        except sqlite3.Error as e:
+            print(f"[ERRORE QUERY - BATCH INCOMPLETI] {e}")
+            return []
+
 
     #DEBUG ONLY
     def svuota_tabelle(self):
