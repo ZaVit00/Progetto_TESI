@@ -1,8 +1,7 @@
 import json
-from typing import List, Dict
 
 import requests
-import costanti
+import costanti_produttore
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree, ProofCompatta
 from costruttore_payload import CostruttorePayload
@@ -16,7 +15,6 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
     4. Aggiorna la root nel DB.
     5. Salva il payload come JSON nel DB per debug o reinvio futuro.
     6. Converte il payload in dizionario e lo invia al cloud.
-
     Inoltre, è possibile distinguere due tipi di errore
     Errori gravi (Merkle / Payload)
     Errori transitori (es. Errori con il DB)
@@ -48,7 +46,7 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             messaggio_errore = f"Creazione Merkle Tree fallita: {e}"
             print(f"[ERRORE] {messaggio_errore}")
             db.segna_batch_errore(id_batch_chiuso, messaggio_errore,
-                                  tipo_errore=costanti.ERRORE_MERKLE_INVALIDO)
+                                  tipo_errore=costanti_produttore.ERRORE_MERKLE_INVALIDO)
             return
 
         # 4. Aggiorna la Merkle Root nel record del batch
@@ -81,7 +79,7 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
         except Exception as e:
             messaggio_errore = f"Costruzione del payload fallita: {e}"
             print(f"[ERRORE] {messaggio_errore}")
-            db.segna_batch_errore(id_batch_chiuso, messaggio_errore, tipo_errore=costanti.ERRORE_PAYLOAD_INVALIDO)
+            db.segna_batch_errore(id_batch_chiuso, messaggio_errore, tipo_errore=costanti_produttore.ERRORE_PAYLOAD_INVALIDO)
             return
 
         try:

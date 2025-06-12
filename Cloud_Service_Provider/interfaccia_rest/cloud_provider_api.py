@@ -1,6 +1,6 @@
 import uvicorn
-from fastapi import FastAPI, Request
-from Produttore.entita.payload_richiesta_cloud.dati_modellati import DatiPayload
+from fastapi import FastAPI
+from comuni.dati_modellati import DatiPayload
 
 app = FastAPI()
 

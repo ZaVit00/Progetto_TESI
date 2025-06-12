@@ -1,8 +1,8 @@
 import json
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict, List
 from pydantic import BaseModel, Field
-from interfaccia_rest.utils.hash_utils import Hashing
+from hash_utils import Hashing
 
 
 class ModelliHashabili(BaseModel, ABC):
@@ -15,7 +15,7 @@ class ModelliHashabili(BaseModel, ABC):
         """
         Restituisce una rappresentazione JSON ordinata e leggibile della tupla.
         Questa serializzazione viene utilizzata per il calcolo dell'hash e per eventuali
-        operazioni di debug o logging.
+        operazioni di debug o logging. APPLICABILE SOLO A ISTANZE DI PYDANTIC (modul_dump)
         """
         return json.dumps(
             self.model_dump(),

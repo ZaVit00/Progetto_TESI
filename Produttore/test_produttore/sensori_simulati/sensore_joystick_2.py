@@ -14,7 +14,7 @@ RIPETIZIONI = 50 # misurazioni
 try:
     dati_inviati = {
         "id_sensore": ID_SENSORE,
-        "descrizione": "Joystick di test"
+        "descrizione": "Joystick di test_produttore"
     }
     response = requests.post(ENDPOINT_SENSORE, json=dati_inviati)
     response.raise_for_status()

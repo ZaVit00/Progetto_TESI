@@ -1,6 +1,5 @@
 from typing import List, Optional, Dict
-from costanti import ID_BATCH_LOGICO
-from interfaccia_rest.utils.hash_utils import Hashing
+from hash_utils import Hashing
 
 
 class ProofCompatta:

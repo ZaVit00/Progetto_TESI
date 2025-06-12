@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Unnamed" pattern="(!file:*__init__.py||file[Progetto_TESI]:*/||file[TestProject]:*/)&amp;&amp;!ext:*" />
+</component>

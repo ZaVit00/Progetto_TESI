@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from datetime import datetime
@@ -71,3 +72,6 @@ async def ricevi_misurazione(misurazione: Union[MisurazioneInIngressoJoystick, M
         gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
 
     return JSONResponse(content=risposta)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

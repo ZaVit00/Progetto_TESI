@@ -1,12 +1,11 @@
 from typing import List, Dict
 import json
-from dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
-from interfaccia_rest.utils.costanti import ID_BATCH_LOGICO
+from comuni.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
+from comuni.costanti_comuni import  ID_BATCH_LOGICO
 
 class CostruttorePayload:
     """
     Classe che prepara i dati per la costruzione del Merkle Tree e del payload.
-
     Primo momento (intermedio): estrae gli oggetti da una query INNER JOIN e calcola:
       - hash di ogni singola misurazione
       - hash del batch (separatamente)
@@ -89,6 +88,8 @@ class CostruttorePayload:
             raise ValueError("Nessuna misurazione trovata. Il payload sarebbe vuoto.")
 
         # Crea un nuovo oggetto DatiBatch con Merkle Root
+        # Possibile solo per classi PYDANTIC
+        # DATIBATCH è una classe PYDANTIC
         batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
         return DatiPayload(
             batch=batch_con_root,
@@ -96,8 +97,8 @@ class CostruttorePayload:
         )
 
     def get_id_misurazioni(self) -> List[int]:
+        # restituisce la lista degli id della misurazione + ultimo id fittizio per
+        # il batch
         if not self.misurazioni:
             raise ValueError("Errore! Nessun id misurazione presente")
-        #restitusce la lista degli id della misurazione + ultimo id fittizio per
-        # il batch
         return [mis.id_misurazione for mis in self.misurazioni] + [ID_BATCH_LOGICO]
