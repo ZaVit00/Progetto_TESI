@@ -1,7 +1,6 @@
 import json
 import logging
 import requests
-
 import costanti_produttore
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree, ProofCompatta
@@ -79,7 +78,7 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
 
 def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
     """
-    Invia il payload al servizio cloud tramite HTTP POST.
+    Invia il payload (dizionario) al servizio cloud tramite HTTP POST.
     Ritorna True se la richiesta ha esito positivo (status code 2xx), altrimenti False.
     """
     try:

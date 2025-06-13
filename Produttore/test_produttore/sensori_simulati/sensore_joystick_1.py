@@ -1,49 +1,45 @@
+import threading
 import random
 import time
 import requests
 
-# Configurazione
-ID_SENSORE = "joy001"
-ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
-ENDPOINT_SENSORE = "http://localhost:8000/sensori"
-INTERVALLO = 1  # secondi
-RIPETIZIONI = 50 # misurazioni
+def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0, ripetizioni: int = 100, intervallo: float = 1.0):
+    ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
+    ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
-
-""" invio i dati del sensore al server"""
-try:
-    dati_inviati = {
-        "id_sensore": ID_SENSORE,
-        "descrizione": "Joystick di test_produttore"
-    }
-    response = requests.post(ENDPOINT_SENSORE, json=dati_inviati)
-    response.raise_for_status()
-    risultato = response.json()  # recuperi il payload_richiesta_cloud JSON di payload_richiesta_cloud
-    print(f"[OK] Inviati dati del sensore: {dati_inviati}\n")
-    print(f"[RISPOSTA SERVER]: {risultato}\n")
-except requests.RequestException as e:
-    print(f"[ERRORE] {e}")
-
-""" Loop per inviare i dati al server"""
-i = 0
-while i < RIPETIZIONI:
-    # Genera dati fittizi
-    dati = {
-        "id_sensore": ID_SENSORE,
-        "x": round(random.uniform(-1, 1), 2),
-        "y": round(random.uniform(-1, 1), 2),
-        "pressed": random.choice([True, False])
-    }
-
-    # Invia i dati della misurazione_in_ingresso al server
+    time.sleep(ritardo_iniziale)
     try:
-        response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
+        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione})
         response.raise_for_status()
-        risultato = response.json()  # recuperi il payload_richiesta_cloud JSON di payload_richiesta_cloud
-        print(f"[OK] Inviati dati misurazione registrata: {dati}\n")
-        print(f"[RISPOSTA SERVER]: {risultato}\n")
+        print(f"[OK] Sensore registrato: {id_sensore}")
     except requests.RequestException as e:
-        print(f"[ERRORE] {e}")
+        print(f"[ERRORE] Registrazione sensore {id_sensore}: {e}")
 
-    time.sleep(INTERVALLO)
-    i += 1
+    for i in range(ripetizioni):
+        dati = {
+            "id_sensore": id_sensore,
+            "x": round(random.uniform(-1, 1), 2),
+            "y": round(random.uniform(-1, 1), 2),
+            "pressed": random.choice([True, False])
+        }
+
+        try:
+            response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
+            response.raise_for_status()
+            print(f"[OK] {id_sensore}: misurazione {i+1} inviata")
+        except requests.RequestException as e:
+            print(f"[ERRORE] Invio misurazione {id_sensore}: {e}")
+
+        time.sleep(intervallo)
+
+# Avvia 3 sensori in parallelo usando thread
+sensori = [
+    ("joy001", "Joystick A", 0),
+    ("joy002", "Joystick B", 1),
+    ("joy003", "Joystick C", 2),
+    ("joy004", "Joystick D", 3),
+    ("joy005", "Joystick E", 4)
+]
+
+for id_sensore, descrizione, ritardo in sensori:
+    threading.Thread(target=simula_sensore, args=(id_sensore, descrizione, ritardo)).start()

@@ -53,4 +53,7 @@ async def retry_invio_batch_periodico(db, endpoint_cloud: str):
     """
     task1 = asyncio.create_task(reinvia_batch_gia_pronti(db, endpoint_cloud, intervallo=60))
     task2 = asyncio.create_task(recupera_batch_incompleti(db, endpoint_cloud, intervallo=300))
-    await asyncio.gather(task1, task2)
+    try:
+        await asyncio.gather(task1, task2)
+    except Exception as e:
+        logger.critical(f"Errore critico nella gestione dei task periodici: {e}")

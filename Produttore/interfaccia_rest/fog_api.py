@@ -2,11 +2,10 @@ from contextlib import asynccontextmanager
 import uvicorn
 import logging
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 from datetime import datetime
 from typing import Union
 import asyncio
-
+import costanti_produttore
 # Import dei modelli di misurazione_in_ingresso specifici
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
 from sensore_base import Sensore
@@ -20,10 +19,8 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 # Istanza del database (con soglia per batch)
-db = GestoreDatabase(soglia_batch=31)
-
+db = GestoreDatabase(soglia_batch=costanti_produttore.SOGLIA_BATCH)
 # Endpoint del cloud service
 ENDPOINT_CLOUD = "http://localhost:8080/ricevi_batch"
 
@@ -32,6 +29,8 @@ async def lifespan(app: FastAPI):
     logger.info("Avvio del task periodico per il retry dei batch.")
     asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD))
     yield  # Applicazione avviata
+    #operazioni da effettuare alla terminazione dell'applicazione
+    logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
     db.chiudi_connessione()
 
 # Istanzia l'app FastAPI con supporto al lifecycle
@@ -63,24 +62,23 @@ async def ricevi_misurazione(misurazione: Union[MisurazioneInIngressoJoystick, M
     dati = misurazione.estrai_dati_misurazione()
     logger.debug(f"Misurazione ricevuta dal sensore {id_sensore}: {dati}")
 
-    successo, id_batch_chiuso = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
-    if not successo:
-        logger.error(f"Errore nella memorizzazione della misurazione del sensore {id_sensore}")
-        raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione_in_ingresso.")
+    successo_operazione, id_batch_chiuso = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
+    if not successo_operazione:
+        logger.error("Errore nella memorizzazione della misurazione", exc_info=True)
+        raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione.")
+
+    # Verifica che sia stato chiuso il batch dopo l'inserimento della misurazione
+    if id_batch_chiuso is not None:
+        logger.debug(f"Batch completato: ID {id_batch_chiuso}. Avvio elaborazione del batch.")
+        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
 
     risposta = {
-        "status": "misurazione_in_ingresso registrata",
+        "status": "misurazione in ingresso registrata",
         "sensore": id_sensore,
         "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y")
     }
 
-    if id_batch_chiuso is not None:
-        logger.debug(f"Batch completato: ID {id_batch_chiuso}. Avvio elaborazione.")
-        risposta["batch_completato"] = True
-        risposta["id_batch"] = id_batch_chiuso
-        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
-
-    return JSONResponse(content=risposta)
+    return risposta
 
 def main():
     uvicorn.run(app, host="127.0.0.1", port=8000)

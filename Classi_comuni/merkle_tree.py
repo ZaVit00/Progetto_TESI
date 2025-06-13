@@ -60,6 +60,7 @@ class MerkleTree:
         for i, h in enumerate(self.foglie_hash):
             logger.debug(f"  Foglia {i}: {h}")
 
+        #solo per debug uso la variabile livello
         livello = 0
         while len(livello_corrente) > 1:
             logger.debug(f"\n🧱 Livello {livello} (len={len(livello_corrente)})")
