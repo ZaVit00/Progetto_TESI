@@ -6,7 +6,7 @@ from interfaccia_rest.utils.fog_api_utils import gestisci_batch_completato, invi
 # Logger locale
 logger = logging.getLogger(__name__)
 
-async def reinvia_batch_gia_pronti(db, endpoint_cloud: str, intervallo: int = 60):
+async def rinvia_batch_gia_pronti(db, endpoint_cloud: str, intervallo: int = 60):
     """
     Task periodico: reinvia i batch già pronti con Merkle Root e payload_json.
     Default: ogni 60 secondi.
@@ -51,7 +51,7 @@ async def retry_invio_batch_periodico(db, endpoint_cloud: str):
     - Reinvio batch già pronti: ogni 60 secondi.
     - Recupero batch incompleti: ogni 300 secondi.
     """
-    task1 = asyncio.create_task(reinvia_batch_gia_pronti(db, endpoint_cloud, intervallo=60))
+    task1 = asyncio.create_task(rinvia_batch_gia_pronti(db, endpoint_cloud, intervallo=60))
     task2 = asyncio.create_task(recupera_batch_incompleti(db, endpoint_cloud, intervallo=300))
     try:
         await asyncio.gather(task1, task2)

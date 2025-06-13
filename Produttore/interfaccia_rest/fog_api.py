@@ -7,7 +7,7 @@ from typing import Union, Annotated
 import asyncio
 # Import dei modelli di misurazione_in_ingresso specifici
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
-from costanti_produttore import SOGLIA_BATCH, ENDPOINT_CLOUD
+from costanti_produttore import SOGLIA_BATCH, ENDPOINT_CLOUD_STORAGE
 from sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import gestisci_batch_completato
@@ -27,7 +27,7 @@ db = GestoreDatabase(soglia_batch=SOGLIA_BATCH)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Avvio del task periodico per il retry dei batch.")
-    asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD))
+    asyncio.create_task(retry_invio_batch_periodico(db, ENDPOINT_CLOUD_STORAGE))
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
@@ -81,7 +81,7 @@ async def ricevi_misurazione(misurazione: MisurazioneInIngresso):
     # Verifica che sia stato chiuso il batch dopo l'inserimento della misurazione
     if id_batch_chiuso is not None:
         logger.debug(f"Batch completato: ID {id_batch_chiuso}. Avvio elaborazione del batch.")
-        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD)
+        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD_STORAGE)
 
     risposta = {
         "status": "misurazione in ingresso registrata",

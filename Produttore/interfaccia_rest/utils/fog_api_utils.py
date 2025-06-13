@@ -25,13 +25,12 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             logger.error(f"Nessun dato trovato per il batch {id_batch_chiuso}")
             return
 
-        payload_intermedio = CostruttorePayload()
-        payload_intermedio.estrai_dati_da_query(dati_query)
-
+        payload_iniziale = CostruttorePayload()
+        payload_iniziale.estrai_dati_da_query(dati_query)
         try:
-            foglie_hash = payload_intermedio.get_foglie_hash()
+            foglie_hash = payload_iniziale.get_foglie_hash()
             merkle_tree = MerkleTree(foglie_hash)
-            mappa_id = payload_intermedio.get_id_misurazioni()
+            mappa_id = payload_iniziale.get_id_misurazioni()
             merkle_root = merkle_tree.costruisci_albero(mappa_id=mappa_id)
             debug_stampa_proofs_json(
                 proofs=merkle_tree.get_proofs(),
@@ -52,7 +51,9 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             return
 
         try:
-            payload_finale = payload_intermedio.costruisci_payload(merkle_root)
+            payload_finale = payload_iniziale.costruisci_payload()
+            # converte l'oggetto DatiPayload di Pydantic in JSON, con model dump JSON
+            # La conversione è utile per il salvataggio in modo chiaro su database del payload
             payload_json = payload_finale.model_dump_json(indent=2)
             db.aggiorna_payload_json_batch(id_batch_chiuso, payload_json)
             logger.info("Payload JSON costruito:")
@@ -65,6 +66,8 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
             return
 
         try:
+            #La struttura dati che deve essere inviata al cloud è un dizionario.
+            #Con model_dump estraggo un dizionario da un oggetto pydantic
             payload_dict = payload_finale.model_dump()
             if invia_payload(payload_dict, endpoint_cloud):
                 logger.debug(f"Batch {id_batch_chiuso} inviato con successo. In attesa conferma ricezione.")
@@ -101,7 +104,6 @@ def debug_stampa_proofs_json(proofs: dict[int, ProofCompatta], verbose: bool = F
     """
     if not verbose:
         return
-
     json_serializzabile = {
         str(k) if k != 0 else "batch": {
             "d": p.get_direzione(),
@@ -109,7 +111,6 @@ def debug_stampa_proofs_json(proofs: dict[int, ProofCompatta], verbose: bool = F
         }
         for k, p in proofs.items()
     }
-
     logger.info("📦 MERKLE PROOFS (Formato JSON)")
     separator = "-" * 80
     json_str = json.dumps(json_serializzabile, indent=2)

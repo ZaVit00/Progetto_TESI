@@ -10,4 +10,4 @@ SOGLIA_BATCH : int = 63
 TIPO_SENSORE_JOYSTICK: Final = "joystick"
 TIPO_SENSORE_TEMPERATURA: Final = "temperatura"
 
-ENDPOINT_CLOUD = "http://localhost:8080/ricevi_batch"
+ENDPOINT_CLOUD_STORAGE = "http://localhost:8080/ricevi_batch"

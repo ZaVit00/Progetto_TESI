@@ -49,14 +49,19 @@ class DatiBatch(ModelliHashabili):
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., title="Timestamp di creazione", description="Data e ora di creazione del batch in formato ISO 8601")
     numero_misurazioni: int = Field(..., title="Numero misurazioni", description="Numero totale di misurazioni contenute nel batch")
+    """
+    Il campo merkle_root non è inviato al cloud. 
+    Può essere usato per scopi di debug
     merkle_root: str = Field(
         "", title="Merkle Root",
         description="Hash radice dell’albero Merkle costruito sulle misurazioni del batch"
     )
+    """
+
 
 class DatiPayload(BaseModel):
     """
     Payload completo da inviare al cloud: contiene un batch e le sue misurazioni associate.
     """
-    batch: DatiBatch = Field(..., title="Batch", description="Metadati del batch, inclusa la Merkle Root")
-    misurazioni: List[DatiMisurazione] = Field(..., title="Misurazioni", description="Lista delle misurazioni associate al batch")
+    batch: DatiBatch = Field(..., title="Batch", description="Metadati del batch")
+    misurazioni: List[DatiMisurazione] = Field(..., title="Lista di Misurazioni", description="Lista delle misurazioni associate al batch")

@@ -24,6 +24,7 @@ DELETE FROM batch;
 DELETE FROM sensore;
 DELETE FROM sqlite_sequence WHERE name='misurazione';
 DELETE FROM sqlite_sequence WHERE name='batch';
+DELETE FROM sqlite_sequence WHERE name='sensore';
 
 /* conteggio delle misurazioni
    per batch*/

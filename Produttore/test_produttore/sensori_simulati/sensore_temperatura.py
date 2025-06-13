@@ -21,7 +21,7 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
     for i in range(ripetizioni):
         dati = {
             "tipo": TIPO_SENSORE,
-            "id_sensore": id_sensore,
+            "id_sensore": id_sensore.upper(),
             "valore": round(random.uniform(20.0, 30.0), 2),  # temperatura in °C
             "unita": "°C"
         }

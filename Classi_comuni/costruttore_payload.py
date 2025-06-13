@@ -40,7 +40,7 @@ class CostruttorePayload:
             id_batch=prima_riga["id_batch"],
             timestamp_creazione=prima_riga["timestamp_creazione"],
             numero_misurazioni=prima_riga["numero_misurazioni"],
-            merkle_root=""
+            #merkle_root=""
         )
         self.hash_batch = self.batch.to_hash()
 
@@ -75,10 +75,10 @@ class CostruttorePayload:
         # L'ultima foglia di hash è hash del batch
         return self.hash_misurazioni + [self.hash_batch]
 
-    def costruisci_payload(self, merkle_root: str) -> DatiPayload:
+    def costruisci_payload(self) -> DatiPayload:
         """
         Costruisce il payload da inviare al cloud.
-        La Merkle Root viene inserita nel batch.
+        La Merkle Root può essere inserita nel batch per scopi di debug
         I Merkle Path NON sono inclusi (vanno su IPFS separatamente).
         """
         if self.batch is None:
@@ -89,18 +89,17 @@ class CostruttorePayload:
         if not self.misurazioni:
             raise ValueError("Nessuna misurazione trovata. Il payload sarebbe vuoto.")
 
-        # Crea un nuovo oggetto DatiBatch con Merkle Root
-        # Possibile solo per classi PYDANTIC
+        # Crea un nuovo oggetto DatiBatch con Merkle Root. Possibile solo per classi PYDANTIC
         # DATIBATCH è una classe PYDANTIC
-        batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
+        #batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
         return DatiPayload(
-            batch=batch_con_root,
+            batch=self.batch,
             misurazioni=list(self.misurazioni)  # copia esplicita
         )
 
     def get_id_misurazioni(self) -> List[int]:
-        # restituisce la lista degli id della misurazione + ultimo id fittizio per
-        # il batch
+        # restituisce la lista degli id della misurazione concatenato con la lista contenente
+        # ultimo id FITTIZIO rappresentativo del batch
         if not self.misurazioni:
-            raise ValueError("Errore! Nessun id misurazione presente")
+            raise ValueError("Errore! Nessun id misurazione in elaborazione")
         return [mis.id_misurazione for mis in self.misurazioni] + [ID_BATCH_LOGICO]
