@@ -1,43 +1,47 @@
+import threading
 import random
 import time
 import requests
 
-# Configurazione
-ID_SENSORE = "temp001"
-ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
-ENDPOINT_SENSORE = "http://localhost:8000/sensori"
-INTERVALLO = 1  # secondi
-RIPETIZIONI = 100  # misurazioni da inviare
+TIPO_SENSORE = "temperatura"
 
-# Invio dati di registrazione del sensore
-try:
-    dati_inviati = {
-        "id_sensore": ID_SENSORE,
-        "descrizione": "Sensore di temperatura simulato"
-    }
-    response = requests.post(ENDPOINT_SENSORE, json=dati_inviati)
-    response.raise_for_status()
-    risultato = response.json()
-    print(f"[OK] Inviati dati del sensore: {dati_inviati}\n")
-    print(f"[RISPOSTA SERVER]: {risultato}\n")
-except requests.RequestException as e:
-    print(f"[ERRORE REGISTRAZIONE] {e}")
+def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0,
+                                ripetizioni: int = 100, intervallo: float = 1.0):
+    ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
+    ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
-# Ciclo di invio delle misurazioni
-for i in range(RIPETIZIONI):
-    # Dato fittizio di temperatura tra 18 e 30 gradi
-    dati = {
-        "id_sensore": ID_SENSORE,
-        "valore": round(random.uniform(18.0, 30.0), 2)
-    }
-
+    time.sleep(ritardo_iniziale)
     try:
-        response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
+        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione})
         response.raise_for_status()
-        risultato = response.json()
-        print(f"[OK] Inviata misurazione: {dati}")
-        print(f"[RISPOSTA SERVER]: {risultato}\n")
+        print(f"[OK] Sensore registrato: {id_sensore}")
     except requests.RequestException as e:
-        print(f"[ERRORE INVIO MISURAZIONE] {e}")
+        print(f"[ERRORE] Registrazione sensore {id_sensore}: {e}")
 
-    time.sleep(INTERVALLO)
+    for i in range(ripetizioni):
+        dati = {
+            "tipo": TIPO_SENSORE,
+            "id_sensore": id_sensore,
+            "valore": round(random.uniform(20.0, 30.0), 2),  # temperatura in °C
+            "unita": "°C"
+        }
+
+        try:
+            response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
+            response.raise_for_status()
+            print(f"[OK] {id_sensore}: misurazione {i + 1} inviata")
+        except requests.RequestException as e:
+            print(f"[ERRORE] Invio misurazione {id_sensore}: {e}")
+
+        time.sleep(intervallo)
+
+
+# Avvia 3 sensori di temperatura in parallelo usando thread
+sensori_temperatura = [
+    ("temp001", "Sensore Temperatura 1", 0),
+    ("temp002", "Sensore Temperatura 2", 1),
+    ("temp003", "Sensore Temperatura 3", 2)
+]
+
+for id_sensore, descrizione, ritardo in sensori_temperatura:
+    threading.Thread(target=simula_sensore_temperatura, args=(id_sensore, descrizione, ritardo)).start()

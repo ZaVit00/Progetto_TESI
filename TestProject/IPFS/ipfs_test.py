@@ -1,81 +1,39 @@
+"""
+API Key: 6805b1a48e97f4a433bf
+API Secret: d0f3faa29d0acef0109fe95530cd7f3dacfc68b2e940c33890a5b605593cebe8
+JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJhYWY3YjI5Ny03NDZlLTQzN2ItOGExMy04YTU0ODQ3ZjUwMTUiLCJlbWFpbCI6InYuemF6YTExQHN0dWRlbnRpLnVuaWJhLml0IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjY4MDViMWE0OGU5N2Y0YTQzM2JmIiwic2NvcGVkS2V5U2VjcmV0IjoiZDBmM2ZhYTI5ZDBhY2VmMDEwOWZlOTU1MzBjZDdmM2RhY2ZjNjhiMmU5NDBjMzM4OTBhNWI2MDU1OTNjZWJlOCIsImV4cCI6MTc4MTM2MDE5NX0.FeL-mgm4bAa4UNMWoRhPpChIl_rJ6ElRIHvTm1VJP9M
+"""
+# Inserisci qui la tua JWT Key (consiglio: per produzione, usa variabili d'ambiente!)
+JWT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJhYWY3YjI5Ny03NDZlLTQzN2ItOGExMy04YTU0ODQ3ZjUwMTUiLCJlbWFpbCI6InYuemF6YTExQHN0dWRlbnRpLnVuaWJhLml0IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjY4MDViMWE0OGU5N2Y0YTQzM2JmIiwic2NvcGVkS2V5U2VjcmV0IjoiZDBmM2ZhYTI5ZDBhY2VmMDEwOWZlOTU1MzBjZDdmM2RhY2ZjNjhiMmU5NDBjMzM4OTBhNWI2MDU1OTNjZWJlOCIsImV4cCI6MTc4MTM2MDE5NX0.FeL-mgm4bAa4UNMWoRhPpChIl_rJ6ElRIHvTm1VJP9M"
+
+# Endpoint Pinata
+PINATA_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS"
+
 import json
 import requests
-""""
-# 1. Dizionario simile al merkle_paths reale
-dati_merkle_paths = {
-    "1025": {
-        "d": "01",
-        "h": ["abc123", "def456"]
-    },
-    "1026": {
-        "d": "10",
-        "h": ["ghi789", "xyz000"]
-    }
+
+# 1. Simula un dizionario Merkle Path
+merkle_path = {
+    "101": {"d": "01", "h": ["hashA", "hashB"]},
+    "102": {"d": "10", "h": ["hashC", "hashD"]}
 }
 
-# 2. Salviamo su file temporaneo
-nome_file = "merkle_paths_test.json"
-with open(nome_file, "w") as f:
-    json.dump(dati_merkle_paths, f)
+# 2. Scrivi file JSON
+file_name = "merkle_path.json"
+with open(file_name, "w") as f:
+    json.dump(merkle_path, f, indent=2)
 
-# 3. Aggiungiamo il file a IPFS via API
-with open(nome_file, "rb") as f:
-    files = {'file': f}
-    response = requests.post("http://127.0.0.1:5001/api/v0/add", files=files)
+# 3. Upload Pinata
+url = "https://api.pinata.cloud/pinning/pinFileToIPFS"
+headers = {"Authorization" : f"Bearer {JWT_KEY}"}
+files = {'file': (file_name, open(file_name, 'rb'))}
 
-# 4. Parsing della risposta per ottenere il CID
-cid = response.json()["Hash"]
-print(f"✅ CID ottenuto: {cid}")
+res = requests.post(url, headers=headers, files=files)
 
-# 5. Recuperiamo il contenuto via cat
-params = {"arg": cid}
-response_cat = requests.post("http://127.0.0.1:5001/api/v0/cat", params=params)
-contenuto = response_cat.content.decode()
-
-print("\n📦 Contenuto recuperato:")
-print(contenuto)
-
-
-"""""
-
-
-def visualizza_contenuto_file_cid():
-    # METODO PER VERIFICARE IL CONTENUTO DI UN FILE IDENTIFICATO DAL CID
-    import requests
-    cid = "QmZU6MZp2Y8FN5MVRqyzpgu2qfDFn2PzMNsFvHku1t7NLE"
-    params = {"arg": cid}
-    response = requests.post("http://127.0.0.1:5001/api/v0/cat", params=params)
-    print(response.content.decode())
-
-
-
-def visualizza_cid_nodo_locali():
-    """"
-        Prende e mi restituisce quali CID sono memorizzati nel nodo locale
-        """
-    response = requests.post("http://127.0.0.1:5001/api/v0/pin/ls", params={"type": "recursive"})
-    cids = response.json()
-    print(cids)
-
-def elimina_file():
-    # Lista dei CID da rimuovere
-    cid_da_rimuovere = [
-        "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn",
-        "QmUnkkGR4mCY72gh6Z8CgtHLSHhHZ7r1KXhdtmTRRKs5Kj",
-        "QmZU6MZp2Y8FN5MVRqyzpgu2qfDFn2PzMNsFvHku1t7NLE"
-    ]
-
-    # 1. Rimuovi ogni pin
-    for cid in cid_da_rimuovere:
-        response = requests.post("http://127.0.0.1:5001/api/v0/pin/rm", params={"arg": cid})
-        print(f"🗑️  Rimozione pin {cid}: {response.text}")
-
-    # 2. Esegui garbage collection
-    gc_response = requests.post("http://127.0.0.1:5001/api/v0/repo/gc")
-    print("\n♻️  Risultato garbage collection:")
-    print(gc_response.text)
-
-if __name__ == "__main__":
-    #visualizza_contenuto_file_cid()
-    visualizza_cid_nodo_locali()
-    #elimina_file()
+# 4. Risultato
+if res.status_code == 200:
+    cid = res.json()["IpfsHash"]
+    print(f"[OK] CID: {cid}")
+    print(f"Link gateway: https://gateway.pinata.cloud/ipfs/{cid}")
+else:
+    print(f"[ERRORE {res.status_code}] {res.text}")
