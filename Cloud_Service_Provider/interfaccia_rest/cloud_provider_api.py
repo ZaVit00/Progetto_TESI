@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from comuni.dati_modellati import DatiPayload
+from Classi_comuni.dati_modellati import DatiPayload
 
 app = FastAPI()
 

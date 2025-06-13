@@ -1,7 +1,10 @@
 from typing import List, Dict
 import json
-from comuni.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
-from comuni.costanti_comuni import  ID_BATCH_LOGICO
+from Classi_comuni.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
+from Classi_comuni.costanti_comuni import  ID_BATCH_LOGICO
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CostruttorePayload:
     """
@@ -28,8 +31,7 @@ class CostruttorePayload:
         self.hash_misurazioni.clear()
 
         #Ordina esplicitamente i risultati per id_misurazione
-        #key=lambda r: r["id_misurazione"] dice:
-        #"ordina usando il valore del campo id_misurazione come chiave di confronto".
+        #Ordina usando il valore del campo id_misurazione come chiave di confronto".
         risultati_ordinati = sorted(risultati_query, key=lambda r: r["id_misurazione"])
 
         # Batch viene preso dalla prima riga (già ordinata)
@@ -57,7 +59,7 @@ class CostruttorePayload:
                 self.hash_misurazioni.append(mis.to_hash())
 
             except Exception as e:
-                print(f"[ERRORE] Errore durante la creazione della misurazione: {e}")
+                logger.error(f"[ERRORE] Errore durante la creazione della misurazione: {e}")
 
     def get_foglie_hash(self) -> List[str]:
         """
@@ -70,7 +72,7 @@ class CostruttorePayload:
         if not self.hash_misurazioni:
             raise ValueError("Hash delle misurazioni non calcolate. Chiama prima estrai_dati_query.")
         # concatenazione delle liste di hash
-        # L'ultima foglia di hash è l'hash del batch
+        # L'ultima foglia di hash è hash del batch
         return self.hash_misurazioni + [self.hash_batch]
 
     def costruisci_payload(self, merkle_root: str) -> DatiPayload:

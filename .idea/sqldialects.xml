@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/../AppData/Local/Temp/MicrosoftEdgeDownloads/422536a4-82d0-4ce1-8e7c-f56a5f13abae/gestore_db_refactor.py" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/Cloud_Service_Provider/Database/SQL_script/script.sql" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/Produttore/database/SQL_script/script.sql" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/Produttore/database/gestore_db.py" dialect="GenericSQL" />

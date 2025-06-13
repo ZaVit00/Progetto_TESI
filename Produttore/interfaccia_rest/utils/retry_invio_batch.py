@@ -1,6 +1,10 @@
 import asyncio
 import json
+import logging
 from interfaccia_rest.utils.fog_api_utils import gestisci_batch_completato, invia_payload
+
+# Logger locale
+logger = logging.getLogger(__name__)
 
 async def reinvia_batch_gia_pronti(db, endpoint_cloud: str, intervallo: int = 60):
     """
@@ -9,19 +13,19 @@ async def reinvia_batch_gia_pronti(db, endpoint_cloud: str, intervallo: int = 60
     """
     await asyncio.sleep(10)  # primo check rapido
     while True:
-        print("[DEBUG] Controllo batch già pronti per invio...")
-        batch_json_list = db.get_payload_batch_non_inviati()
-        for p in batch_json_list:
+        logger.info("Controllo batch già pronti per invio...")
+        batch_payload_list = db.get_payload_batch_non_inviati()
+        for p in batch_payload_list:
             try:
                 payload_dict = json.loads(p)
                 id_batch = payload_dict["batch"]["id_batch"]
                 if invia_payload(payload_dict, endpoint_cloud):
-                    print(f"[INFO] Batch {id_batch} reinviato correttamente.")
+                    logger.debug(f"Batch {id_batch} reinviato correttamente.")
                 else:
-                    print(f"[AVVISO] Reinvio fallito per batch {id_batch}.")
-                    break  # interrompe il ciclo se il cloud è giù
+                    logger.warning(f"Reinvio fallito per batch {id_batch}.")
+                    break  # interrompe il ciclo se il cloud è down
             except Exception as e:
-                print(f"[ERRORE] Errore durante la conversione/invio di un batch: {e}")
+                logger.error(f"Errore durante la conversione/invio di un batch: {e}")
         await asyncio.sleep(intervallo)
 
 async def recupera_batch_incompleti(db, endpoint_cloud: str, intervallo: int = 300):
@@ -31,15 +35,14 @@ async def recupera_batch_incompleti(db, endpoint_cloud: str, intervallo: int = 3
     """
     await asyncio.sleep(20)  # delay iniziale diverso
     while True:
-        print("[DEBUG] Controllo batch incompleti (manca Merkle Root o Payload)...")
+        logger.info("Controllo batch incompleti (manca Merkle Root o Payload)...")
         id_batch_list = db.estrai_batch_incompleti()
-        #print(f" [DEBUG] {id_batch_list}")
         for id_batch in id_batch_list:
             try:
-                print(f"[INFO] Tentativo di rielaborazione batch ID {id_batch}...")
+                logger.debug(f"Tentativo di rielaborazione batch ID {id_batch}...")
                 gestisci_batch_completato(id_batch, db, endpoint_cloud)
             except Exception as e:
-                print(f"[ERRORE] Errore durante la rielaborazione del batch {id_batch}: {e}")
+                logger.error(f"Errore durante la rielaborazione del batch {id_batch}: {e}")
         await asyncio.sleep(intervallo)
 
 async def retry_invio_batch_periodico(db, endpoint_cloud: str):

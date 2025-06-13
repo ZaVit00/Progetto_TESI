@@ -1,6 +1,8 @@
 from typing import List, Optional, Dict
 from hash_utils import Hashing
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ProofCompatta:
     # Classe per la rappresentazione compatta di una Merkle Proof
@@ -24,21 +26,19 @@ class MerkleTree:
         self.root: Optional[str] = None
 
     def _aggiorna_proofs(self, gruppo_sx: List[int], gruppo_dx: List[int],
-                         elem_sx: str, elem_dx: str, verbose: bool = False) -> None:
+                         elem_sx: str, elem_dx: str) -> None:
         if self.proofs is None:
             return
         for idx in gruppo_sx:
             self.proofs[idx].append_direzione("0")  # 0 = aggiungi fratello a destra
             self.proofs[idx].hash_fratelli.append(elem_dx)
-            if verbose:
-                print(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello DESTRO {elem_dx}\n")
+            logger.debug(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello DESTRO {elem_dx}\n")
         for idx in gruppo_dx:
             self.proofs[idx].append_direzione("1")  # 1 = fratello a sinistra
             self.proofs[idx].hash_fratelli.append(elem_sx)
-            if verbose:
-                print(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello SINISTRO {elem_sx}\n")
+            logger.debug(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello SINISTRO {elem_sx}\n")
 
-    def costruisci_albero(self, mappa_id: Optional[List[int]] = None, verbose: bool = True) -> str:
+    def costruisci_albero(self, mappa_id: List[int]) -> str:
         if not self.foglie_hash:
             raise ValueError("L'albero non può essere costruito senza foglie.")
         n = len(self.foglie_hash)
@@ -56,16 +56,14 @@ class MerkleTree:
         indici_correnti = [[id_logico] for id_logico in mappa_id]
         livello_corrente = list(self.foglie_hash)
 
-        if verbose:
-            print("🌱 Hash delle foglie iniziali:")
-            for i, h in enumerate(self.foglie_hash):
-                print(f"  Foglia {i}: {h}")
+        logger.info("🌱 Hash delle foglie iniziali:")
+        for i, h in enumerate(self.foglie_hash):
+            logger.debug(f"  Foglia {i}: {h}")
 
         livello = 0
         while len(livello_corrente) > 1:
-            if verbose:
-                print(f"\n🧱 Livello {livello} (len={len(livello_corrente)})")
-                print(f"  Indici correnti: {indici_correnti}")
+            logger.debug(f"\n🧱 Livello {livello} (len={len(livello_corrente)})")
+            logger.debug(f"  Indici correnti: {indici_correnti}")
             nuovo_livello = []
             nuovi_indici = []
 
@@ -74,16 +72,17 @@ class MerkleTree:
                 elem_dx = livello_corrente[i + 1]
                 elem_padre = Hashing.hash_concat(elem_sx, elem_dx)
                 nuovo_livello.append(elem_padre)
-                if verbose:
-                    print(f"    Hash sinistro: {elem_sx}")
-                    print(f"    Hash destro  : {elem_dx}")
-                    print(f"    Hash padre   : {elem_padre}")
-
                 gruppo_sx = indici_correnti[i]
                 gruppo_dx = indici_correnti[i + 1]
-                if verbose:
-                    print(f"  Gruppo {gruppo_sx} + {gruppo_dx}")
-                self._aggiorna_proofs(gruppo_sx, gruppo_dx, elem_sx, elem_dx, verbose)
+
+                logger.debug(
+                    f"Hash Sinistro:   {elem_sx}\n"
+                    f"Hash Destro:     {elem_dx}\n"
+                    f"Hash Padre:      {elem_padre}\n"
+                    f"Gruppo SX:       {gruppo_sx}\n"
+                    f"Gruppo DX:       {gruppo_dx}\n"
+                )
+                self._aggiorna_proofs(gruppo_sx, gruppo_dx, elem_sx, elem_dx)
                 nuovi_indici.append(gruppo_sx + gruppo_dx)
 
             indici_correnti = list(nuovi_indici)

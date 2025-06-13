@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 class MisurazioneInIngresso(BaseModel, ABC):
     """
     Classe base astratta per tutte le misurazioni inviate dai microcontrollori.
-    Contiene solo i dati comuni a ogni misurazione_in_ingresso.
+    Contiene solo i dati Classi_comuni a ogni misurazione_in_ingresso.
     """
     id_sensore: str = Field(..., description="Identificativo univoco del sensore")
 
