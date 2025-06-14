@@ -48,49 +48,56 @@ class GestoreDatabase:
             logger.error(f"QUERY - INSERIMENTO SENSORE] {e}")
             return False
 
-    def inserisci_misurazione(self, id_sensore: str, dati: dict) -> tuple[bool, int | None]:
+    def inserisci_misurazione(self, id_sensore: str, dati: dict) -> bool:
         """
         Inserisce una misurazione_in_ingresso associata al batch attivo.
         Se non esiste un batch non completato, ne crea uno.
-        Restituisce (True, id_batch_chiuso) se tutto va a buon fine,
-        altrimenti (False, None).
+        La misurazione viene accettata solo se il sensore esiste.
+        Restituisce True se tutto va a buon fine, altrimenti False.
         """
-        id_batch_chiuso = None
         try:
             cursor = self.conn.cursor()
+            # Controllo preventivo: il sensore deve esistere
+            cursor.execute(query.VERIFICA_ESISTENZA_SENSORE, (id_sensore,))
+            #Se il sensore non è stato ancora registrato, nessuna riga viene restituita (None in Python).
+            if cursor.fetchone() is None:
+                logger.warning(f"[MISURAZIONE RIFIUTATA] Sensore '{id_sensore}' non registrato.")
+                return False
+
+            # Recupera o crea un nuovo batch attivo
             cursor.execute(query.BATCH_ATTIVO)
             risultato = cursor.fetchone()
-
             if risultato:
+                # esiste un batch attivo
                 id_batch = risultato["id_batch"]
                 num_misurazione_attuale = risultato["numero_misurazioni"]
             else:
+                # devo creare un batch nuovo
                 id_batch = self._crea_batch()
                 num_misurazione_attuale = 0
 
+            # creazione dati misurazione
             json_dati = json.dumps(dati)
             timestamp_locale = datetime.now().isoformat()
-
-            cursor.execute(query.INSERISCI_MISURAZIONE,
+            cursor.execute(
+                query.INSERISCI_MISURAZIONE,
                 (id_sensore, id_batch, json_dati, timestamp_locale)
             )
 
-            nuovo_num_misurazione = num_misurazione_attuale + 1
-            cursor.execute(
-                query.AGGIORNA_BATCH_NUM_MISURAZIONI,
-                (nuovo_num_misurazione, id_batch)
-            )
-
-            if nuovo_num_misurazione >= self.soglia_batch:
+            # Aggiorna numero misurazioni nel batch
+            nuovo_num = num_misurazione_attuale + 1
+            cursor.execute(query.AGGIORNA_BATCH_NUM_MISURAZIONI, (nuovo_num, id_batch))
+            # Chiudi batch se soglia raggiunta
+            if nuovo_num >= self.soglia_batch:
                 cursor.execute(query.CHIUDI_BATCH, (id_batch,))
-                id_batch_chiuso = id_batch
+                logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
 
+            # Conferma tutte le modifiche
             self.conn.commit()
-            return True, id_batch_chiuso
-
+            return True
         except sqlite3.Error as e:
-            logger.error(f"QUERY - INSERIMENTO MISURAZIONE] {e}")
-            return False, None
+            logger.error(f"[QUERY - INSERIMENTO MISURAZIONE] {e}")
+            return False
 
     def _crea_batch(self) -> int:
         """
@@ -177,27 +184,27 @@ class GestoreDatabase:
             logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
 
-    def get_payload_batch_non_inviati(self) -> list[dict]:
+    def ottieni_payload_batch_non_inviati(self) -> list[dict]:
         """
         Restituisce tutti i batch completati (completato = 1) ma non ancora inviati (inviato = 0).
         Se la connessione al database non è disponibile, restituisce una lista vuota
         senza sollevare eccezioni. Metodo che viene utilizzato dalla classe che gestisce
         il reinvio dei batch completati. Essendo esecuzioni concorrenti la connessione al database
-        potrebbe non essere stata ancora stabilita
+        potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo
         """
         if not self.conn:
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
             return []
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.BATCH_NON_INVIATI)
+            cursor.execute(query.BATCH_NON_INVIATI_COMPLETATI_ELABORABILI)
             risultati = cursor.fetchall()
             return [riga["payload_json"] for riga in risultati]
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
 
-    def segna_batch_errore(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
+    def imposta_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
         """
         Segna un batch come impossibile da elaborare in seguito a errore grave
         """
@@ -209,22 +216,19 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - SEGNA BATCH ERRORE] {e}")
 
-    def estrai_batch_incompleti(self) -> List[int]:
+    def estrai_sensori_non_confermati(self) -> list[dict]:
         """
-        Restituisce gli ID dei batch completati ma interrotti (mancano Merkle Root e payload),
-        che possono essere rielaborati perché ancora marcati come elaborabili.
+        Estrae i sensori registrati localmente che non hanno ancora ricevuto
+        conferma di registrazione da parte del cloud provider.
+        Restituisce una lista di dizionari con id_sensore e descrizione.
         """
-        if not self.conn:
-            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
-            return []
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.BATCH_ELABORALABILI_NON_COMPLETATI)
-            #estrai l'id del batch elaborabile, ma senza merkle root e payload JSON
-            #Gestisci casi in cui si verificano eccezioni con il database
-            return [riga["id_batch"] for riga in cursor.fetchall()]
+            cursor.execute(query.SENSORI_NON_RICEVUTI)
+            righe = cursor.fetchall()
+            return [{"id_sensore": r["id_sensore"], "descrizione": r["descrizione"]} for r in righe]
         except sqlite3.Error as e:
-            logger.error(f"QUERY - BATCH INCOMPLETI] {e}")
+            logger.error(f"[DB] Errore durante l'estrazione dei sensori non confermati: {e}")
             return []
 
 
@@ -246,6 +250,7 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - SVUOTAMENTO TABELLE] {e}")
 
+    #DEBUG ONLY
     def drop_tabelle(self):
         """
         Elimina tutte le tabelle del database.
@@ -269,3 +274,5 @@ class GestoreDatabase:
                 logger.info("Connessione al database chiusa correttamente.")
         except Exception as e:
             logger.error(f"Errore durante la chiusura della connessione al database: {e}")
+
+

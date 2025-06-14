@@ -8,10 +8,9 @@ import asyncio
 # Import dei modelli di misurazione_in_ingresso specifici
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
 from costanti_produttore import SOGLIA_BATCH, ENDPOINT_CLOUD_STORAGE
-from sensore_base import Sensore
+from entita.sensore_base import Sensore
 from database.gestore_db import GestoreDatabase
-from fog_api_utils import gestisci_batch_completato
-from retry_invio_batch import retry_invio_batch_periodico
+from retry_invio_dati_batch import retry_invio_batch_periodico
 
 # Configurazione globale del logging
 logging.basicConfig(
@@ -39,7 +38,7 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/sensori")
 async def registra_sensore(sensore: Sensore):
     """
-    Endpoint per la registrazione manuale di un sensore.
+    Endpoint per la registrazione di un sensore.
     """
     if not db.inserisci_dati_sensore(sensore.id_sensore, sensore.descrizione):
         logger.error(f"Errore nella registrazione del sensore {sensore.id_sensore}")
@@ -64,32 +63,28 @@ MisurazioneInIngresso = Annotated[Union[MisurazioneInIngressoJoystick, Misurazio
 @app.post("/misurazioni")
 async def ricevi_misurazione(misurazione: MisurazioneInIngresso):
     """
-    Endpoint per ricevere e salvare una misurazione_in_ingresso da un sensore registrato.
-    Restituisce anche l'ID del batch chiuso, se la soglia è stata raggiunta.
+    Endpoint per ricevere e salvare una misurazione proveniente da un sensore registrato.
+    La misurazione viene associata al batch attivo o ne crea uno nuovo se necessario.
     """
-    #estraggo i dati effettivi dalla misurazione separandoli dai metadata ricevuto
     id_sensore = misurazione.id_sensore
     dati = misurazione.estrai_dati_misurazione()
     logger.debug(f"Misurazione ricevuta dal sensore {id_sensore}: {dati}")
-    successo_operazione, id_batch_chiuso = (
-        db.inserisci_misurazione(id_sensore=id_sensore,dati=dati))
 
+    successo_operazione = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
     if not successo_operazione:
         logger.error("Errore nella memorizzazione della misurazione", exc_info=True)
-        raise HTTPException(status_code=500, detail="Errore nella memorizzazione della misurazione.")
-
-    # Verifica che sia stato chiuso il batch dopo l'inserimento della misurazione
-    if id_batch_chiuso is not None:
-        logger.debug(f"Batch completato: ID {id_batch_chiuso}. Avvio elaborazione del batch.")
-        gestisci_batch_completato(id_batch_chiuso, db, ENDPOINT_CLOUD_STORAGE)
-
+        raise HTTPException(
+            status_code=500,
+            detail="Errore nella memorizzazione della misurazione."
+        )
     risposta = {
         "status": "misurazione in ingresso registrata",
         "sensore": id_sensore,
-        "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y")
+        "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y"),
+        "timestamp_iso": datetime.now().isoformat()
     }
-
     return risposta
+
 
 def main():
     uvicorn.run(app, host="127.0.0.1", port=8000)

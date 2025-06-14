@@ -105,12 +105,11 @@ class MerkleTree:
         return self.root
 
     @staticmethod
-    def verifica_singola_foglia(foglia_hash: str, path: Dict[str, List[str]], root_attesa: str) -> bool:
+    def verifica_singola_foglia(foglia_hash: str, proof: ProofCompatta, root_attesa: str) -> bool:
         # Verifica l'integrità di una singola foglia usando il Merkle Path compatto
-        direzioni = path["d"]
-        hash_fratelli = path["h"]
+        direzioni = proof.get_direzione()
+        hash_fratelli = proof.get_hash_fratelli()
         h = foglia_hash
-
         for direzione, fratello in zip(direzioni, hash_fratelli):
             if direzione == "1":  # sinistra
                 h = Hashing.hash_concat(fratello, h)

@@ -1,8 +1,8 @@
 import logging
 import uvicorn
 from fastapi import FastAPI
-from Classi_comuni.dati_modellati import DatiPayload
-from utils.costanti_provider import FOG_NODE_ENDPOINT_CONFERMA
+from entita.dati_modellati import DatiPayload
+
 app = FastAPI()
 # Configurazione globale del logging
 logging.basicConfig(

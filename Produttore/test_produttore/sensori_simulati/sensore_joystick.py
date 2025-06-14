@@ -3,11 +3,10 @@ import random
 import time
 import requests
 
+ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
+ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
-TIPO_SENSORE = "joystick"
 def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0, ripetizioni: int = 100, intervallo: float = 1.0):
-    ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
-    ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
     time.sleep(ritardo_iniziale)
     try:
@@ -19,7 +18,6 @@ def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 
 
     for i in range(ripetizioni):
         dati = {
-            "tipo" : TIPO_SENSORE,
             "id_sensore": id_sensore.upper(),
             "x": round(random.uniform(-1, 1), 2),
             "y": round(random.uniform(-1, 1), 2),

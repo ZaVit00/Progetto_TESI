@@ -1,7 +1,7 @@
 from typing import List, Dict
 import json
-from Classi_comuni.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
-from Classi_comuni.costanti_comuni import  ID_BATCH_LOGICO
+from entita.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
+from entita.costanti_comuni import  ID_BATCH_LOGICO
 import logging
 
 logger = logging.getLogger(__name__)

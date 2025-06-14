@@ -39,10 +39,9 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
         except Exception as e:
             messaggio_errore = f"Creazione Merkle Tree fallita: {e}"
             logger.error(messaggio_errore)
-            db.segna_batch_errore(id_batch_chiuso, messaggio_errore,
-                                  tipo_errore=costanti_produttore.ERRORE_MERKLE_INVALIDO)
+            db.imposta_batch_errore_elaborazione(id_batch_chiuso, messaggio_errore,
+                                                 tipo_errore=costanti_produttore.ERRORE_MERKLE_INVALIDO)
             return
-
         try:
             db.aggiorna_merkle_root_batch(id_batch_chiuso, merkle_root)
         except Exception as e:
@@ -61,8 +60,8 @@ def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoin
         except Exception as e:
             messaggio_errore = f"Costruzione del payload fallita: {e}"
             logger.error(messaggio_errore)
-            db.segna_batch_errore(id_batch_chiuso, messaggio_errore,
-                                  tipo_errore=costanti_produttore.ERRORE_PAYLOAD_INVALIDO)
+            db.imposta_batch_errore_elaborazione(id_batch_chiuso, messaggio_errore,
+                                                 tipo_errore=costanti_produttore.ERRORE_PAYLOAD_INVALIDO)
             return
 
         try:
