@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional, Dict
 from hash_utils import Hashing
 import logging
@@ -94,10 +95,26 @@ class MerkleTree:
         return self.root
 
     def get_proofs(self) -> dict[int, ProofCompatta]:
-        # Restituisce i Merkle Path già strutturati per l'invio
+        """
+        Restituisce il dizionario completo dei Merkle Path compatti:
+        - chiavi: ID delle misurazioni
+        - valori: {'direzioni': str, 'hash_fratelli': list[str]}
+        """
         if self.proofs is None:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
         return self.proofs
+
+    def get_proofs_JSON(self) -> str:
+        """
+        Restituisce una stringa JSON formattata del dizionario dei Merkle Path compatti.
+        Utile per la memorizzazione o l'invio su IPFS/Filebase.
+        """
+        return json.dumps(
+            self.get_proofs(),
+            sort_keys=True,  # ordine prevedibile delle chiavi
+            separators=(",", ":"),  # compatto ma leggibile
+            indent=2  # indentazione per leggibilità
+        )
 
     def get_root(self) -> str:
         if self.root is None:

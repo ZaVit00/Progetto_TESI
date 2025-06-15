@@ -5,19 +5,29 @@ import costanti_produttore
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree, ProofCompatta
 from costruttore_payload import CostruttorePayload
+from misurazioni_in_ingresso import MisurazioneInIngresso
 
 # Logger del modulo
 logger = logging.getLogger(__name__)
 
-def gestisci_batch_completato(id_batch_chiuso: int, db: GestoreDatabase, endpoint_cloud: str) -> None:
+
+def gestisci_misurazione(id_sensore : str, dati : MisurazioneInIngresso, db : GestoreDatabase):
+    """
+    db.inserisci_misurazione(id_sensore=id_sensore, dati=dati):
+        return True
+    return False
+    """
+
+def gestisci_batch_completo(id_batch_chiuso: int, db: GestoreDatabase, endpoint_cloud: str) -> None:
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
     1. Estrae le misurazioni associate dal DB.
-    2. Costruisce il payload.
-    3. Calcola la Merkle Root.
-    4. Aggiorna la root nel DB.
-    5. Salva il payload come JSON nel DB per debug o reinvio futuro.
-    6. Converte il payload in dizionario e lo invia al cloud.
+    2. Calcola la Merkle Root e ottiene il merkle path
+    3. Salva i merkle path su FILEBASE
+    4. Aggiorna la root e i merkle path su database per debug futuri
+    5. Costruisce il payload JSON da inviare al cloud e lo salva in DB
+    6. Tenta l'invio al cloud del payload. Se l'invio fallisce, il payload rimane
+       in DB e viene effettuato un nuovo tentativo a intervalli periodici.
     """
     try:
         dati_query = db.estrai_dati_batch_misurazioni(id_batch_chiuso)
@@ -98,7 +108,7 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
 
 def debug_stampa_proofs_json(proofs: dict[int, ProofCompatta], verbose: bool = False) -> None:
     """
-    METODO DEBUG
+    METODO [DEBUG]
     Stampa compatta delle Merkle Proofs in formato JSON leggibile.
     """
     if not verbose:

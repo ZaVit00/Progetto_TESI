@@ -21,14 +21,14 @@ CREA_TABELLA_BATCH = """
         id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp_creazione TEXT NOT NULL,
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
-        completato INTEGER NOT NULL DEFAULT 0,
+        completo INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
-        elaborabile BOOLEAN DEFAULT 1,
-        messaggio_errore TEXT DEFAULT NULL,
-        tipo_errore TEXT DEFAULT  NULL,
+        elaborabile INTEGER DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
-        payload_json TEXT DEFAULT NULL
-        
+        cid_merkle_path TEXT DEFAULT NULL,
+        payload_json TEXT DEFAULT NULL,
+        messaggio_errore TEXT DEFAULT NULL,
+        tipo_errore TEXT DEFAULT  NULL
     )
 """
 
@@ -72,10 +72,10 @@ AGGIORNA_BATCH_NUM_MISURAZIONI = """
     WHERE id_batch = ?
 """
 
-BATCH_ATTIVO = """
+OTTIENI_BATCH_ATTIVO = """
     SELECT id_batch, numero_misurazioni
     FROM batch
-    WHERE completato = 0
+    WHERE completo = 0
     ORDER BY id_batch DESC
     LIMIT 1
 """
@@ -93,14 +93,14 @@ AGGIORNA_PAYLOAD_JSON_BATCH = """
 """
 CHIUDI_BATCH = """
     UPDATE batch
-    SET completato = 1
+    SET completo = 1
     WHERE id_batch = ?
 """
 
 IMPOSTA_BATCH_CONFERMA_RICEZIONE = """
     UPDATE batch
     SET conferma_ricezione = 1
-    WHERE id_batch = ? AND completato = 1
+    WHERE id_batch = ? AND completo = 1
 """
 
 ELIMINA_MISURAZIONI = """
@@ -108,7 +108,7 @@ ELIMINA_MISURAZIONI = """
 """
 
 CREA_BATCH = """
-    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completato, conferma_ricezione)
+    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completo, conferma_ricezione)
     VALUES (?, 0, 0, 0)
 """
 
@@ -133,7 +133,7 @@ ovvero, non recuperabili dal sistema (richiedono intervento umano)
 """
 # 0 = condizione di errore grave
 # 1 = Nessun errore
-IMPOSTA_ERRORE_ELABORAZIONE_BATCH = """
+AGGIORNA_ERRORE_ELABORAZIONE_BATCH = """
     UPDATE batch
     SET elaborabile = 0,
         messaggio_errore = ?,
@@ -141,28 +141,32 @@ IMPOSTA_ERRORE_ELABORAZIONE_BATCH = """
     WHERE id_batch = ?;
 """
 
+AGGIORNA_CID_MERKLE_PATH_BATCH = """
+    UPDATE batch SET cid_merkle_path = ?
+    WHERE id_batch = ?
+"""
 
-
-BATCH_NON_ELABORABILI = """
+OTTIENI_BATCH_NON_ELABORABILI = """
     SELECT id_batch, tipo_errore, messaggio_errore, timestamp_creazione
     FROM batch
     WHERE elaborabile = 0
     ORDER BY id_batch;
 """
 """
-Estrae i batch completati, elaborabili, non ancora inviati al cloud (conferma_ricezione = 0),
-che risultano elaborabili e per cui è già stata generata la Merkle Root e il payload_json.
+Estrae i batch completi (hanno raggiunto la soglia), elaborabili, non ancora inviati al cloud 
+(conferma_ricezione = 0),
+che risultano elaborabili e per cui NON E' stata generata la Merkle Root e il payload_json.
 Inoltre, si assicura che tutte le misurazioni associate siano collegate a sensori 
 già confermati dal cloud (sensore.conferma_ricezione = 1), così da evitare 
-violazioni di integrità referenziale durante l'invio.
-La query restituisce al massimo 6 batch ordinati per ID crescente.
+violazioni di integrità referenziale durante la memorizzazione del cloud.
+La query restituisce al massimo 6 batch ordinati per ID batch crescente.
 """
-BATCH_NON_INVIATI_COMPLETATI_ELABORABILI = """
-    SELECT DISTINCT b.*
+OTTIENI_BATCH_COMPLETI_DA_ELABORARE = """
+    SELECT DISTINCT b.id_batch
     FROM batch b
     JOIN misurazione m ON b.id_batch = m.id_batch
     JOIN sensore s ON m.id_sensore = s.id_sensore
-    WHERE b.completato = 1
+    WHERE b.completo = 1
     AND b.conferma_ricezione = 0
     AND b.elaborabile = 1
     AND b.merkle_root IS NOT NULL AND b.merkle_root != ''
@@ -171,23 +175,14 @@ BATCH_NON_INVIATI_COMPLETATI_ELABORABILI = """
     ORDER BY b.id_batch,
     LIMIT 6;
 """
-
-"""
-Riconosce i batch che sono stati chiusi ma, 
-per un errore durante la creazione del Merkle Tree o del payload JSON
-(es. crash, errore di hash, eccezione), non sono stati elaborati correttamente né inviati.
-Considerato come errore di run-time.
-
-QUERY PREVISTA PER EFFETTUARE UN TENTATIVO DI RIELABORAZIONE
-DI BATCH CON ERRORI BLOCCANTI. ATTUALMENTE NON UTILIZZATA NEL SISTEMA.
-Un eventuale recupero dovrà essere gestito manualmente o con tool dedicati.
-"""
-BATCH_NON_ELABORABILI_COMPLETATI = """
-    SELECT id_batch
+# sensore confermato dal cloud = 1
+# sensore non confermato dal cloud = 0
+OTTIENI_PAYLOAD_BATCH_NON_INVIATI = """
+    SELECT id_batch, payload_json   
     FROM batch
-    WHERE completato = 1
-      AND conferma_ricezione = 0
-      AND elaborabile = 0
-      AND merkle_root IS NULL
-      AND payload_json IS NULL;
+    WHERE payload_json IS NOT NULL
+    AND conferma_ricezione = 0
+    AND elaborabile = 1
+    ORDER BY id_batch,
+    LIMITI 6
 """

@@ -69,7 +69,6 @@ async def ricevi_misurazione(misurazione: MisurazioneInIngresso):
     id_sensore = misurazione.id_sensore
     dati = misurazione.estrai_dati_misurazione()
     logger.debug(f"Misurazione ricevuta dal sensore {id_sensore}: {dati}")
-
     successo_operazione = db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
     if not successo_operazione:
         logger.error("Errore nella memorizzazione della misurazione", exc_info=True)

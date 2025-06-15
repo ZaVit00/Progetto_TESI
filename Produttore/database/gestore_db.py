@@ -7,7 +7,13 @@ from typing import List
 from database import query
 
 logger = logging.getLogger(__name__)
-
+"""
+Classe che gestisce tutte le operazioni sul database locale SQLite.
+Tutti i metodi catturano internamente le eccezioni e restituiscono
+True/False o una lista vuota in caso di errore.
+Il chiamante è responsabile nel controllare i valori restituiti.
+Tutti gli errori vengono loggati.
+"""
 class GestoreDatabase:
     # Trova la directory root del progetto (2 livelli sopra gestore_db.py)
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -65,7 +71,7 @@ class GestoreDatabase:
                 return False
 
             # Recupera o crea un nuovo batch attivo
-            cursor.execute(query.BATCH_ATTIVO)
+            cursor.execute(query.OTTIENI_BATCH_ATTIVO)
             risultato = cursor.fetchone()
             if risultato:
                 # esiste un batch attivo
@@ -90,6 +96,9 @@ class GestoreDatabase:
             # Chiudi batch se soglia raggiunta
             if nuovo_num >= self.soglia_batch:
                 cursor.execute(query.CHIUDI_BATCH, (id_batch,))
+                #quando il batch è stato chiuso questo viene marcato come completo
+                # il task di invio periodico elabora tutti i batch completo
+                # che possono essere elaborati sono stati ancora elaborati
                 logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
 
             # Conferma tutte le modifiche
@@ -184,25 +193,64 @@ class GestoreDatabase:
             logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
 
+
+    def aggiorna_cid_merkle_path(self, id_batch: int, cid: str):
+        """
+        Aggiorna il campo 'cid_merkle_path' nella tabella 'batch' per un determinato batch.
+        Questo metodo viene utilizzato per associare al batch specificato il CID IPFS
+        corrispondente al file JSON dei Merkle Path, precedentemente caricato su Filebase.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.AGGIORNA_CID_MERKLE_PATH_BATCH, (id_batch, cid))
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
+            return False
+
     def ottieni_payload_batch_non_inviati(self) -> list[dict]:
         """
-        Restituisce tutti i batch completati (completato = 1) ma non ancora inviati (inviato = 0).
-        Se la connessione al database non è disponibile, restituisce una lista vuota
-        senza sollevare eccezioni. Metodo che viene utilizzato dalla classe che gestisce
-        il reinvio dei batch completati. Essendo esecuzioni concorrenti la connessione al database
-        potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo
+        Metodo che viene utilizzato dalla classe che gestisce
+        il reinvio dei batch completi, il cui payload JSON è pronto per l'invio.
+        Restituisce solo i payload dei batch completi (completo = 1)
+        ma non ancora inviati (inviato = 0). Essendo esecuzioni concorrenti la connessione al database
+        potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo.
+        Se la connessione non è stata stabilita restituisce una lista vuota.
         """
         if not self.conn:
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
             return []
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.BATCH_NON_INVIATI_COMPLETATI_ELABORABILI)
+            cursor.execute(query.OTTIENI_PAYLOAD_BATCH_NON_INVIATI)
             risultati = cursor.fetchall()
             return [riga["payload_json"] for riga in risultati]
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
+
+    def ottieni_id_batch_completi(self) -> list[dict]:
+        """
+        Restituisce tutti i batch completi (completi = 1) che necessitano di elaborazione:
+        aggregazione, creazione merkle tree ecc e che non sono ancora stati inviati (inviato = 0).
+        Se la connessione al database non è disponibile, restituisce una lista vuota
+        senza sollevare eccezioni. Metodo che viene utilizzato dalla classe che gestisce
+        la elaborazione periodica dei batch completi.
+        """
+        if not self.conn:
+            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
+            return []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_BATCH_COMPLETI_DA_ELABORARE)
+            risultati = cursor.fetchall()
+            righe = cursor.fetchall()
+            return [dict(riga) for riga in righe]
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
+            return []
+
 
     def imposta_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
         """
@@ -210,7 +258,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.IMPOSTA_ERRORE_ELABORAZIONE_BATCH, (messaggio_errore, tipo_errore, id_batch))
+            cursor.execute(query.AGGIORNA_ERRORE_ELABORAZIONE_BATCH, (messaggio_errore, tipo_errore, id_batch))
             self.conn.commit()
             logger.debug(f"Batch {id_batch} marcato come non elaborabile. Errore: {tipo_errore}")
         except sqlite3.Error as e:

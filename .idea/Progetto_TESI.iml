@@ -18,10 +18,11 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test_produttore" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test_produttore/sensori_simulati" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Classi_comuni" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore/ipfs" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="TestProject" />
+    <orderEntry type="module" module-name="PythonProject" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />

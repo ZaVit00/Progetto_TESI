@@ -1,7 +1,5 @@
 import asyncio
 import logging
-from typing import Any
-
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import invia_payload
 logger = logging.getLogger(__name__)
