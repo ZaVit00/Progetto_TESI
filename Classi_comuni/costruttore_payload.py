@@ -1,6 +1,6 @@
 from typing import List, Dict
 import json
-from entita.dati_modellati import DatiBatch, DatiPayload, DatiMisurazione
+from entita.modelli_dati import DatiBatch, DatiPayload, DatiMisurazione
 from entita.costanti_comuni import  ID_BATCH_LOGICO
 import logging
 
@@ -29,11 +29,9 @@ class CostruttorePayload:
         """
         self.misurazioni.clear()
         self.hash_misurazioni.clear()
-
         #Ordina esplicitamente i risultati per id_misurazione
         #Ordina usando il valore del campo id_misurazione come chiave di confronto".
         risultati_ordinati = sorted(risultati_query, key=lambda r: r["id_misurazione"])
-
         # Batch viene preso dalla prima riga (già ordinata)
         prima_riga = risultati_ordinati[0]
         self.batch = DatiBatch(

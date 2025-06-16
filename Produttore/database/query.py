@@ -1,12 +1,10 @@
+# Abilita i vincoli di integrità referenziale in SQLite (obbligatorio per usare FOREIGN KEY)
 PRAGMA_FK = "PRAGMA foreign_keys = ON"
-"""
-Conferma_ricezione: 0 → tutti i sensori appena registrati sono considerati non ancora confermati.
-Questo campo sarà aggiornato a 1 (TRUE) solo dopo conferma ricevuta dal cloud che il sensore è stato
-memorizzato correttamente. Se un batch contiene delle misurazioni di sensori non ancora confermati dal cloud
-(significa che non sono stati registrati nel cloud per problemi di quest'ultimo, allora i batch devono essere
-trattenuti in locale per evitare vincoli di integrità referenziale. Inoltre, i dati del sensore devono essere
-inviati prima di qualsiasi altra misurazione proprio per problemi di foreign key
-"""
+
+# Crea la tabella dei sensori registrati localmente.
+# Il campo `conferma_ricezione` indica se il sensore è stato confermato dal cloud provider (0 = no, 1 = sì).
+# È fondamentale per evitare problemi di integrità referenziale: se un sensore non è confermato,
+# le sue misurazioni non possono essere mandate al cloud.
 CREA_TABELLA_SENSORE = """
     CREATE TABLE IF NOT EXISTS sensore (
         id_sensore TEXT PRIMARY KEY,
@@ -16,6 +14,14 @@ CREA_TABELLA_SENSORE = """
     )
 """
 
+# Crea la tabella dei batch. Ogni batch raccoglie un gruppo di misurazioni.
+# completo: 1 = batch chiuso, 0 = ancora in raccolta.
+# conferma_ricezione: 1 = batch confermato dal cloud, 0 = ancora in locale.
+# merkle_root: radice Merkle calcolata per le misurazioni.
+# cid_merkle_path: riferimento su IPFS ai Merkle Path.
+# payload_json: JSON aggregato da inviare al cloud.
+# elaborabile: 1 = batch valido, 0 = errore grave (non elaborabile).
+# messaggio_errore e tipo_errore: info per il debug in caso di errore.
 CREA_TABELLA_BATCH = """
     CREATE TABLE IF NOT EXISTS batch (
         id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,15 +29,17 @@ CREA_TABELLA_BATCH = """
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
         completo INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
-        elaborabile INTEGER DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
         cid_merkle_path TEXT DEFAULT NULL,
         payload_json TEXT DEFAULT NULL,
+        elaborabile INTEGER DEFAULT 1,
         messaggio_errore TEXT DEFAULT NULL,
         tipo_errore TEXT DEFAULT  NULL
     )
 """
 
+# Crea la tabella delle misurazioni.
+# Ogni misurazione è associata a un sensore e a un batch tramite foreign key.
 CREA_TABELLA_MISURAZIONE = """
     CREATE TABLE IF NOT EXISTS misurazione (
         id_misurazione INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,34 +52,32 @@ CREA_TABELLA_MISURAZIONE = """
     )
 """
 
+# Controlla se esiste già un sensore con l'id specificato
 VERIFICA_ESISTENZA_SENSORE = """
 SELECT 1 FROM sensore 
 WHERE id_sensore = ?
 """
 
-SENSORI_NON_RICEVUTI = """
-    SELECT id_sensore, descrizione
-    FROM sensore
-    WHERE conferma_ricezione = 0
-    LIMIT 5;
-"""
-
+# Inserisce un nuovo sensore, ignorando la richiesta se l'ID è già presente
 INSERISCI_SENSORE = """
     INSERT OR IGNORE INTO sensore (id_sensore, descrizione)
     VALUES (?, ?)
 """
 
+# Inserisce una nuova misurazione associata a sensore e batch
 INSERISCI_MISURAZIONE = """
     INSERT INTO misurazione (id_sensore, id_batch, dati, timestamp)
     VALUES (?, ?, ?, ?)
 """
 
+# Aggiorna il numero di misurazioni presenti in un batch
 AGGIORNA_BATCH_NUM_MISURAZIONI = """
     UPDATE batch
     SET numero_misurazioni = ?
     WHERE id_batch = ?
 """
 
+# Restituisce l’ultimo batch attivo (non completo), da usare per nuove misurazioni
 OTTIENI_BATCH_ATTIVO = """
     SELECT id_batch, numero_misurazioni
     FROM batch
@@ -80,38 +86,46 @@ OTTIENI_BATCH_ATTIVO = """
     LIMIT 1
 """
 
+# Aggiorna la Merkle Root di un batch
 AGGIORNA_MERKLE_ROOT_BATCH = """
     UPDATE batch
     SET merkle_root = ?
     WHERE id_batch = ?
 """
 
+# Inserisce il payload JSON aggregato in un batch
 AGGIORNA_PAYLOAD_JSON_BATCH = """
     UPDATE batch
     SET payload_json = ?
     WHERE id_batch = ?
 """
+
+# Chiude un batch (completo = 1)
 CHIUDI_BATCH = """
     UPDATE batch
     SET completo = 1
     WHERE id_batch = ?
 """
 
+# Segna un batch come ricevuto dal cloud (conferma_ricezione = 1), ma solo se è completo
 IMPOSTA_BATCH_CONFERMA_RICEZIONE = """
     UPDATE batch
     SET conferma_ricezione = 1
     WHERE id_batch = ? AND completo = 1
 """
 
+# Elimina tutte le misurazioni associate a un batch (tipicamente dopo invio al cloud)
 ELIMINA_MISURAZIONI = """
     DELETE FROM misurazione WHERE id_batch = ?
 """
 
+# Crea un nuovo batch inizializzato con 0 misurazioni e non completo
 CREA_BATCH = """
     INSERT INTO batch (timestamp_creazione, numero_misurazioni, completo, conferma_ricezione)
     VALUES (?, 0, 0, 0)
 """
 
+# Estrae tutte le misurazioni di un batch, includendo anche i metadati del batch stesso
 ESTRAI_DATI_BATCH_MISURAZIONI = """
     SELECT 
         m.id_misurazione,
@@ -127,12 +141,7 @@ ESTRAI_DATI_BATCH_MISURAZIONI = """
     ORDER BY m.id_misurazione ASC;
 """
 
-"""
-In seguito ad errori gravi, i batch possono essere marcati come NON ELABORABILI
-ovvero, non recuperabili dal sistema (richiedono intervento umano)
-"""
-# 0 = condizione di errore grave
-# 1 = Nessun errore
+# In caso di errore grave durante l’elaborazione del batch (es. fallimento Merkle Tree), lo segna come non elaborabile
 AGGIORNA_ERRORE_ELABORAZIONE_BATCH = """
     UPDATE batch
     SET elaborabile = 0,
@@ -141,25 +150,22 @@ AGGIORNA_ERRORE_ELABORAZIONE_BATCH = """
     WHERE id_batch = ?;
 """
 
+# Salva il CID IPFS contenente i Merkle Path relativi al batch
 AGGIORNA_CID_MERKLE_PATH_BATCH = """
     UPDATE batch SET cid_merkle_path = ?
     WHERE id_batch = ?
 """
 
-OTTIENI_BATCH_NON_ELABORABILI = """
-    SELECT id_batch, tipo_errore, messaggio_errore, timestamp_creazione
-    FROM batch
-    WHERE elaborabile = 0
-    ORDER BY id_batch;
+#--------------------------------#
+# QUERY ESEGUITE DA TASK DI RETRY
+#--------------------------------#
+
+
 """
-"""
-Estrae i batch completi (hanno raggiunto la soglia), elaborabili, non ancora inviati al cloud 
-(conferma_ricezione = 0),
-che risultano elaborabili e per cui NON E' stata generata la Merkle Root e il payload_json.
-Inoltre, si assicura che tutte le misurazioni associate siano collegate a sensori 
-già confermati dal cloud (sensore.conferma_ricezione = 1), così da evitare 
-violazioni di integrità referenziale durante la memorizzazione del cloud.
-La query restituisce al massimo 6 batch ordinati per ID batch crescente.
+Seleziona i batch completi (hanno raggiunto la soglia)
+ma ancora da elaborare (elaborabile =1) e merkle_root e/o payload_json nulli
+(significa che il batch deve attraversare la pipeline di elaborazione)
+e con tutti i sensori già confermati (per evitare errori di integrità referenziale)
 """
 OTTIENI_BATCH_COMPLETI_DA_ELABORARE = """
     SELECT DISTINCT b.id_batch
@@ -169,20 +175,49 @@ OTTIENI_BATCH_COMPLETI_DA_ELABORARE = """
     WHERE b.completo = 1
     AND b.conferma_ricezione = 0
     AND b.elaborabile = 1
-    AND b.merkle_root IS NOT NULL AND b.merkle_root != ''
-    AND b.payload_json IS NOT NULL AND b.payload_json != ''
+    AND (b.merkle_root IS NULL OR b.merkle_root != '')
+    AND (b.payload_json IS NULL OR b.payload_json != '')
     AND s.conferma_ricezione = 1
-    ORDER BY b.id_batch,
+    ORDER BY b.id_batch
     LIMIT 6;
 """
-# sensore confermato dal cloud = 1
-# sensore non confermato dal cloud = 0
+
+"""
+Restituisce i batch pronti per l’invio: 
+- payload_json presente,
+- ancora non confermati (conferma_ricezione = 0)
+- non corrotti/errori gravi durante la pipeline (elaborabile = 1)
+Il batch passa attraverso varie fasi di esecuzione e un errore di elaborazione
+tale da impedire la elaborazione può avvenire in quattro casi: 
+- Durante creazione del Merkle Tree,
+- Durante creazione payload JSON da inviare
+- Durante il salvataggio del merkle path su IPFS
+- Durante il salvataggio del merkle root + cid ipfs su blockchain
+Se accade un errore di elaborazione in qualunque di questa fase, il batch si troverà
+in uno stato inconsistente e quindi la sua elaborazione sarà bloccata.
+Se l'errore non avviene durante la costruzione del payload JSON questo viene
+correttamente salvato in database per persistenza ma, un errore si potrebbe verificare anche
+nelle fasi successive. In questo caso il batch possiede il payload JSON ma
+risulta non elaborabile (errore grave tale da impedire il proseguimento del flusso di
+elaborazione)
+"""
 OTTIENI_PAYLOAD_BATCH_NON_INVIATI = """
     SELECT id_batch, payload_json   
     FROM batch
     WHERE payload_json IS NOT NULL
     AND conferma_ricezione = 0
     AND elaborabile = 1
-    ORDER BY id_batch,
-    LIMITI 6
+    ORDER BY id_batch
+    LIMIT 6
+"""
+
+"""
+Restituisce un elenco (massimo 6) dei sensori registrati localmente ma non ancora confermati dal cloud.
+Questa informazione è utile per eseguire un retry dell'invio dei dati sensore al cloud provider.
+"""
+SENSORI_NON_CONFERMA_RICEZIONE = """
+    SELECT id_sensore, descrizione
+    FROM sensore
+    WHERE conferma_ricezione = 0
+    LIMIT 6;
 """

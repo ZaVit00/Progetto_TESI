@@ -3,7 +3,6 @@ import os
 import sqlite3
 import json
 from datetime import datetime
-from typing import List
 from database import query
 
 logger = logging.getLogger(__name__)
@@ -264,7 +263,7 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - SEGNA BATCH ERRORE] {e}")
 
-    def estrai_sensori_non_confermati(self) -> list[dict]:
+    def ottieni_sensori_non_conferma_ricezione(self) -> list[dict]:
         """
         Estrae i sensori registrati localmente che non hanno ancora ricevuto
         conferma di registrazione da parte del cloud provider.
@@ -272,7 +271,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.SENSORI_NON_RICEVUTI)
+            cursor.execute(query.SENSORI_NON_CONFERMA_RICEZIONE)
             righe = cursor.fetchall()
             return [{"id_sensore": r["id_sensore"], "descrizione": r["descrizione"]} for r in righe]
         except sqlite3.Error as e:

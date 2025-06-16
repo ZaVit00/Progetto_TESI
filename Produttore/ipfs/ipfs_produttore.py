@@ -1,10 +1,18 @@
 # Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
 # logging e variabili ambiente
+import json
+import os
+import random
+from pprint import pprint
+
 import boto3
 import botocore.exceptions
 import logging
 from dotenv import load_dotenv
 from Classi_comuni.hash_utils import Hashing
+import gzip
+from io import BytesIO
+
 logger = logging.getLogger(__name__)
 """
 LOGGER SE SERVE UTILIZZARE ESEGUIRE LA CLASSE IN MODO STANDALONE
@@ -34,11 +42,10 @@ che contiene un ulteriore dizionario con i metadata personalizzati dell'oggetto.
 Filebase, nel caso di file caricati sulla rete IPFS tramite il suo endpoint S3-compatibile,
 inserisce automaticamente in 'Metadata' una chiave denominata 'ipfs-hash', il cui valore è
 il CID IPFS associato al contenuto caricato. Accediamo a tale valore tramite:
-risposta["Metadata"]["ipfs-hash"]
+risposta["Metadata"]["cid"]
 Questo è possibile solo se l'oggetto è presente nel bucket dell'utente autenticato,
 e non può essere fatto su oggetti esterni o appartenenti ad altri account.
 """
-
 class ProduttoreIPFS:
     """
     Classe per caricare file JSON su Filebase (IPFS) e recuperare il CID associato.
@@ -70,20 +77,23 @@ class ProduttoreIPFS:
             logger.error(f"❌ Errore nella verifica/creazione del bucket: {e}")
             raise ErroreCaricamento("Errore durante la creazione o verifica del bucket.")
 
-    def carica_json(self, nome_bucket: str, stringa_json: str) -> str:
+    def upload_json_string(self, nome_bucket: str, stringa_json: str) -> str:
         """
-        Carica un file JSON su IPFS (tramite Filebase).
-        Solleva ErroreCaricamento se upload fallisce.
+        Carica un file JSON su IPFS (tramite Filebase), usando come nome file
+        un hash deterministico del contenuto. Se l'upload fallisce, solleva ErroreCaricamento.
         """
         self.verifica_o_crea_bucket(nome_bucket)
         nome_file = ProduttoreIPFS._genera_nome_file(stringa_json)
+        #Applico l'algoritmo di compressione GZIP per risparmiare spazio
+        contenuto_gzip = ProduttoreIPFS._genera_contenuto_gzip(stringa_json)
         try:
             logger.info(f"Caricamento '{nome_file}' nel bucket '{nome_bucket}'...")
             self.s3.put_object(
                 Bucket=nome_bucket,
                 Key=nome_file,
-                Body=stringa_json,
-                ContentType='application/json'
+                Body=contenuto_gzip,
+                ContentType='application/json',
+                ContentEncoding = 'gzip'
             )
             logger.info("✅ Upload completato.")
             return nome_file
@@ -122,33 +132,56 @@ class ProduttoreIPFS:
         full_hash = Hashing.calcola_hash(json_string)
         #esrae i primi 8 caratteri hash complessivo
         short_hash = full_hash[:8]
-        return f"merkle_path_{short_hash}.json"
+        #.json: indica il tipo di dati (Merkle Path strutturato in formato JSON).
+        #.gz: indica che è stato compresso con gzip.
+        return f"merkle_path_{short_hash}.json.gz"
 
+    @staticmethod
+    def _genera_contenuto_gzip(json_string: str) -> bytes:
+        """
+        Comprimi una stringa JSON in formato GZIP e restituisce i byte compressi.
+        """
+        buffer = BytesIO()
+        with gzip.GzipFile(fileobj=buffer, mode='wb') as gzip_file:
+            gzip_file.write(json_string.encode('utf-8'))
+        return buffer.getvalue()
 
 """
-FUNZIONE DI AUSILIO/DEBUG (serve per testare il comportamento della classe in modo indipendente)
+# FUNZIONE DI AUSILIO/DEBUG (serve per testare il comportamento della classe in modo indipendente)
 def main():
+    # Carica chiavi da .env
     load_dotenv()
     access_key = os.getenv("AWS_ACCESS_KEY_ID")
     secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
     uploader = ProduttoreIPFS(access_key, secret_key)
-    data =  {
-        1: {"directions": "0101", "siblings": ["aaa", "bbb"]},
-        3: {"directions": "0011", "siblings": ["ccc", "ddd"]}
-    }
 
+    # Simulazione Merkle Path per 1024 misurazioni
+    data = {}
+    for i in range(1, 1025):
+        direzione = ''.join(random.choices("01", k=8))
+        siblings = [f"{random.getrandbits(256):064x}" for _ in range(8)]
+        data[i] = {
+            "directions": direzione,
+            "siblings": siblings
+        }
+
+    # Serializzazione JSON
     data_JSON = json.dumps(
         data,
-        sort_keys=True,  # ordine prevedibile delle chiavi
-        separators=(",", ":"),  # compatto ma leggibile
-        indent=2  # indentazione per leggibilità
+        sort_keys=True,
+        separators=(",", ":"),
+        indent=2
     )
+
+    pprint(data_JSON)
+    
     try:
         nome_file_caricare = uploader.carica_json("merkle-path-batch", stringa_json=data_JSON)
         cid_ottenuto = uploader.recupera_cid_file_bucket("merkle-path-batch", nome_file_caricare)
-        logger.info(f"✅ Caricamento completato con CID: {cid_ottenuto}")
+        print(f"✅ Caricamento completato con CID: {cid_ottenuto}")
     except (ErroreCaricamento, ErroreRecuperoCID) as e:
-        logger.error(f"‼️ Operazione fallita: {e}")
+        print(f"‼️ Operazione fallita: {e}")
 
 if __name__ == "__main__":
+    main()
 """

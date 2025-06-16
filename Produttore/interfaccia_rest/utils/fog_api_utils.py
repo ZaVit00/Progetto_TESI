@@ -1,7 +1,7 @@
 import json
 import logging
 import requests
-import costanti_produttore
+from config import costanti_produttore
 from database.gestore_db import GestoreDatabase
 from merkle_tree import MerkleTree, ProofCompatta
 from costruttore_payload import CostruttorePayload
