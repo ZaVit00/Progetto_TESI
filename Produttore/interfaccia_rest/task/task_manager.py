@@ -4,7 +4,6 @@ import logging
 
 from database.gestore_db import GestoreDatabase
 from utils.fog_api_utils import gestisci_batch_completo, invia_payload
-
 logger = logging.getLogger(__name__)
 
 # === TASK GENERICO PER INVIO ELEMENTI AL CLOUD ===
@@ -44,10 +43,11 @@ async def task_elabora_batch_completi(db, endpoint_cloud: str, intervallo: int =
     while True:
         logger.info("[BATCH-ELAB] Controllo batch completi da elaborare...")
         lista_id_batch = db.ottieni_id_batch_completi()
+        logger.debug(f"[BATCH-ELAB] Lista batch chiusi {lista_id_batch}")
         for id_batch in lista_id_batch:
             try:
                 logger.debug(f"[BATCH-ELAB] Elaborazione batch {id_batch}...")
-                gestisci_batch_completo(id_batch, db, endpoint_cloud)
+                gestisci_batch_completo(id_batch, db)
             except Exception as e:
                 logger.error(f"[BATCH-ELAB] Errore durante elaborazione batch {id_batch}: {e}")
         await asyncio.sleep(intervallo)
@@ -63,7 +63,7 @@ async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
     ))
 
     task2 = asyncio.create_task(task_retry_generico(
-        estrai_elementi_fn=db.ottieni_payload_batch_non_inviati,
+        estrai_elementi_fn=db.ottieni_payload_batch_pronti_per_invio,
         chiave_id="id_batch",
         etichetta_log="BATCH-JSON",
         endpoint_cloud=endpoint_cloud,
@@ -77,6 +77,7 @@ async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
     ))
 
     try:
-        await asyncio.gather(task1, task2, task3)
+        #task1, task2
+        await asyncio.gather(task3)
     except Exception as e:
         logger.critical(f"Errore critico nella gestione dei task periodici: {e}")

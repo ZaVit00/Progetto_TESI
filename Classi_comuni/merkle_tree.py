@@ -1,10 +1,13 @@
 import json
+from dataclasses import dataclass
 from typing import List, Optional, Dict
 from hash_utils import Hashing
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL + 1)
 
+@dataclass
 class ProofCompatta:
     # Classe per la rappresentazione compatta di una Merkle Proof
     def __init__(self):
@@ -19,6 +22,12 @@ class ProofCompatta:
 
     def append_direzione(self, direzione: str) -> None:
         self.direzione += direzione
+
+    def to_dict(self) -> dict:
+        return {
+            "direzione": self.direzione,
+            "hash_fratelli": self.hash_fratelli
+        }
 
 class MerkleTree:
     def __init__(self, foglie_hash: List[str]):
@@ -109,11 +118,27 @@ class MerkleTree:
         Restituisce una stringa JSON formattata del dizionario dei Merkle Path compatti.
         Utile per la memorizzazione o l'invio su IPFS/Filebase.
         """
+        if self.proofs is None:
+            raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
+
+        # Converte tutte le ProofCompatta in dizionari standard Python (serializzabili in JSON)
+        # self.proofs è un dizionario: {id_misurazione: ProofCompatta}
+        # Usando .to_dict() su ogni ProofCompatta, otteniamo:
+        # {id_misurazione: {"direzione": "01", "hash_fratelli": ["abc", "def"]}, ...}
+        proofs_dict = {
+            id_misurazione: proof.to_dict()  # id come chiave, dizionario come valore
+            for id_misurazione, proof in self.proofs.items()
+        }
+
+        # Serializza il dizionario finale in stringa JSON leggibile
+        # - sort_keys=True → ordina le chiavi (utile per confronti o diff)
+        # - separators → compatta leggermente il JSON
+        # - indent=2 → lo rende leggibile a occhio umano
         return json.dumps(
-            self.get_proofs(),
-            sort_keys=True,  # ordine prevedibile delle chiavi
-            separators=(",", ":"),  # compatto ma leggibile
-            indent=2  # indentazione per leggibilità
+            proofs_dict,
+            sort_keys=True,
+            separators=(",", ":"),
+            indent=2
         )
 
     def get_root(self) -> str:

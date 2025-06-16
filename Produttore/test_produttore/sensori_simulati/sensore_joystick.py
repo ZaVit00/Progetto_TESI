@@ -3,14 +3,16 @@ import random
 import time
 import requests
 
+import costanti_produttore
+
 ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
 ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
-def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0, ripetizioni: int = 100, intervallo: float = 1.0):
+def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0, ripetizioni: int = 300, intervallo: float = 1.0):
 
     time.sleep(ritardo_iniziale)
     try:
-        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione})
+        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore.upper(), "descrizione": descrizione})
         response.raise_for_status()
         print(f"[OK] Sensore registrato: {id_sensore}")
     except requests.RequestException as e:
@@ -19,6 +21,7 @@ def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 
     for i in range(ripetizioni):
         dati = {
             "id_sensore": id_sensore.upper(),
+            "tipo": costanti_produttore.TIPO_SENSORE_JOYSTICK,
             "x": round(random.uniform(-1, 1), 2),
             "y": round(random.uniform(-1, 1), 2),
             "pressed": random.choice([True, False])
@@ -39,6 +42,7 @@ sensori = [
     ("joy002", "Joystick B", 1),
     ("joy003", "Joystick C", 2),
     ("joy004", "Joystick D", 3),
+    ("joy005", "Joystick E", 4),
     ("joy005", "Joystick E", 4)
 ]
 

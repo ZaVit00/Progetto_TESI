@@ -31,7 +31,7 @@ DELETE FROM sqlite_sequence WHERE name='sensore';
 SELECT
     batch.id_batch,
     batch.timestamp_creazione,
-    batch.completato,
+    batch.completo,
     batch.merkle_root,
     batch.conferma_ricezione,
     COUNT(*) AS num_misurazioni
@@ -41,3 +41,15 @@ INNER JOIN
     misurazione AS m ON batch.id_batch = m.id_batch
 GROUP BY
     batch.id_batch;
+
+SELECT DISTINCT b.id_batch
+    FROM batch b
+    INNER JOIN misurazione m ON b.id_batch = m.id_batch
+    INNER JOIN sensore s ON m.id_sensore = s.id_sensore
+    WHERE b.completo = 1
+    AND b.conferma_ricezione = 0
+    AND b.elaborabile = 1
+    AND (b.merkle_root IS NULL OR b.merkle_root = '')
+    AND (b.payload_json IS NULL OR b.payload_json = '')
+    AND s.conferma_ricezione = 0
+    ORDER BY b.id_batch

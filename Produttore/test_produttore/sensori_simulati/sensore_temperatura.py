@@ -2,11 +2,14 @@ import threading
 import random
 import time
 import requests
+
+import costanti_produttore
+
 ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
 ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 
 def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0,
-                                ripetizioni: int = 100, intervallo: float = 1.0):
+                                ripetizioni: int = 300, intervallo: float = 1.0):
     time.sleep(ritardo_iniziale)
     try:
         response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione})
@@ -18,6 +21,7 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
     for i in range(ripetizioni):
         dati = {
             "id_sensore": id_sensore.upper(),
+            "tipo": costanti_produttore.TIPO_SENSORE_TEMPERATURA,
             "valore": round(random.uniform(20.0, 30.0), 2),  # temperatura in °C
             "unita": "°C"
         }

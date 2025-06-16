@@ -1,10 +1,8 @@
-# Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
-# logging e variabili ambiente
 import json
 import os
 import random
 from pprint import pprint
-
+# Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
 import boto3
 import botocore.exceptions
 import logging
@@ -12,21 +10,15 @@ from dotenv import load_dotenv
 from Classi_comuni.hash_utils import Hashing
 import gzip
 from io import BytesIO
-
 logger = logging.getLogger(__name__)
-"""
-LOGGER SE SERVE UTILIZZARE ESEGUIRE LA CLASSE IN MODO STANDALONE
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(levelname)s] %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-"""
+logging.getLogger("botocore").setLevel(logging.CRITICAL)
+logging.getLogger("boto3").setLevel(logging.CRITICAL)
+logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 #ErroreCaricamento: nella put_object → quando upload fallisce.
 #ErroreRecuperoCID: nella head_object → se ipfs-hash non esiste nei metadata.
-class ErroreCaricamento(Exception):
+class ErroreCaricamentoIPFS(Exception):
     """Eccezione sollevata quando il caricamento su Filebase/IPFS fallisce."""
     pass
 
@@ -46,19 +38,19 @@ risposta["Metadata"]["cid"]
 Questo è possibile solo se l'oggetto è presente nel bucket dell'utente autenticato,
 e non può essere fatto su oggetti esterni o appartenenti ad altri account.
 """
-class ProduttoreIPFS:
+class IpfsClient:
     """
     Classe per caricare file JSON su Filebase (IPFS) e recuperare il CID associato.
     """
-    def __init__(self, chiave_accesso: str, chiave_segreta: str):
+    def __init__(self):
         load_dotenv()
-        #access_key = os.getenv("AWS_ACCESS_KEY_ID")
-        #secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
         self.s3 = boto3.client(
             's3',
             endpoint_url='https://s3.filebase.com',
-            aws_access_key_id=chiave_accesso,
-            aws_secret_access_key=chiave_segreta
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
         )
 
     def verifica_o_crea_bucket(self, nome_bucket: str):
@@ -75,7 +67,7 @@ class ProduttoreIPFS:
                 logger.debug(f"Bucket '{nome_bucket}' già esistente.")
         except botocore.exceptions.ClientError as e:
             logger.error(f"❌ Errore nella verifica/creazione del bucket: {e}")
-            raise ErroreCaricamento("Errore durante la creazione o verifica del bucket.")
+            raise ErroreCaricamentoIPFS("Errore durante la creazione o verifica del bucket.")
 
     def upload_json_string(self, nome_bucket: str, stringa_json: str) -> str:
         """
@@ -83,23 +75,23 @@ class ProduttoreIPFS:
         un hash deterministico del contenuto. Se l'upload fallisce, solleva ErroreCaricamento.
         """
         self.verifica_o_crea_bucket(nome_bucket)
-        nome_file = ProduttoreIPFS._genera_nome_file(stringa_json)
+        nome_file = IpfsClient._genera_nome_file(stringa_json)
         #Applico l'algoritmo di compressione GZIP per risparmiare spazio
-        contenuto_gzip = ProduttoreIPFS._genera_contenuto_gzip(stringa_json)
+        #contenuto_gzip = IpfsClient._genera_contenuto_gzip(stringa_json)
         try:
             logger.info(f"Caricamento '{nome_file}' nel bucket '{nome_bucket}'...")
             self.s3.put_object(
                 Bucket=nome_bucket,
                 Key=nome_file,
-                Body=contenuto_gzip,
+                Body=stringa_json,
                 ContentType='application/json',
-                ContentEncoding = 'gzip'
             )
+            # ContentEncoding = 'gzip'
             logger.info("✅ Upload completato.")
             return nome_file
         except botocore.exceptions.ClientError as e:
             logger.error(f"❌ Errore durante upload: {e}")
-            raise ErroreCaricamento(f"Errore nel caricamento di '{nome_file}'")
+            raise ErroreCaricamentoIPFS(f"Errore nel caricamento di '{nome_file}'")
 
     def recupera_cid_file_bucket(self, nome_bucket: str, nome_file: str) -> str:
         """

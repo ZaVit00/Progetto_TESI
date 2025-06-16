@@ -1,10 +1,11 @@
 # costanti di errore durante l'elaborazione del batch
 from typing import Final
 
-ERRORE_MERKLE_INVALIDO = "MERKLE_INVALIDO"
-ERRORE_PAYLOAD_INVALIDO = "PAYLOAD_INVALIDO"
+ERRORE_IPFS = "ERRORE_IPFS"
+ERRORE_BLOCKCHAIN= "ERRORE_BLOCKCHAIN"
+ERRORE_HTTP = "ERRORE_HTTP"
 
-SOGLIA_BATCH : int = 63
+SOGLIA_BATCH : int = 511
 
 # Costanti con valori ammissibili
 TIPO_SENSORE_JOYSTICK: Final = "joystick"

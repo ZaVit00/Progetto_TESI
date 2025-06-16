@@ -40,13 +40,13 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
-    def inserisci_dati_sensore(self, id_sensore: str, descrizione: str) -> bool:
+    def inserisci_dati_sensore(self, id_sensore: str, descrizione: str, tipo: str) -> bool:
         """
         Inserisce un nuovo sensore solo se non già presente.
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.INSERISCI_SENSORE, (id_sensore, descrizione))
+            cursor.execute(query.INSERISCI_SENSORE, (id_sensore, descrizione, tipo))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
@@ -135,32 +135,114 @@ class GestoreDatabase:
             logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
-    def aggiorna_merkle_root_batch(self, id_batch_chiuso, merkle_root) -> bool:
+    def aggiorna_metadata_batch(self, id_batch : int, merkle_root : str,
+                                cid_merkle_path : str, payload_json : str) -> bool:
         """
-        Aggiorna la Merkle Root del batch una volta completato.
+        Aggiorna la Merkle Root, CID_IPFS e payload JSON del batch una volta
+        che è stato elaborato correttamente durante la pipeline.
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.AGGIORNA_MERKLE_ROOT_BATCH, (merkle_root, id_batch_chiuso))
+            cursor.execute(query.AGGIORNA_METADATA_BATCH, (merkle_root,
+                                                           cid_merkle_path, payload_json, id_batch))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
             logger.error(f"QUERY - AGGIORNAMENTO PAYLOAD JSON IN BATCH] {e}")
             return False
 
-    def aggiorna_payload_json_batch(self, id_batch: int, payload_json: str) -> bool:
+    def aggiorna_batch_conferma_ricezione(self, id_batch: int) -> bool:
+        """
+        Imposta il flag 'inviato' del batch a 1 dopo l'invio riuscito.
+        ATTENZIONE: solo un batch completato può essere segnato come confermato
+        dalla destinazione. Se il batch non è stato ancora completato non può essere
+        stato inviato
+        """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(
-                query.AGGIORNA_PAYLOAD_JSON_BATCH,
-                (payload_json, id_batch)  # << ordine corretto dei parametri
-            )
+            cursor.execute(query.AGGIORNA_BATCH_CONFERMA_RICEZIONE, (id_batch,))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
-            logger.error(f"QUERY - AGGIORNAMENTO PAYLOAD JSON IN BATCH] {e}")
+            logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
 
+
+    def ottieni_payload_batch_pronti_per_invio(self) -> list[dict]:
+        """
+        Metodo che viene utilizzato dalla classe che gestisce
+        il reinvio dei batch completi, il cui payload JSON è pronto per l'invio.
+        Restituisce solo i payload dei batch completi (completo = 1)
+        ma non ancora inviati (inviato = 0). Essendo esecuzioni concorrenti la connessione al database
+        potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo.
+        Se la connessione non è stata stabilita restituisce una lista vuota.
+        """
+        if not self.conn:
+            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
+            return []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO)
+            risultati = cursor.fetchall()
+            return [riga["payload_json"] for riga in risultati]
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
+            return []
+
+    def ottieni_id_batch_completi(self) -> list[int]:
+        """
+        Restituisce tutti i batch completi (completi = 1) che necessitano di elaborazione:
+        aggregazione, creazione merkle tree ecc e che non sono ancora stati inviati (inviato = 0).
+        Se la connessione al database non è disponibile, restituisce una lista vuota
+        senza sollevare eccezioni. Metodo che viene utilizzato dalla classe che gestisce
+        la elaborazione periodica dei batch completi.
+        """
+        if not self.conn:
+            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
+            return []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE)
+            risultati = cursor.fetchall()
+            #estrai solo i primi elementi e li inserisci in una lista
+            return list(riga[0] for riga in risultati)
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
+            return []
+
+    def ottieni_sensori_non_conferma_ricezione(self) -> list[dict]:
+        """
+        Estrae i sensori registrati localmente che non hanno ancora ricevuto
+        conferma di registrazione da parte del cloud provider.
+        Restituisce una lista di dizionari con id_sensore e descrizione.
+        """
+        if not self.conn:
+            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
+            return []
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE)
+            righe = cursor.fetchall()
+            return [{"id_sensore": r["id_sensore"], "descrizione": r["descrizione"]} for r in righe]
+        except sqlite3.Error as e:
+            logger.error(f"[DB] Errore durante l'estrazione dei sensori non confermati: {e}")
+            return []
+
+
+    def aggiorna_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
+        """
+        Segna un batch come impossibile da elaborare in seguito a errore grave
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.AGGIORNA_ERRORE_ELABORAZIONE_BATCH, (messaggio_errore, tipo_errore, id_batch))
+            self.conn.commit()
+            logger.debug(f"Batch {id_batch} marcato come non elaborabile. Errore: {tipo_errore}")
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - SEGNA BATCH ERRORE] {e}")
+
+
+    # attualmente non utilizzato
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:
         """
         Elimina tutte le misurazioni associate a un determinato
@@ -175,109 +257,6 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - ELIMINAZIONE MISURAZIONI] {e}")
             return False
-
-    def imposta_batch_conferma_ricezione(self, id_batch: int) -> bool:
-        """
-        Imposta il flag 'inviato' del batch a 1 dopo l'invio riuscito.
-        ATTENZIONE: solo un batch completato può essere segnato come confermato
-        dalla destinazione. Se il batch non è stato ancora completato non può essere
-        stato inviato
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.IMPOSTA_BATCH_CONFERMA_RICEZIONE, (id_batch,))
-            self.conn.commit()
-            return True
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
-            return False
-
-
-    def aggiorna_cid_merkle_path(self, id_batch: int, cid: str):
-        """
-        Aggiorna il campo 'cid_merkle_path' nella tabella 'batch' per un determinato batch.
-        Questo metodo viene utilizzato per associare al batch specificato il CID IPFS
-        corrispondente al file JSON dei Merkle Path, precedentemente caricato su Filebase.
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.AGGIORNA_CID_MERKLE_PATH_BATCH, (id_batch, cid))
-            self.conn.commit()
-            return True
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
-            return False
-
-    def ottieni_payload_batch_non_inviati(self) -> list[dict]:
-        """
-        Metodo che viene utilizzato dalla classe che gestisce
-        il reinvio dei batch completi, il cui payload JSON è pronto per l'invio.
-        Restituisce solo i payload dei batch completi (completo = 1)
-        ma non ancora inviati (inviato = 0). Essendo esecuzioni concorrenti la connessione al database
-        potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo.
-        Se la connessione non è stata stabilita restituisce una lista vuota.
-        """
-        if not self.conn:
-            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
-            return []
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.OTTIENI_PAYLOAD_BATCH_NON_INVIATI)
-            risultati = cursor.fetchall()
-            return [riga["payload_json"] for riga in risultati]
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
-            return []
-
-    def ottieni_id_batch_completi(self) -> list[dict]:
-        """
-        Restituisce tutti i batch completi (completi = 1) che necessitano di elaborazione:
-        aggregazione, creazione merkle tree ecc e che non sono ancora stati inviati (inviato = 0).
-        Se la connessione al database non è disponibile, restituisce una lista vuota
-        senza sollevare eccezioni. Metodo che viene utilizzato dalla classe che gestisce
-        la elaborazione periodica dei batch completi.
-        """
-        if not self.conn:
-            logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
-            return []
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.OTTIENI_BATCH_COMPLETI_DA_ELABORARE)
-            risultati = cursor.fetchall()
-            righe = cursor.fetchall()
-            return [dict(riga) for riga in righe]
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
-            return []
-
-
-    def imposta_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
-        """
-        Segna un batch come impossibile da elaborare in seguito a errore grave
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.AGGIORNA_ERRORE_ELABORAZIONE_BATCH, (messaggio_errore, tipo_errore, id_batch))
-            self.conn.commit()
-            logger.debug(f"Batch {id_batch} marcato come non elaborabile. Errore: {tipo_errore}")
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - SEGNA BATCH ERRORE] {e}")
-
-    def ottieni_sensori_non_conferma_ricezione(self) -> list[dict]:
-        """
-        Estrae i sensori registrati localmente che non hanno ancora ricevuto
-        conferma di registrazione da parte del cloud provider.
-        Restituisce una lista di dizionari con id_sensore e descrizione.
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query.SENSORI_NON_CONFERMA_RICEZIONE)
-            righe = cursor.fetchall()
-            return [{"id_sensore": r["id_sensore"], "descrizione": r["descrizione"]} for r in righe]
-        except sqlite3.Error as e:
-            logger.error(f"[DB] Errore durante l'estrazione dei sensori non confermati: {e}")
-            return []
-
 
     #DEBUG ONLY
     def svuota_tabelle(self):

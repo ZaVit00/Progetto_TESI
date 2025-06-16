@@ -104,7 +104,7 @@ class DatiBatch(ModelliHashabili):
         description="Hash radice dell’albero Merkle costruito sulle misurazioni del batch")
     """
 
-class DatiPayload(BaseModel):
+class DatiPayload(ModelliHashabili):
     """
     Payload completo da inviare al cloud: contiene un batch e le sue misurazioni associate.
     """

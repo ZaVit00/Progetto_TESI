@@ -8,9 +8,9 @@ PRAGMA_FK = "PRAGMA foreign_keys = ON"
 CREA_TABELLA_SENSORE = """
     CREATE TABLE IF NOT EXISTS sensore (
         id_sensore TEXT PRIMARY KEY,
-        tipo TEXT NOT NULL,
         descrizione TEXT NOT NULL,
-        conferma_ricezione INTEGER DEFAULT 0;
+        tipo TEXT NOT NULL,
+        conferma_ricezione INTEGER DEFAULT 0
     )
 """
 
@@ -29,10 +29,10 @@ CREA_TABELLA_BATCH = """
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
         completo INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
+        elaborabile INTEGER DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
         cid_merkle_path TEXT DEFAULT NULL,
         payload_json TEXT DEFAULT NULL,
-        elaborabile INTEGER DEFAULT 1,
         messaggio_errore TEXT DEFAULT NULL,
         tipo_errore TEXT DEFAULT  NULL
     )
@@ -60,8 +60,8 @@ WHERE id_sensore = ?
 
 # Inserisce un nuovo sensore, ignorando la richiesta se l'ID è già presente
 INSERISCI_SENSORE = """
-    INSERT OR IGNORE INTO sensore (id_sensore, descrizione)
-    VALUES (?, ?)
+    INSERT OR IGNORE INTO sensore (id_sensore, descrizione, tipo)
+    VALUES (?, ?, ?)
 """
 
 # Inserisce una nuova misurazione associata a sensore e batch
@@ -86,20 +86,6 @@ OTTIENI_BATCH_ATTIVO = """
     LIMIT 1
 """
 
-# Aggiorna la Merkle Root di un batch
-AGGIORNA_MERKLE_ROOT_BATCH = """
-    UPDATE batch
-    SET merkle_root = ?
-    WHERE id_batch = ?
-"""
-
-# Inserisce il payload JSON aggregato in un batch
-AGGIORNA_PAYLOAD_JSON_BATCH = """
-    UPDATE batch
-    SET payload_json = ?
-    WHERE id_batch = ?
-"""
-
 # Chiude un batch (completo = 1)
 CHIUDI_BATCH = """
     UPDATE batch
@@ -108,7 +94,7 @@ CHIUDI_BATCH = """
 """
 
 # Segna un batch come ricevuto dal cloud (conferma_ricezione = 1), ma solo se è completo
-IMPOSTA_BATCH_CONFERMA_RICEZIONE = """
+AGGIORNA_BATCH_CONFERMA_RICEZIONE = """
     UPDATE batch
     SET conferma_ricezione = 1
     WHERE id_batch = ? AND completo = 1
@@ -141,18 +127,25 @@ ESTRAI_DATI_BATCH_MISURAZIONI = """
     ORDER BY m.id_misurazione ASC;
 """
 
-# In caso di errore grave durante l’elaborazione del batch (es. fallimento Merkle Tree), lo segna come non elaborabile
+# In caso di errore grave durante l’elaborazione del batch lo segna come non elaborabile
+# CASI DI ERRORE:
+# - IPFS
+# - BLOCKCHAIN
+# - HTTP (errori di http non considerati come errori gravi tali da interrompere l'elaborazione
+# del batch)
 AGGIORNA_ERRORE_ELABORAZIONE_BATCH = """
     UPDATE batch
-    SET elaborabile = 0,
+    SET elaborabile = ?,
         messaggio_errore = ?,
         tipo_errore = ?
-    WHERE id_batch = ?;
+    WHERE id_batch = ?
 """
 
-# Salva il CID IPFS contenente i Merkle Path relativi al batch
-AGGIORNA_CID_MERKLE_PATH_BATCH = """
-    UPDATE batch SET cid_merkle_path = ?
+#Salva il merkle root, il cid IPFS e il payload JSON di un batch correttamente
+# elaborato durante la pipeline di esecuzione
+AGGIORNA_METADATA_BATCH = """
+    UPDATE batch 
+    SET merkle_root = ?, cid_merkle_path = ?, payload_json = ?
     WHERE id_batch = ?
 """
 
@@ -160,28 +153,28 @@ AGGIORNA_CID_MERKLE_PATH_BATCH = """
 # QUERY ESEGUITE DA TASK DI RETRY
 #--------------------------------#
 
-
 """
 Seleziona i batch completi (hanno raggiunto la soglia)
 ma ancora da elaborare (elaborabile =1) e merkle_root e/o payload_json nulli
 (significa che il batch deve attraversare la pipeline di elaborazione)
 e con tutti i sensori già confermati (per evitare errori di integrità referenziale)
 """
-OTTIENI_BATCH_COMPLETI_DA_ELABORARE = """
+OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE = """
     SELECT DISTINCT b.id_batch
     FROM batch b
-    JOIN misurazione m ON b.id_batch = m.id_batch
-    JOIN sensore s ON m.id_sensore = s.id_sensore
+    INNER JOIN misurazione m ON b.id_batch = m.id_batch
+    INNER JOIN sensore s ON m.id_sensore = s.id_sensore
     WHERE b.completo = 1
     AND b.conferma_ricezione = 0
     AND b.elaborabile = 1
-    AND (b.merkle_root IS NULL OR b.merkle_root != '')
-    AND (b.payload_json IS NULL OR b.payload_json != '')
-    AND s.conferma_ricezione = 1
-    ORDER BY b.id_batch
+    AND (b.merkle_root IS NULL OR b.merkle_root = '')
+    AND (b.payload_json IS NULL OR b.payload_json = '')
+    AND s.conferma_ricezione = 0
+    ORDER BY b.id_batch ASC
     LIMIT 6;
 """
-
+#ATTENZIONE
+#
 """
 Restituisce i batch pronti per l’invio: 
 - payload_json presente,
@@ -201,7 +194,7 @@ nelle fasi successive. In questo caso il batch possiede il payload JSON ma
 risulta non elaborabile (errore grave tale da impedire il proseguimento del flusso di
 elaborazione)
 """
-OTTIENI_PAYLOAD_BATCH_NON_INVIATI = """
+OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
     SELECT id_batch, payload_json   
     FROM batch
     WHERE payload_json IS NOT NULL
@@ -215,9 +208,11 @@ OTTIENI_PAYLOAD_BATCH_NON_INVIATI = """
 Restituisce un elenco (massimo 6) dei sensori registrati localmente ma non ancora confermati dal cloud.
 Questa informazione è utile per eseguire un retry dell'invio dei dati sensore al cloud provider.
 """
-SENSORI_NON_CONFERMA_RICEZIONE = """
+OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     SELECT id_sensore, descrizione
     FROM sensore
     WHERE conferma_ricezione = 0
     LIMIT 6;
 """
+
+
