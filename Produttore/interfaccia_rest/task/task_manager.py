@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-
+from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from database.gestore_db import GestoreDatabase
 from utils.fog_api_utils import gestisci_batch_completo, invia_payload
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ async def task_retry_generico(estrai_elementi_fn, chiave_id: str, etichetta_log:
         await asyncio.sleep(intervallo)
 
 # === TASK PER ELABORAZIONE PERIODICA DEI BATCH COMPLETI ===
-async def task_elabora_batch_completi(db, endpoint_cloud: str, intervallo: int = 60):
+async def task_elabora_batch_completi(db, intervallo: int = 60):
     """
     Controlla periodicamente se esistono batch completi (hanno raggiunto la soglia)
     ma non ancora elaborati (manca Merkle Root o JSON), e li elabora.
@@ -54,13 +54,13 @@ async def task_elabora_batch_completi(db, endpoint_cloud: str, intervallo: int =
         await asyncio.sleep(intervallo)
 
 # === AVVIO DEI TASK ASINCRONI ===
-async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
-    """
+async def avvia_task_periodici(db : GestoreDatabase):
+
     task1 = asyncio.create_task(task_retry_generico(
         estrai_elementi_fn=db.ottieni_sensori_non_conferma_ricezione,
         chiave_id="id_sensore",
         etichetta_log="SENSORI",
-        endpoint_cloud=endpoint_cloud,
+        endpoint_cloud=ENDPOINT_CLOUD_SENSORI,
         intervallo=30
     ))
 
@@ -68,18 +68,16 @@ async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
         estrai_elementi_fn=db.ottieni_payload_batch_pronti_per_invio,
         chiave_id="id_batch",
         etichetta_log="BATCH-JSON",
-        endpoint_cloud=endpoint_cloud,
+        endpoint_cloud=ENDPOINT_CLOUD_BATCH,
         intervallo=60
     ))
-    """
+
     task3 = asyncio.create_task(task_elabora_batch_completi(
         db=db,
-        endpoint_cloud=endpoint_cloud,
         intervallo=60
     ))
 
     try:
-        #task1, task2
-        await asyncio.gather(task3)
+        await asyncio.gather(task1, task2, task3)
     except Exception as e:
         logger.critical(f"Errore critico nella gestione dei task periodici: {e}")

@@ -1,23 +1,115 @@
-import psycopg2
-import logging
-import query
+import json
 
+import psycopg2
+from psycopg2 import Error as Psycopg2Error
+from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch
+from Cloud_Service_Provider.Database.query import (
+    CREA_TABELLA_SENSORE,
+    CREA_TABELLA_BATCH,
+    CREA_TABELLA_MISURAZIONE,
+    INSERISCI_SENSORE,
+    INSERISCI_MISURAZIONE,
+    INSERISCI_BATCH
+)
+import logging
 logger = logging.getLogger(__name__)
 
-class DbManager:
-    def __init__(self, db_config):
-        self.conn = psycopg2.connect(**db_config)
-        self.conn.autocommit = True
-
-    def inserisci_sensore(self, id_sensore : str, descrizione : str):
+class GestoreDatabase:
+    def __init__(self, db_config: dict):
         try:
-            cursor = self.conn.cursor()
-            cursor.execute(
-                query.INSERISCI_SENSORE,
-                (id_sensore, descrizione)
+            self.conn = psycopg2.connect(**db_config)
+            self.conn.autocommit = True
+            self.cursor = self.conn.cursor()
+            logger.info("Connessione a PostgreSQL stabilita.")
+            self._crea_tabelle()
+        except Psycopg2Error as e:
+            logger.error(f"Errore di connessione al database: {e}")
+            raise
+
+    def _crea_tabelle(self):
+        """
+        Metodo privato per creare le tabelle necessarie al sistema.
+        Viene invocato automaticamente al momento della connessione.
+        """
+        try:
+            self.cursor.execute(CREA_TABELLA_SENSORE)
+            self.cursor.execute(CREA_TABELLA_BATCH)
+            self.cursor.execute(CREA_TABELLA_MISURAZIONE)
+            logger.info("Tabelle create (se non esistenti).")
+        except Psycopg2Error as e:
+            logger.error(f"Errore nella creazione delle tabelle: {e}")
+            raise
+
+
+    def inserisci_sensore(self, sensore: DatiSensore) -> bool:
+        """
+        Inserisce un nuovo sensore nel database.
+        """
+        try:
+            self.cursor.execute(
+                INSERISCI_SENSORE,
+                (sensore.id_sensore, sensore.descrizione, sensore.tipo)
             )
-            self.conn.commit()
+            logger.info(f"Sensore inserito: {sensore.id_sensore}")
             return True
-        except psycopg2.Error as e:
-            logger.error(f"[QUERY - INSERIMENTO SENSORE] {e}")
+        except Psycopg2Error as e:
+            logger.error(f"Errore inserimento sensore {sensore.id_sensore}: {e}")
             return False
+
+    def inserisci_batch(self, batch: DatiBatch) -> bool:
+        """
+        Inserisce un nuovo batch nel database.
+        """
+        try:
+            self.cursor.execute(
+                INSERISCI_BATCH,
+                (batch.id_batch, batch.timestamp_creazione, batch.numero_misurazioni)
+            )
+            logger.info(f"Batch inserito: {batch.id_batch}")
+            return True
+        except Psycopg2Error as e:
+            logger.error(f"Errore inserimento batch {batch.id_batch}: {e}")
+            return False
+
+    def inserisci_misurazione(self, misurazione: DatiMisurazione, id_batch: int) -> bool:
+        """
+        Inserisce una singola misurazione nel database.
+        """
+        try:
+            self.cursor.execute(
+                INSERISCI_MISURAZIONE,
+                (
+                    misurazione.id_misurazione,
+                    id_batch,
+                    misurazione.id_sensore,
+                    misurazione.timestamp,
+                    #misurazione.dati è un Dict (ad esempio: {"x": 10, "y": 5, "pressed": True})
+                    # json.dumps(...) lo trasforma in una stringa JSON: '{"x": 10, "y": 5, "pressed": true}'
+                    #questa stringa può essere salvata in PostgreSQL in una colonna JSON o TEXT
+                    json.dumps(misurazione.dati)
+                )
+            )
+            logger.info(f"Misurazione inserita: {misurazione.id_misurazione}")
+            return True
+        except Psycopg2Error as e:
+            logger.error(f"Errore inserimento misurazione {misurazione.id_misurazione}: {e}")
+            return False
+
+    def chiudi_connessione(self):
+        """
+        Chiude la connessione al database PostgreSQL in modo sicuro.
+        Da chiamare durante la fase di shutdown dell'applicazione.
+        """
+        try:
+            # Verifica che l'attributo esista prima di tentare la chiusura,
+            # per evitare errori se la connessione non è mai stata creata correttamente
+            if hasattr(self, "cursor") and self.cursor:
+                self.cursor.close()
+            if hasattr(self, "conn") and self.conn:
+                self.conn.close()
+            logger.info("Connessione al database chiusa correttamente.")
+        except Psycopg2Error as e:
+            logger.error(f"Errore durante la chiusura della connessione: {e}")
+
+
+

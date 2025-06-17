@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="dati_temporanei" uuid="3906e6d3-eb07-4e76-b096-ed95ea0626ea">
+    <data-source source="LOCAL" name="dati_cloud" uuid="3485749c-2879-4981-80bf-57c1f2ec74dc">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:5432/dati_cloud</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="dati_fog_node" uuid="d052a0b5-1e09-446b-8213-5043277cc313">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\zazav\Progetto_TESI\Produttore\dati_temporanei.sqlite</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\zazav\Progetto_TESI\Produttore\dati_fog_node.sqlite</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>

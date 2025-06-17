@@ -192,15 +192,15 @@ sono stati registrati dal cloud (conferma_ricezione di sensore). Se così non fo
 a cascata.
 """
 OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
-    SELECT id_batch, payload_json   
-    FROM batch
-    INNER JOIN misurazione m ON b.id_batch = m.id_batch
-    INNER JOIN sensore s ON m.id_sensore = s.id_sensore
+    SELECT b.id_batch, b.payload_json   
+    FROM batch as b
+    INNER JOIN misurazione as m ON b.id_batch = m.id_batch
+    INNER JOIN sensore as s s ON m.id_sensore = s.id_sensore
     WHERE payload_json IS NOT NULL
     AND conferma_ricezione = 0
     AND elaborabile = 1
     AND s.conferma_ricezione = 1
-    ORDER BY id_batch ASC
+    ORDER BY b.id_batch ASC
     LIMIT 3
 """
 

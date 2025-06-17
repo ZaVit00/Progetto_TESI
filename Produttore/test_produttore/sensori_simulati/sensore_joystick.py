@@ -26,7 +26,6 @@ def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 
             "y": round(random.uniform(-1, 1), 2),
             "pressed": random.choice([True, False])
         }
-
         try:
             response = requests.post(ENDPOINT_MISURAZIONE, json=dati)
             response.raise_for_status()
@@ -41,14 +40,14 @@ sensori = [
     ("joy001", "Joystick A", 0),
     ("joy002", "Joystick B", 1),
     ("joy003", "Joystick C", 2),
-    ("joy004", "Joystick D", 3),
-    ("joy005", "Joystick E", 4),
-    ("joy005", "Joystick F", 5),
-    ("joy006", "Joystick G", 6),
-    ("joy007", "Joystick H", 7),
-    ("joy008", "Joystick I", 8),
-    ("joy009", "Joystick II", 9),
-    ("joy010", "Joystick III", 10),
+    #("joy004", "Joystick D", 3),
+    #("joy005", "Joystick E", 4),
+    #("joy005", "Joystick F", 5),
+    #("joy006", "Joystick G", 6),
+    #("joy007", "Joystick H", 7),
+    #("joy008", "Joystick I", 8),
+    #("joy009", "Joystick II", 9),
+    #("joy010", "Joystick III", 10),
 ]
 
 for id_sensore, descrizione, ritardo in sensori:

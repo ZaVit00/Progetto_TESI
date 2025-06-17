@@ -9,7 +9,7 @@ from merkle_tree import MerkleTree, PathCompatto
 logger = logging.getLogger(__name__)
 
 
-def debug_stampa_paths_json(proofs: dict[int, PathCompatto], verbose: bool = False) -> None:
+def debug_stampa_paths_json(paths: dict[int, PathCompatto], verbose: bool = False) -> None:
     """
     SERVE?
     METODO [DEBUG]
@@ -22,7 +22,7 @@ def debug_stampa_paths_json(proofs: dict[int, PathCompatto], verbose: bool = Fal
             "d": p.get_direzione(),
             "h": p.get_hash_fratelli()
         }
-        for k, p in proofs.items()
+        for k, p in paths.items()
     }
     logger.info("📦 MERKLE PROOFS (Formato JSON)")
     separator = "-" * 80
@@ -44,7 +44,7 @@ def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
     logger.debug(f" Merkle Root calcolata {merkle_root}")
     # merkle path come stringa JSON strutturata
     merkle_path = merkle_tree.get_paths_JSON()
-    logger.debug(f"Merkle path calcolati {merkle_path}")
+    #logger.debug(f"Merkle path calcolati {merkle_path}")
     return merkle_root, merkle_path
 
 

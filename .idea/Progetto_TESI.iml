@@ -21,6 +21,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore/ipfs" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/task" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/config" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

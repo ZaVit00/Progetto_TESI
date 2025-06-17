@@ -28,7 +28,7 @@ class ModelliHashabili(BaseModel, ABC):
 
     def to_hash(self) -> str:
         """
-        Calcola e restituisce l'hash SHA-256 della tupla,
+        Calcola e restituisce hash SHA-256 della tupla,
         serializzandola prima in formato JSON.
         """
         return Hashing.calcola_hash(self.to_json())
@@ -82,7 +82,7 @@ class DatiSensore(ModelliHashabili):
 
 class DatiMisurazione(ModelliHashabili):
     """
-    Rappresenta una singola misurazione proveniente da un sensore.
+    Rappresenta una singola misurazione arricchita con metadata interni proveniente da un sensore.
     """
     id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")
     id_sensore: str = Field(..., title="ID Sensore", description="Identificativo del sensore IoT che ha generato la misurazione")

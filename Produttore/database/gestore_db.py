@@ -16,7 +16,7 @@ Tutti gli errori vengono loggati.
 class GestoreDatabase:
     # Trova la directory root del progetto (2 livelli sopra gestore_db.py)
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    _DBPATH = os.path.join(BASE_DIR, "dati_temporanei.sqlite")
+    _DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
     _STRING_MAX_LENGTH = 12
 
     def __init__(self, soglia_batch: int = 1023):

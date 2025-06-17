@@ -8,7 +8,7 @@ import asyncio
 # Import dei modelli di misurazione_in_ingresso specifici
 # i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
-from config.costanti_produttore import SOGLIA_BATCH, ENDPOINT_CLOUD_STORAGE
+from config.costanti_produttore import SOGLIA_BATCH
 from Classi_comuni.entita.modelli_dati import DatiSensore
 from database.gestore_db import GestoreDatabase
 from task_manager import avvia_task_periodici
@@ -28,7 +28,7 @@ gestore_db = GestoreDatabase(soglia_batch=SOGLIA_BATCH)
 async def lifespan(app: FastAPI):
     logger.info("Avvio dei task periodici per invio dati sensori, invio payload al cloud,"
                 "elaborazione dei batch completi")
-    asyncio.create_task(avvia_task_periodici(gestore_db, ENDPOINT_CLOUD_STORAGE))
+    asyncio.create_task(avvia_task_periodici(gestore_db))
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
@@ -63,7 +63,7 @@ Con discriminator="tipo", FastAPI:
 MisurazioneInIngresso = Annotated[Union[MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura],
                          Body(discriminator="tipo")]
 @app.post("/misurazioni", summary="Registra una misurazione", response_model=dict)
-async def ricevi_misurazione(misurazione: MisurazioneInIngresso):
+async def registra_misurazione(misurazione: MisurazioneInIngresso):
     """
     Endpoint per ricevere e salvare una misurazione proveniente da un sensore registrato.
     La misurazione viene associata al batch attivo o ne crea uno nuovo se necessario.
