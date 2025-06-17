@@ -70,8 +70,8 @@ class CostruttorePayload:
         if not self.hash_misurazioni:
             raise ValueError("Hash delle misurazioni non calcolate. Chiama prima estrai_dati_query.")
         # concatenazione delle liste di hash
-        # L'ultima foglia di hash è hash del batch
-        return self.hash_misurazioni + [self.hash_batch]
+        # La prima foglia è hash del batch; le restanti sono delle misurazioni
+        return [self.hash_batch] + self.hash_misurazioni
 
     def costruisci_payload(self) -> DatiPayload:
         """
@@ -97,7 +97,9 @@ class CostruttorePayload:
 
     def get_id_misurazioni(self) -> List[int]:
         # restituisce la lista degli id della misurazione concatenato con la lista contenente
-        # ultimo id FITTIZIO rappresentativo del batch
+        # IL PRIMO id FITTIZIO rappresentativo del batch = 0 (nessuna misurazione avrà mai id misurazione = 0
+        # essendo il campo id_misurazione con autoincrement partirà da 1
+        # Metodo necessario per la creazione dei merkle paths
         if not self.misurazioni:
             raise ValueError("Errore! Nessun id misurazione in elaborazione")
-        return [mis.id_misurazione for mis in self.misurazioni] + [ID_BATCH_LOGICO]
+        return [ID_BATCH_LOGICO] + [mis.id_misurazione for mis in self.misurazioni]

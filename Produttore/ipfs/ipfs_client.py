@@ -69,26 +69,35 @@ class IpfsClient:
             logger.error(f"❌ Errore nella verifica/creazione del bucket: {e}")
             raise ErroreCaricamentoIPFS("Errore durante la creazione o verifica del bucket.")
 
-    def upload_json_string(self, nome_bucket: str, stringa_json: str) -> str:
+    def upload_json_string(self, nome_bucket: str, stringa_json: str, comprimi_dimensione: bool = False) -> str:
         """
         Carica un file JSON su IPFS (tramite Filebase), usando come nome file
         un hash deterministico del contenuto. Se l'upload fallisce, solleva ErroreCaricamento.
         """
         self.verifica_o_crea_bucket(nome_bucket)
         nome_file = IpfsClient._genera_nome_file(stringa_json)
-        #Applico l'algoritmo di compressione GZIP per risparmiare spazio
-        #contenuto_gzip = IpfsClient._genera_contenuto_gzip(stringa_json)
+        if comprimi_dimensione:
+            contenuto = IpfsClient._genera_contenuto_gzip(stringa_json)
+            nome_file += ".gz"
+        else:
+            contenuto = stringa_json
         try:
             logger.info(f"Caricamento '{nome_file}' nel bucket '{nome_bucket}'...")
-            self.s3.put_object(
-                Bucket=nome_bucket,
-                Key=nome_file,
-                Body=stringa_json,
-                ContentType='application/json',
-            )
-            # ContentEncoding = 'gzip'
+            params = {
+                "Bucket": nome_bucket,
+                "Key": nome_file,
+                "Body": contenuto,
+                "ContentType": "application/json",
+            }
+            if comprimi_dimensione:
+                params["ContentEncoding"] = "gzip"
+            #usando un dizionario (params), puoi aggiungere parametri solo quando servono
+            #con ** sto creando un nuovo dizionario
+            self.s3.put_object(**params)
+
             logger.info("✅ Upload completato.")
             return nome_file
+
         except botocore.exceptions.ClientError as e:
             logger.error(f"❌ Errore durante upload: {e}")
             raise ErroreCaricamentoIPFS(f"Errore nel caricamento di '{nome_file}'")
@@ -126,7 +135,7 @@ class IpfsClient:
         short_hash = full_hash[:8]
         #.json: indica il tipo di dati (Merkle Path strutturato in formato JSON).
         #.gz: indica che è stato compresso con gzip.
-        return f"merkle_path_{short_hash}.json.gz"
+        return f"merkle_path_{short_hash}.json"
 
     @staticmethod
     def _genera_contenuto_gzip(json_string: str) -> bytes:

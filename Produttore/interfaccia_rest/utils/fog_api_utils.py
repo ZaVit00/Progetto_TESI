@@ -3,7 +3,7 @@ import requests
 from costanti_produttore import ERRORE_IPFS, ERRORE_BLOCKCHAIN
 from database.gestore_db import GestoreDatabase
 from Classi_comuni.entita.modelli_dati import DatiPayload
-from gestione_batch import costruisci_merkle_tree, carica_merkle_path_su_ipfs_mamt
+from gestione_batch import costruisci_merkle_tree, carica_merkle_path_ipfs
 from ipfs_client import ErroreCaricamentoIPFS, ErroreRecuperoCID
 from costruttore_payload import CostruttorePayload
 from misurazioni_in_ingresso import MisurazioneInIngresso
@@ -39,7 +39,7 @@ def gestisci_batch_completo(id_batch: int, db: GestoreDatabase) -> bool:
 
     # === Upload su IPFS ===
     try:
-        cid = carica_merkle_path_su_ipfs_mamt(merkle_path)
+        cid = carica_merkle_path_ipfs(merkle_path)
         # ✅ IPFS OK → aggiorna subito i metadata nel DB
         db.aggiorna_metadata_batch(id_batch, merkle_root, cid, payload_json)
         # (in futuro) Upload su blockchain

@@ -4,12 +4,12 @@ from typing import Tuple
 from costanti_produttore import BUCKET_MERKLE_PATH
 from costruttore_payload import CostruttorePayload
 from ipfs_client import IpfsClient
-from merkle_tree import MerkleTree, ProofCompatta
+from merkle_tree import MerkleTree, PathCompatto
 # Logger del modulo
 logger = logging.getLogger(__name__)
 
 
-def debug_stampa_proofs_json(proofs: dict[int, ProofCompatta], verbose: bool = False) -> None:
+def debug_stampa_paths_json(proofs: dict[int, PathCompatto], verbose: bool = False) -> None:
     """
     SERVE?
     METODO [DEBUG]
@@ -43,17 +43,17 @@ def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
     merkle_root = merkle_tree.costruisci_albero(mappa_id=mappa_id)
     logger.debug(f" Merkle Root calcolata {merkle_root}")
     # merkle path come stringa JSON strutturata
-    merkle_path = merkle_tree.get_proofs_JSON()
+    merkle_path = merkle_tree.get_paths_JSON()
     logger.debug(f"Merkle path calcolati {merkle_path}")
     return merkle_root, merkle_path
 
 
-def carica_merkle_path_su_ipfs_mamt(merkle_path: str):
+def carica_merkle_path_ipfs(merkle_path: str):
     #funzione privata utilizzata solo internamente alla classe
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file: str = client.upload_json_string(BUCKET_MERKLE_PATH, merkle_path)
+    nome_file: str = client.upload_json_string(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
     cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
     return cid

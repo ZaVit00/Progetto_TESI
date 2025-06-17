@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from abc import ABC, abstractmethod
 from config.costanti_produttore import TIPO_SENSORE_JOYSTICK
 from config.costanti_produttore import TIPO_SENSORE_TEMPERATURA
-TipoSensore = Literal["joystick", "temperatura"]
+TipoSensore = Literal["JOYSTICK", "TEMPERATURA"]
 
 class MisurazioneInIngresso(BaseModel, ABC):
     """
@@ -16,6 +16,8 @@ class MisurazioneInIngresso(BaseModel, ABC):
     #il tipo viene utilizzato da FastAPi per determinare quale istanza di misurazione è in ingresso
     # e validare i campi del JSON arrivato nella richiesta HTTP
     #È usato esclusivamente durante la fase di parsing e validazione dell’input JSON da parte di fastAPI
+    #il campo tipo deve essere esplicitamente presente nel JSON ricevuto. é una ridondanza di informazioni
+    #ma, necessaria ai fini della validazione delle misurazioni
     tipo: TipoSensore = Field(..., description="Tipo di misurazioni. Necessario per identificare"
                                        "l'istanza corretta di misurazione")
 
@@ -45,11 +47,11 @@ class MisurazioneInIngressoJoystick(MisurazioneInIngresso):
     Estensione della classe Misurazione per le misurazioni effettuate
     da un sensore joystick. Aggiunge le coordinate x, y e il flag 'pressed'.
     """
-    #Literal ti permette di dire: Questa variabile può valere solo uno (o più) valori precisi”.
-    tipo: Literal["joystick"] = TIPO_SENSORE_JOYSTICK
     x: float = Field(..., description="Valore X del joystick")
     y: float = Field(..., description="Valore Y del joystick")
     pressed: bool = Field(..., description="Pulsante premuto o no")
+    # Literal ti permette di dire: Questa variabile può valere solo uno (o più) valori precisi”.
+    tipo: Literal["JOYSTICK"] = TIPO_SENSORE_JOYSTICK
 
     def to_dict(self) -> dict:
         """
@@ -69,7 +71,7 @@ class MisurazioneInIngressoTemperatura(MisurazioneInIngresso):
     Estende la classe astratta Misurazione.
     """
     valore: float = Field(..., description="Valore della temperatura rilevata (in gradi Celsius)")
-    tipo: Literal["temperatura"] = TIPO_SENSORE_TEMPERATURA
+    tipo: Literal["TEMPERATURA"] = TIPO_SENSORE_TEMPERATURA
 
     def to_dict(self) -> dict:
         """

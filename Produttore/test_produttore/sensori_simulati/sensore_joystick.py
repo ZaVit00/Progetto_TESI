@@ -43,7 +43,12 @@ sensori = [
     ("joy003", "Joystick C", 2),
     ("joy004", "Joystick D", 3),
     ("joy005", "Joystick E", 4),
-    ("joy005", "Joystick E", 4)
+    ("joy005", "Joystick F", 5),
+    ("joy006", "Joystick G", 6),
+    ("joy007", "Joystick H", 7),
+    ("joy008", "Joystick I", 8),
+    ("joy009", "Joystick II", 9),
+    ("joy010", "Joystick III", 10),
 ]
 
 for id_sensore, descrizione, ritardo in sensori:

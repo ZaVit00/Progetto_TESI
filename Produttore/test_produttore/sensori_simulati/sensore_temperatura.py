@@ -40,7 +40,14 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
 sensori_temperatura = [
     ("temp001", "Sensore Temperatura 1", 0),
     ("temp002", "Sensore Temperatura 2", 1),
-    ("temp003", "Sensore Temperatura 3", 2)
+    ("temp003", "Sensore Temperatura 3", 2),
+    ("temp004", "Sensore Temperatura 4", 3),
+    ("temp005", "Sensore Temperatura 5", 4),
+    ("temp006", "Sensore Temperatura 6", 5),
+    ("temp007", "Sensore Temperatura 7", 6),
+    ("temp008", "Sensore Temperatura 8", 7),
+    ("temp009", "Sensore Temperatura 9", 8),
+    ("temp010", "Sensore Temperatura 10", 9),
 ]
 
 for id_sensore, descrizione, ritardo in sensori_temperatura:

@@ -154,54 +154,54 @@ AGGIORNA_METADATA_BATCH = """
 #--------------------------------#
 
 """
-Seleziona i batch completi (hanno raggiunto la soglia)
-ma ancora da elaborare (elaborabile =1) e merkle_root e/o payload_json nulli
-(significa che il batch deve attraversare la pipeline di elaborazione)
-e con tutti i sensori già confermati (per evitare errori di integrità referenziale)
+Seleziona i batch completi (hanno raggiunto la soglia di misurazioni massime previste)
+che necessitano di elaborazioni:
+(elaborabile=1) e merkle_root e/o payload_json nulli
+(significa che il batch deve ancora attraversare la pipeline di elaborazione)
 """
 OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE = """
     SELECT DISTINCT b.id_batch
     FROM batch b
     INNER JOIN misurazione m ON b.id_batch = m.id_batch
-    INNER JOIN sensore s ON m.id_sensore = s.id_sensore
     WHERE b.completo = 1
     AND b.conferma_ricezione = 0
     AND b.elaborabile = 1
     AND (b.merkle_root IS NULL OR b.merkle_root = '')
     AND (b.payload_json IS NULL OR b.payload_json = '')
-    AND s.conferma_ricezione = 0
     ORDER BY b.id_batch ASC
-    LIMIT 6;
+    LIMIT 1;
 """
-#ATTENZIONE
-#
+
 """
 Restituisce i batch pronti per l’invio: 
 - payload_json presente,
 - ancora non confermati (conferma_ricezione = 0)
 - non corrotti/errori gravi durante la pipeline (elaborabile = 1)
 Il batch passa attraverso varie fasi di esecuzione e un errore di elaborazione
-tale da impedire la elaborazione può avvenire in quattro casi: 
-- Durante creazione del Merkle Tree,
-- Durante creazione payload JSON da inviare
+tale da impedire la elaborazione può avvenire in tre casi: 
 - Durante il salvataggio del merkle path su IPFS
 - Durante il salvataggio del merkle root + cid ipfs su blockchain
-Se accade un errore di elaborazione in qualunque di questa fase, il batch si troverà
-in uno stato inconsistente e quindi la sua elaborazione sarà bloccata.
-Se l'errore non avviene durante la costruzione del payload JSON questo viene
-correttamente salvato in database per persistenza ma, un errore si potrebbe verificare anche
-nelle fasi successive. In questo caso il batch possiede il payload JSON ma
-risulta non elaborabile (errore grave tale da impedire il proseguimento del flusso di
-elaborazione)
+
+- Durante Http,considerato errore non grave ma dovuto alla connessione Internet
+Se accade un errore di elaborazione in qualunque di queste due fasi, il batch si troverà
+in uno stato inconsistente e quindi la sua elaborazione deve essere bloccata. Se avviene anche solo
+un errore durante la elaborazione il batch è marcato come non elaborabile e la query così scritta
+ne impedisce l'invio del payload JSON. Per evitare violazioni ai vincoli di integrità referenziale lato
+cloud, è possibile inviare il payload di un batch solo se i sensori che hanno eseguito le misurazioni
+sono stati registrati dal cloud (conferma_ricezione di sensore). Se così non fosse si creerebbero errori
+a cascata.
 """
 OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
     SELECT id_batch, payload_json   
     FROM batch
+    INNER JOIN misurazione m ON b.id_batch = m.id_batch
+    INNER JOIN sensore s ON m.id_sensore = s.id_sensore
     WHERE payload_json IS NOT NULL
     AND conferma_ricezione = 0
     AND elaborabile = 1
-    ORDER BY id_batch
-    LIMIT 6
+    AND s.conferma_ricezione = 1
+    ORDER BY id_batch ASC
+    LIMIT 3
 """
 
 """

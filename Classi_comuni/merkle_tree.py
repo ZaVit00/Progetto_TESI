@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL + 1)
 
 @dataclass
-class ProofCompatta:
-    # Classe per la rappresentazione compatta di una Merkle Proof
+class PathCompatto:
+    # Classe per la rappresentazione compatta di un Merkle Path
+    # Migliora le leggibilità del codice
     def __init__(self):
         self.direzione: str = ""  # Stringa di direzioni codificate ("01", "10", ecc.)
         self.hash_fratelli: List[str] = []  # Lista degli hash fratelli lungo il Merkle Path
@@ -24,28 +25,31 @@ class ProofCompatta:
         self.direzione += direzione
 
     def to_dict(self) -> dict:
+        """
+        Restituisce un dizionario. Necessaria per la serializzazione dell'oggetto self.paths
+        """
         return {
-            "direzione": self.direzione,
-            "hash_fratelli": self.hash_fratelli
+            "dir": self.direzione,
+            "hash": self.hash_fratelli
         }
 
 class MerkleTree:
     def __init__(self, foglie_hash: List[str]):
         self.foglie_hash = foglie_hash
-        self.proofs: Optional[Dict[int, ProofCompatta]] = None  # Proofs compatte per ogni foglia
+        self.paths: Optional[Dict[int, PathCompatto]] = None  # Merkle Path compatte per ogni foglia
         self.root: Optional[str] = None
 
-    def _aggiorna_proofs(self, gruppo_sx: List[int], gruppo_dx: List[int],
-                         elem_sx: str, elem_dx: str) -> None:
-        if self.proofs is None:
+    def _aggiorna_paths(self, gruppo_sx: List[int], gruppo_dx: List[int],
+                        elem_sx: str, elem_dx: str) -> None:
+        if self.paths is None:
             return
         for idx in gruppo_sx:
-            self.proofs[idx].append_direzione("0")  # 0 = aggiungi fratello a destra
-            self.proofs[idx].hash_fratelli.append(elem_dx)
+            self.paths[idx].append_direzione("0")  # 0 = aggiungi fratello a destra
+            self.paths[idx].hash_fratelli.append(elem_dx)
             logger.debug(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello DESTRO {elem_dx}\n")
         for idx in gruppo_dx:
-            self.proofs[idx].append_direzione("1")  # 1 = fratello a sinistra
-            self.proofs[idx].hash_fratelli.append(elem_sx)
+            self.paths[idx].append_direzione("1")  # 1 = fratello a sinistra
+            self.paths[idx].hash_fratelli.append(elem_sx)
             logger.debug(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello SINISTRO {elem_sx}\n")
 
     def costruisci_albero(self, mappa_id: List[int]) -> str:
@@ -62,7 +66,7 @@ class MerkleTree:
             raise ValueError("La lunghezza di mappa_id deve essere uguale al numero di foglie")
 
         # inizializzazione delle strutture dati importanti
-        self.proofs = {id_logico: ProofCompatta() for id_logico in mappa_id}
+        self.paths = {id_logico: PathCompatto() for id_logico in mappa_id}
         indici_correnti = [[id_logico] for id_logico in mappa_id]
         livello_corrente = list(self.foglie_hash)
 
@@ -93,7 +97,7 @@ class MerkleTree:
                     f"Gruppo SX:       {gruppo_sx}\n"
                     f"Gruppo DX:       {gruppo_dx}\n"
                 )
-                self._aggiorna_proofs(gruppo_sx, gruppo_dx, elem_sx, elem_dx)
+                self._aggiorna_paths(gruppo_sx, gruppo_dx, elem_sx, elem_dx)
                 nuovi_indici.append(gruppo_sx + gruppo_dx)
 
             indici_correnti = list(nuovi_indici)
@@ -103,31 +107,33 @@ class MerkleTree:
         self.root = livello_corrente[0]
         return self.root
 
-    def get_proofs(self) -> dict[int, ProofCompatta]:
+    def get_paths(self) -> dict[int, PathCompatto]:
         """
         Restituisce il dizionario completo dei Merkle Path compatti:
         - chiavi: ID delle misurazioni
         - valori: {'direzioni': str, 'hash_fratelli': list[str]}
         """
-        if self.proofs is None:
+        if self.paths is None:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
-        return self.proofs
+        return self.paths
 
-    def get_proofs_JSON(self) -> str:
+    def get_paths_JSON(self) -> str:
         """
         Restituisce una stringa JSON formattata del dizionario dei Merkle Path compatti.
         Utile per la memorizzazione o l'invio su IPFS/Filebase.
         """
-        if self.proofs is None:
+        if self.paths is None:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
 
-        # Converte tutte le ProofCompatta in dizionari standard Python (serializzabili in JSON)
-        # self.proofs è un dizionario: {id_misurazione: ProofCompatta}
-        # Usando .to_dict() su ogni ProofCompatta, otteniamo:
+        # Converte tutte i PathCompatti in dizionari standard Python (serializzabili in JSON)
+        # self.paths è un dizionario: {id_misurazione: PathCompatti}
+        # Usando .to_dict() su ogni PathCompatto, otteniamo:
         # {id_misurazione: {"direzione": "01", "hash_fratelli": ["abc", "def"]}, ...}
-        proofs_dict = {
-            id_misurazione: proof.to_dict()  # id come chiave, dizionario come valore
-            for id_misurazione, proof in self.proofs.items()
+        # chiave id_misurazione --> valore: un dizionario composto da due chiavi "dir"
+        # "hash"
+        paths_dict = {
+            id_misurazione: path.to_dict()
+            for id_misurazione, path in self.paths.items()
         }
 
         # Serializza il dizionario finale in stringa JSON leggibile
@@ -135,7 +141,7 @@ class MerkleTree:
         # - separators → compatta leggermente il JSON
         # - indent=2 → lo rende leggibile a occhio umano
         return json.dumps(
-            proofs_dict,
+            paths_dict,
             sort_keys=True,
             separators=(",", ":"),
             indent=2
@@ -147,10 +153,10 @@ class MerkleTree:
         return self.root
 
     @staticmethod
-    def verifica_singola_foglia(foglia_hash: str, proof: ProofCompatta, root_attesa: str) -> bool:
+    def verifica_singola_foglia(foglia_hash: str, path: PathCompatto, root_attesa: str) -> bool:
         # Verifica l'integrità di una singola foglia usando il Merkle Path compatto
-        direzioni = proof.get_direzione()
-        hash_fratelli = proof.get_hash_fratelli()
+        direzioni = path.get_direzione()
+        hash_fratelli = path.get_hash_fratelli()
         h = foglia_hash
         for direzione, fratello in zip(direzioni, hash_fratelli):
             if direzione == "1":  # sinistra

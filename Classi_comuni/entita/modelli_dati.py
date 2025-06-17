@@ -20,6 +20,7 @@ class ModelliHashabili(BaseModel, ABC):
         """
         return json.dumps(
             self.model_dump(),
+            #ordina le chiavi
             sort_keys=True,
             separators=(",", ":"),
             indent=2
@@ -91,7 +92,7 @@ class DatiMisurazione(ModelliHashabili):
 
 class DatiBatch(ModelliHashabili):
     """
-    Rappresenta i metadati di un batch di misurazioni.
+    Rappresenta i metadata di un batch di misurazioni.
     """
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., title="Timestamp di creazione", description="Data e ora di creazione del batch in formato ISO 8601")

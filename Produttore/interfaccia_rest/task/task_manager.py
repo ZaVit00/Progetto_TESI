@@ -47,13 +47,15 @@ async def task_elabora_batch_completi(db, endpoint_cloud: str, intervallo: int =
         for id_batch in lista_id_batch:
             try:
                 logger.debug(f"[BATCH-ELAB] Elaborazione batch {id_batch}...")
-                gestisci_batch_completo(id_batch, db)
+                if not gestisci_batch_completo(id_batch, db):
+                    logger.debug(f"[BATCH-ELAB] Elaborazione batch {id_batch} FALLITA")
             except Exception as e:
                 logger.error(f"[BATCH-ELAB] Errore durante elaborazione batch {id_batch}: {e}")
         await asyncio.sleep(intervallo)
 
 # === AVVIO DEI TASK ASINCRONI ===
 async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
+    """
     task1 = asyncio.create_task(task_retry_generico(
         estrai_elementi_fn=db.ottieni_sensori_non_conferma_ricezione,
         chiave_id="id_sensore",
@@ -69,7 +71,7 @@ async def avvia_task_periodici(db : GestoreDatabase, endpoint_cloud: str):
         endpoint_cloud=endpoint_cloud,
         intervallo=60
     ))
-
+    """
     task3 = asyncio.create_task(task_elabora_batch_completi(
         db=db,
         endpoint_cloud=endpoint_cloud,

@@ -5,11 +5,12 @@ ERRORE_IPFS = "ERRORE_IPFS"
 ERRORE_BLOCKCHAIN= "ERRORE_BLOCKCHAIN"
 ERRORE_HTTP = "ERRORE_HTTP"
 
-SOGLIA_BATCH : int = 511
+#soglia potenza di due - 1
+SOGLIA_BATCH : int = 1023
 
 # Costanti con valori ammissibili
-TIPO_SENSORE_JOYSTICK: Final = "joystick"
-TIPO_SENSORE_TEMPERATURA: Final = "temperatura"
+TIPO_SENSORE_JOYSTICK: Final = "JOYSTICK"
+TIPO_SENSORE_TEMPERATURA: Final = "TEMPERATURA"
 
 ENDPOINT_CLOUD_STORAGE = "http://localhost:8080/ricevi_batch"
 

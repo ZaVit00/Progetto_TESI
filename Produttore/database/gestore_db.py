@@ -19,7 +19,7 @@ class GestoreDatabase:
     _DBPATH = os.path.join(BASE_DIR, "dati_temporanei.sqlite")
     _STRING_MAX_LENGTH = 12
 
-    def __init__(self, soglia_batch: int = 1024):
+    def __init__(self, soglia_batch: int = 1023):
         self.conn = sqlite3.connect(self._DBPATH)
         #logger.debug("Usando database:", os.path.abspath(self._DBPATH))
         self.conn.row_factory = sqlite3.Row
