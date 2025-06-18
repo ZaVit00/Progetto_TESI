@@ -1,5 +1,11 @@
 # costanti di errore durante l'elaborazione del batch
 from typing import Final
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY_PRODUTTORE = os.getenv("API_KEY_PRODUTTORE")
 
 ERRORE_IPFS = "ERRORE_IPFS"
 ERRORE_BLOCKCHAIN= "ERRORE_BLOCKCHAIN"
@@ -14,7 +20,6 @@ TIPO_SENSORE_TEMPERATURA: Final = "TEMPERATURA"
 
 ENDPOINT_CLOUD_SENSORI = "http://localhost:8080/sensori"
 ENDPOINT_CLOUD_BATCH = "http://localhost:8080/batch"
-
 
 #BUCKET FILEBASE
 BUCKET_MERKLE_PATH = "merkle-path-batch"

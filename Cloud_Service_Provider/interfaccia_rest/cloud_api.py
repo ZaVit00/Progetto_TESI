@@ -4,10 +4,13 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload
-from Cloud_Service_Provider.Database.gestore_db import GestoreDatabase
+from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload
 import os
 from dotenv import load_dotenv
+from fastapi import Depends
+from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura
+from Cloud_Service_Provider.entita.utente_api import UtenteAPI
 
 
 # Configurazione globale del logging
@@ -42,7 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/sensori")
-def registra_sensore(dati: DatiSensore):
+def registra_sensore(dati: DatiSensore, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     """
     Endpoint per la registrazione di un sensore.
     Riceve un oggetto DatiSensore, lo valida e lo salva nel database.
@@ -65,7 +68,7 @@ def registra_sensore(dati: DatiSensore):
         )
 
 @app.post("/batch")
-def ricevi_batch(payload: DatiPayload):
+def ricevi_batch(payload: DatiPayload, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     """
     Endpoint per ricevere un intero batch con le sue misurazioni.
     Il payload contiene un oggetto DatiBatch e una lista di DatiMisurazione.

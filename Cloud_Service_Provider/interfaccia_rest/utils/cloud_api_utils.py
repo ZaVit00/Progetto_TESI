@@ -1,4 +1,4 @@
-from Cloud_Service_Provider.Database.gestore_db import GestoreDatabase
+from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Classi_comuni.entita.modelli_dati import DatiPayload
 import logging
 

@@ -1,6 +1,6 @@
 import logging
 import requests
-from costanti_produttore import ERRORE_IPFS, ERRORE_BLOCKCHAIN
+from costanti_produttore import ERRORE_IPFS, ERRORE_BLOCKCHAIN, API_KEY_PRODUTTORE
 from database.gestore_db import GestoreDatabase
 from Classi_comuni.entita.modelli_dati import DatiPayload
 from gestione_batch import costruisci_merkle_tree, carica_merkle_path_ipfs
@@ -73,11 +73,15 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db : GestoreD
     Eventuali errori di rete o risposte errate vengono loggati sul logger
     """
     try:
-        # Invia il payload dict come JSON con timeout di 10 secondi
-        response = requests.post(endpoint_cloud, json=payload_dict, timeout=10)
-        # Solleva eccezione se il codice HTTP non è 2xx
-        response.raise_for_status()
-        # Tenta di interpretare la risposta come JSON (in realtà è un dizionario)
+        # Header con chiave API
+        headers = {
+            "X-API-Key": API_KEY_PRODUTTORE
+        }
+
+        # Invia il payload con header e timeout
+        response = requests.post(endpoint_cloud, json=payload_dict, headers=headers, timeout=10)
+        response.raise_for_status()  # genera eccezione se non 2xx
+        # Tenta di effettuare il parsing della risposta come JSON (in realtà il payload è un dizionario)
         payload_dict = response.json()
         logger.debug(payload_dict)
         # Verifica che il campo "conferma_ricezione" sia presente e valga True
