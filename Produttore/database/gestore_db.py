@@ -3,6 +3,8 @@ import os
 import sqlite3
 import json
 from datetime import datetime
+from typing import Any
+
 from database import query
 
 logger = logging.getLogger(__name__)
@@ -130,6 +132,9 @@ class GestoreDatabase:
             cursor = self.conn.cursor()
             cursor.execute(query.ESTRAI_DATI_BATCH_MISURAZIONI, (id_batch,))
             righe = cursor.fetchall()
+            #.fetchall() restituisce una lista di sqlite3.Row, che sembrano dizionari, ma non lo sono al 100%.
+            # Se ti serve una lista di dizionari veri,
+            # fai righe = [dict(r) for r in cursor.fetchall()].
             return [dict(riga) for riga in righe]
         except sqlite3.Error as e:
             logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
@@ -168,7 +173,7 @@ class GestoreDatabase:
             return False
 
 
-    def ottieni_payload_batch_pronti_per_invio(self) -> list[dict]:
+    def ottieni_payload_batch_pronti_per_invio(self) -> list[tuple[int, str]]:
         """
         Metodo che viene utilizzato dalla classe che gestisce
         il reinvio dei batch completi, il cui payload JSON è pronto per l'invio.
@@ -184,7 +189,7 @@ class GestoreDatabase:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO)
             risultati = cursor.fetchall()
-            return [riga["payload_json"] for riga in risultati]
+            return [(r["id_batch"], r["payload_json"]) for r in risultati]
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
@@ -241,6 +246,21 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - SEGNA BATCH ERRORE] {e}")
 
+    def aggiorna_conferma_ricezione_batch(self, id_batch: int):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.AGGIORNA_CONFERMA_RICEZIONE_BATCH, (id_batch,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - aggiorna batch conferma ricezione ERRORE] {e}")
+
+    def aggiorna_conferma_ricezione_sensore(self, id_sensore: str):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.AGGIORNA_CONFERMA_RICEZIONE_SENSORE, (id_sensore,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - aggiorna sensore conferma ricezione ERRORE] {e}")
 
     # attualmente non utilizzato
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:

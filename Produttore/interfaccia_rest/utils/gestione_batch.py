@@ -53,7 +53,7 @@ def carica_merkle_path_ipfs(merkle_path: str):
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file: str = client.upload_json_string(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
+    nome_file: str = client.upload_json_string(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=False)
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
     cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
     return cid

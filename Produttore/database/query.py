@@ -195,13 +195,13 @@ OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
     SELECT b.id_batch, b.payload_json   
     FROM batch as b
     INNER JOIN misurazione as m ON b.id_batch = m.id_batch
-    INNER JOIN sensore as s s ON m.id_sensore = s.id_sensore
+    INNER JOIN sensore as s ON m.id_sensore = s.id_sensore
     WHERE payload_json IS NOT NULL
-    AND conferma_ricezione = 0
+    AND b.conferma_ricezione = 0
     AND elaborabile = 1
     AND s.conferma_ricezione = 1
     ORDER BY b.id_batch ASC
-    LIMIT 3
+    LIMIT 1
 """
 
 """
@@ -212,7 +212,19 @@ OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     SELECT id_sensore, descrizione
     FROM sensore
     WHERE conferma_ricezione = 0
-    LIMIT 6;
+    LIMIT 3;
+"""
+
+AGGIORNA_CONFERMA_RICEZIONE_BATCH = """
+    UPDATE batch
+    SET conferma_ricezione = 1
+    WHERE id_batch = ?
+"""
+
+AGGIORNA_CONFERMA_RICEZIONE_SENSORE = """
+    UPDATE sensore
+    SET conferma_ricezione = 1
+    WHERE id_sensore = ?
 """
 
 

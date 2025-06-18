@@ -19,6 +19,7 @@ def elabora_payload(payload: DatiPayload, gestore_db: GestoreDatabase) -> bool:
     - False se una qualsiasi operazione fallisce
     """
     batch = payload.batch
+    #lista di misurazioni
     misurazioni = payload.misurazioni
 
     # Prima l'inserimento del batch e poi delle misurazioni associate
@@ -28,7 +29,7 @@ def elabora_payload(payload: DatiPayload, gestore_db: GestoreDatabase) -> bool:
 
     # Inserisce le misurazioni
     for m in misurazioni:
-        if not gestore_db.inserisci_misurazione(m):
+        if not gestore_db.inserisci_misurazione(m, batch.id_batch):
             logger.error(f"Inserimento misurazione {m.id_misurazione} fallito.")
             return False
 

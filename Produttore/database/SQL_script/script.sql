@@ -52,4 +52,7 @@ SELECT DISTINCT b.id_batch
     AND (b.merkle_root IS NULL OR b.merkle_root = '')
     AND (b.payload_json IS NULL OR b.payload_json = '')
     AND s.conferma_ricezione = 0
-    ORDER BY b.id_batch
+    ORDER BY b.id_batch;
+
+
+SELECT * FROM sensore;

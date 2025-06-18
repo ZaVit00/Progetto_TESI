@@ -62,7 +62,7 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
     return True
 
 
-def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
+def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db : GestoreDatabase) -> bool:
     """
     Invia il payload (dizionario) al servizio cloud tramite HTTP POST.
 
@@ -79,13 +79,16 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
         response.raise_for_status()
         # Tenta di interpretare la risposta come JSON (in realtà è un dizionario)
         payload_dict = response.json()
+        logger.debug(payload_dict)
         # Verifica che il campo "conferma_ricezione" sia presente e valga True
         if payload_dict.get("conferma_ricezione") is True:
             # Messaggio di log personalizzato in base al contenuto della risposta
             if "id_sensore" in payload_dict:
                 logger.debug(f"Registrazione id Sensore confermata: {payload_dict['id_sensore']}")
+                gestore_db.aggiorna_conferma_ricezione_sensore(payload_dict['id_sensore'])
             elif "id_batch" in payload_dict:
                 logger.debug(f"Registrazione id Batch confermato: {payload_dict['id_batch']}")
+                gestore_db.aggiorna_conferma_ricezione_batch(payload_dict['id_batch'])
             return True
         else:
             #fallita la registrazione del sensore o del batch
