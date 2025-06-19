@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from Classi_comuni.hash_utils import Hashing
 import gzip
 from io import BytesIO
+
+from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
+
 logger = logging.getLogger(__name__)
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
 logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -43,9 +46,11 @@ class IpfsClient:
     Classe per caricare file JSON su Filebase (IPFS) e recuperare il CID associato.
     """
     def __init__(self):
-        load_dotenv()
-        access_key = os.getenv("AWS_ACCESS_KEY_ID")
-        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        #load_dotenv()
+        #access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        #secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        access_key = AWS_ACCESS_KEY_ID
+        secret_key = AWS_SECRET_ACCESS_KEY
         self.s3 = boto3.client(
             's3',
             endpoint_url='https://s3.filebase.com',

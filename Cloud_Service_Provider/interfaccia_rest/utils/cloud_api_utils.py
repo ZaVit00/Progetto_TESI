@@ -1,9 +1,7 @@
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Classi_comuni.entita.modelli_dati import DatiPayload
 import logging
-
 logger = logging.getLogger(__name__)
-
 
 def elabora_payload(payload: DatiPayload, gestore_db: GestoreDatabase) -> bool:
     """

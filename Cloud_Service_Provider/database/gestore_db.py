@@ -2,6 +2,8 @@ import json
 
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
+from psycopg2.extras import RealDictCursor
+
 from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch
 from Cloud_Service_Provider.database.query import (
     CREA_TABELLA_SENSORE,
@@ -19,7 +21,7 @@ class GestoreDatabase:
         try:
             self.conn = psycopg2.connect(**db_config)
             self.conn.autocommit = True
-            self.cursor = self.conn.cursor()
+            self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             logger.info("Connessione a PostgreSQL stabilita.")
             self._crea_tabelle()
         except Psycopg2Error as e:

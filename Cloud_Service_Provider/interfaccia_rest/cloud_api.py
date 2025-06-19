@@ -12,7 +12,6 @@ from fastapi import Depends
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
 
-
 # Configurazione globale del logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -20,7 +19,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL)
-
 #Path assoluto al file .env
 env_path = os.path.join(os.path.dirname(__file__), "..", "config", ".env")
 load_dotenv(dotenv_path=os.path.abspath(env_path))
@@ -43,7 +41,6 @@ async def lifespan(app: FastAPI):
 
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
-
 @app.post("/sensori")
 def registra_sensore(dati: DatiSensore, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     """
