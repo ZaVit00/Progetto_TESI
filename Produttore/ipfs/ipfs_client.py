@@ -1,16 +1,12 @@
-import json
-import os
-import random
-from pprint import pprint
 # Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
-import boto3
-import botocore.exceptions
-import logging
-from dotenv import load_dotenv
-from Classi_comuni.hash_utils import Hashing
 import gzip
+import logging
 from io import BytesIO
 
+import boto3
+import botocore.exceptions
+
+from Classi_comuni.hash_utils import Hashing
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
 
 logger = logging.getLogger(__name__)

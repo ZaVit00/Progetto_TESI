@@ -2,8 +2,9 @@ import json
 import re
 from abc import ABC
 from typing import Dict, List
-from pydantic import BaseModel, Field, field_validator
+
 from hash_utils import Hashing
+from pydantic import BaseModel, Field, field_validator
 
 
 class ModelliHashabili(BaseModel, ABC):

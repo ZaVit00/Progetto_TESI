@@ -1,6 +1,7 @@
 # costanti di errore durante l'elaborazione del batch
-from typing import Final
 import os
+from typing import Final
+
 from dotenv import load_dotenv
 
 load_dotenv()

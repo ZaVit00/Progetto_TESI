@@ -1,6 +1,8 @@
 from fastapi import Request, HTTPException, Depends
-from Cloud_Service_Provider.entita.utente_api import UtenteAPI
+
 from Cloud_Service_Provider.config.costanti_cloud import API_KEYS
+from Cloud_Service_Provider.entita.utente_api import UtenteAPI
+
 
 def get_utente(request: Request) -> UtenteAPI:
     # DA CHIAVE --> UTENTE API DEL SISTEMA

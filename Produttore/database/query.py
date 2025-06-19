@@ -111,7 +111,7 @@ CREA_BATCH = """
     VALUES (?, 0, 0, 0)
 """
 
-# Estrae tutte le misurazioni di un batch, includendo anche i metadati del batch stesso
+# Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
 ESTRAI_DATI_BATCH_MISURAZIONI = """
     SELECT 
         m.id_misurazione,

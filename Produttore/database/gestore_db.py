@@ -1,9 +1,8 @@
+import json
 import logging
 import os
 import sqlite3
-import json
 from datetime import datetime
-from typing import Any
 
 from database import query
 

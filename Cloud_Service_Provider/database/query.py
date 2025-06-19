@@ -46,3 +46,20 @@ INSERT INTO misurazione (id_misurazione, id_batch, id_sensore, timestamp, dati)
 VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (id_misurazione) DO NOTHING;
 """
+
+
+
+# Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
+ESTRAI_DATI_BATCH_MISURAZIONI = """
+    SELECT m.id_misurazione,
+    m.id_sensore,
+    m.timestamp,
+    m.dati,
+    b.id_batch,
+    b.timestamp_creazione,
+    b.numero_misurazioni
+    FROM misurazione AS m
+    INNER JOIN batch AS b ON m.id_batch = b.id_batch
+    WHERE b.id_batch = %s
+    ORDER BY m.id_misurazione ASC;
+"""

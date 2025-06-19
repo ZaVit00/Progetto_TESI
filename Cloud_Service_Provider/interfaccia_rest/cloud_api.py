@@ -1,16 +1,18 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload
-from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
-from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload
-import os
 from dotenv import load_dotenv
 from fastapi import Depends
-from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
+from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload
+from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica
+from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
+from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload
+from cloud_api_utils import costruisci_payload_per_batch
 
 # Configurazione globale del logging
 logging.basicConfig(
@@ -33,7 +35,7 @@ gestore_db = GestoreDatabase(config_db)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("StartUp lifespan")
+    logger.info("StartUp Applicazione")
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
@@ -86,6 +88,17 @@ def ricevi_batch(payload: DatiPayload, utente: UtenteAPI = Depends(richiede_perm
             content={"conferma_ricezione": False, "messaggio": "Errore durante il salvataggio del batch"},
             status_code=500
         )
+
+@app.get("/batch", response_model=DatiPayload)
+def ottieni_batch(id: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    try:
+        print(f"[DEBUG] Ricevuta richiesta batch con id = {id}")
+        payload = costruisci_payload_per_batch(id, gestore_db)
+        #print(f"[DEBUG] Payload costruito: {payload}")
+        return payload
+    except Exception as e:
+        print(f"[ERRORE GET /batch] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def main():

@@ -1,8 +1,8 @@
 import json
+import logging
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 from hash_utils import Hashing
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL + 1)
@@ -23,6 +23,12 @@ class PathCompatto:
 
     def append_direzione(self, direzione: str) -> None:
         self.direzione += direzione
+
+    def set_direzione(self, dir : str):
+        self.direzione = dir
+
+    def set_hash_fratelli(self, hash_fratelli : list[str]):
+        self.hash_fratelli = list(hash_fratelli)
 
     def to_dict(self) -> dict:
         """

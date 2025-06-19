@@ -1,4 +1,5 @@
 import json
+import logging
 
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
@@ -11,9 +12,10 @@ from Cloud_Service_Provider.database.query import (
     CREA_TABELLA_MISURAZIONE,
     INSERISCI_SENSORE,
     INSERISCI_MISURAZIONE,
-    INSERISCI_BATCH
+    INSERISCI_BATCH,
+    ESTRAI_DATI_BATCH_MISURAZIONI
 )
-import logging
+
 logger = logging.getLogger(__name__)
 
 class GestoreDatabase:
@@ -96,6 +98,23 @@ class GestoreDatabase:
         except Psycopg2Error as e:
             logger.error(f"Errore inserimento misurazione {misurazione.id_misurazione}: {e}")
             return False
+
+    def estrai_dati_batch_misurazioni(self, id_batch: int) -> list[dict]:
+        """
+        Estrae tutte le misurazioni associate a un batch ordinandole per ID.
+        Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
+        """
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(ESTRAI_DATI_BATCH_MISURAZIONI, (id_batch,))
+            righe = cursor.fetchall()
+            #.fetchall() restituisce una lista di Row, che sembrano dizionari, ma non lo sono al 100%.
+            # Se ti serve una lista di dizionari veri,
+            # fai righe = [dict(r) for r in cursor.fetchall()].
+            return [dict(riga) for riga in righe]
+        except Psycopg2Error as e:
+            logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
+            return []
 
     def chiudi_connessione(self):
         """

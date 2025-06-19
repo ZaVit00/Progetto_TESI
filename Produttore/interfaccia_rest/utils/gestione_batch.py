@@ -1,10 +1,13 @@
 import json
 import logging
 from typing import Tuple
-from costanti_produttore import BUCKET_MERKLE_PATH
+
 from costruttore_payload import CostruttorePayload
-from ipfs_client import IpfsClient
 from merkle_tree import MerkleTree, PathCompatto
+
+from costanti_produttore import BUCKET_MERKLE_PATH
+from ipfs_client import IpfsClient
+
 # Logger del modulo
 logger = logging.getLogger(__name__)
 

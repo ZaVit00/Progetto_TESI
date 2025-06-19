@@ -16,7 +16,6 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/payload_richiesta_cloud" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test_produttore" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/test_produttore/sensori_simulati" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Classi_comuni" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/ipfs" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/task" isTestSource="false" />
@@ -25,10 +24,16 @@
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/auth" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/database" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/entita" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Classi_comuni" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Classi_comuni/config" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Verificatore" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Verificatore/api_client" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Verificatore/config" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Verificatore/verifica" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="PythonProject" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />

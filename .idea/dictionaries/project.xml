@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>dell'endpoint</w>
+      <w>deserializzazione</w>
       <w>elaborabile</w>
       <w>elaborabili</w>
       <w>filebase</w>
@@ -12,6 +13,7 @@
       <w>postgre</w>
       <w>reinvio</w>
       <w>serializzabile</w>
+      <w>sottoforma</w>
       <w>tupla</w>
     </words>
   </dictionary>

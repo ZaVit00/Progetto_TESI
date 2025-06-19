@@ -1,7 +1,9 @@
-import os
 import json
-from dotenv import load_dotenv
+import os
 from types import MappingProxyType  # per rendere il dict immutabile
+
+from dotenv import load_dotenv
+
 from utente_api import UtenteAPI
 
 # === Percorsi ===

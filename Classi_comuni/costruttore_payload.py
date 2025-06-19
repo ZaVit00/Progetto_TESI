@@ -1,8 +1,8 @@
-from typing import List, Dict
 import json
-from Classi_comuni.entita.modelli_dati import DatiBatch, DatiPayload, DatiMisurazione
-from Classi_comuni.entita.costanti_comuni import  ID_BATCH_LOGICO
 import logging
+from typing import List, Dict
+from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
+from Classi_comuni.entita.modelli_dati import DatiBatch, DatiPayload, DatiMisurazione
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,11 @@ class CostruttorePayload:
                     dati=riga["dati"]
                 )
                 self.misurazioni.append(mis)
-                self.hash_misurazioni.append(mis.to_hash())
-
             except Exception as e:
                 logger.error(f"[ERRORE] Errore durante la creazione della misurazione: {e}")
+        # Alla fine di estrai_dati_da_query
+        self.misurazioni.sort(key=lambda m: m.id_misurazione)
+        self.hash_misurazioni = [m.to_hash() for m in self.misurazioni]
 
     def get_foglie_hash(self) -> List[str]:
         """
@@ -90,6 +91,7 @@ class CostruttorePayload:
         # Crea un nuovo oggetto DatiBatch con Merkle Root. Possibile solo per classi PYDANTIC
         # DATIBATCH è una classe PYDANTIC
         #batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
+
         return DatiPayload(
             batch=self.batch,
             misurazioni=list(self.misurazioni)  # copia esplicita
@@ -103,3 +105,19 @@ class CostruttorePayload:
         if not self.misurazioni:
             raise ValueError("Errore! Nessun id misurazione in elaborazione")
         return [ID_BATCH_LOGICO] + [mis.id_misurazione for mis in self.misurazioni]
+
+    @staticmethod
+    def ricostruisci_hash_foglie(payload: DatiPayload) -> dict[int, str]:
+        """
+        Ricostruisce i singoli hash (foglie) da batch e misurazioni.
+        Restituisce un dizionario che mappa ogni ID logico al suo hash:
+        - ID 0 per il batch
+        - ID della misurazione per ogni misurazione
+        """
+        payload.misurazioni.sort(key=lambda m: m.id_misurazione)
+        mappa_id_hash = {ID_BATCH_LOGICO: payload.batch.to_hash()}
+        for misurazione in payload.misurazioni:
+            # 2047 --> ababhuduhjcdbjkcbkdshdcwi
+            mappa_id_hash[misurazione.id_misurazione] = misurazione.to_hash()
+
+        return mappa_id_hash

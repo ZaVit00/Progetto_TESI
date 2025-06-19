@@ -1,16 +1,18 @@
-from contextlib import asynccontextmanager
-import uvicorn
+import asyncio
 import logging
-from fastapi import FastAPI, HTTPException, Body
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Union, Annotated
-import asyncio
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, Body
+
+from Classi_comuni.entita.modelli_dati import DatiSensore
+from config.costanti_produttore import SOGLIA_BATCH
+from database.gestore_db import GestoreDatabase
 # Import dei modelli di misurazione_in_ingresso specifici
 # i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
-from config.costanti_produttore import SOGLIA_BATCH
-from Classi_comuni.entita.modelli_dati import DatiSensore
-from database.gestore_db import GestoreDatabase
 from task_manager import avvia_task_periodici
 
 # Configurazione globale del logging

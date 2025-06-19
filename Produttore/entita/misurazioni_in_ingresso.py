@@ -1,9 +1,11 @@
+from abc import ABC, abstractmethod
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from abc import ABC, abstractmethod
+
 from config.costanti_produttore import TIPO_SENSORE_JOYSTICK
 from config.costanti_produttore import TIPO_SENSORE_TEMPERATURA
+
 TipoSensore = Literal["JOYSTICK", "TEMPERATURA"]
 
 class MisurazioneInIngresso(BaseModel, ABC):
