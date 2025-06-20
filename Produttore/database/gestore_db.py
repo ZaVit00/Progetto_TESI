@@ -54,7 +54,7 @@ class GestoreDatabase:
             logger.error(f"QUERY - INSERIMENTO SENSORE] {e}")
             return False
 
-    def inserisci_misurazione(self, id_sensore: str, dati: dict) -> bool:
+    def inserisci_misurazione(self, id_sensore: str, dati: str) -> bool:
         """
         Inserisce una misurazione_in_ingresso associata al batch attivo.
         Se non esiste un batch non completato, ne crea uno.
@@ -82,12 +82,10 @@ class GestoreDatabase:
                 id_batch = self._crea_batch()
                 num_misurazione_attuale = 0
 
-            # creazione dati misurazione
-            json_dati = json.dumps(dati)
             timestamp_locale = datetime.now().isoformat()
             cursor.execute(
                 query.INSERISCI_MISURAZIONE,
-                (id_sensore, id_batch, json_dati, timestamp_locale)
+                (id_sensore, id_batch, dati, timestamp_locale)
             )
 
             # Aggiorna numero misurazioni nel batch

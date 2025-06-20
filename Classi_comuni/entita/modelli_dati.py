@@ -90,6 +90,21 @@ class DatiMisurazione(ModelliHashabili):
     timestamp: str = Field(..., title="Timestamp", description="Data e ora della misurazione in formato ISO 8601")
     dati: Dict = Field(..., title="Dati rilevati", description="Contenuto effettivo della misurazione in formato JSON")
 
+    def to_json(self) -> str:
+        # Copia dell'oggetto come dizionario
+        # Classe pydantic --> Dizionario
+        dump = self.model_dump()
+        # Canonizza il campo "dati" separatamente
+        # cioè rende omogeneo il campo dati. Necessario per la verifica dell'integrità salvare
+        # in modo omogeneo i campi dei dati nello stesso modo tra sqlite e postegreSQL
+        dump["dati"] = json.loads(json.dumps(self.dati, sort_keys=True, separators=(",", ":")))
+        return json.dumps(
+            dump,
+            sort_keys=True,
+            separators=(",", ":"),
+            indent=2
+        )
+
 
 class DatiBatch(ModelliHashabili):
     """

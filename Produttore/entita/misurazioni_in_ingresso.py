@@ -1,3 +1,4 @@
+import json
 from abc import ABC, abstractmethod
 from typing import Literal
 
@@ -24,24 +25,33 @@ class MisurazioneInIngresso(BaseModel, ABC):
                                        "l'istanza corretta di misurazione")
 
     @abstractmethod
-    def to_dict(self) -> dict:
+    def dati_misurazione_to_dict(self) -> dict:
         """
         Restituisce un dizionario con i dati specifici della misurazione_in_ingresso.
         Deve essere implementato da ogni sottoclasse.
         """
         pass
 
-    def estrai_dati_misurazione(self):
+    def estrai_dati_misurazione(self) -> str:
         """
-        Mantiene solo i dati effettivi della misurazione in ingresso eliminando
-        i metadata. Elimino id_sensore e tipo che viene solo utilizzato per determinare
-        la classe corretta da istanziare in fase di validazione dell'input ricevi_misurazione.)
-        """
-        d = self.to_dict()
-        d.pop("id_sensore", None)
-        # il tipo non viene memorizzato nella rappresentazione a dizionario
-        #ora d contiene solo i dati effettivi della misurazione
-        return d
+        Estrae e normalizza i dati effettivi della misurazione:
+        - Rimuove 'id_sensore' (metadato)
+        - Normalizza gli zeri float (0.0, -0.0, -0.000 → 0)
+        - Arrotonda tutti i float a 6 cifre decimali
+        - Ordina le chiavi e restituisce una stringa JSON compatta
+            """
+        d = self.dati_misurazione_to_dict()
+        # Normalizzazione (IMPORTANTISSIMO) di tutti i valori float equivalenti a zero
+        for key, value in d.items():
+            if isinstance(value, float) and abs(value) == 0.0:
+                #normalizza a 0
+                d[key] = 0
+            else:
+                d[key] = round(value, 6)  # Arrotonda a 6 cifre decimali
+
+        # Serializzazione ordinata e compatta per uso coerente (es. hashing, confronto)
+        return json.dumps(d, sort_keys=True, separators=(",", ":"))
+
 
 
 class MisurazioneInIngressoJoystick(MisurazioneInIngresso):
@@ -55,12 +65,11 @@ class MisurazioneInIngressoJoystick(MisurazioneInIngresso):
     # Literal ti permette di dire: Questa variabile può valere solo uno (o più) valori precisi”.
     tipo: Literal["JOYSTICK"] = TIPO_SENSORE_JOYSTICK
 
-    def to_dict(self) -> dict:
+    def dati_misurazione_to_dict(self) -> dict:
         """
         Restituisce un dizionario con i dati specifici del joystick.
         """
         dati = {
-            "id_sensore": self.id_sensore,
             "x": self.x,
             "y": self.y,
             "pressed": self.pressed
@@ -75,12 +84,11 @@ class MisurazioneInIngressoTemperatura(MisurazioneInIngresso):
     valore: float = Field(..., description="Valore della temperatura rilevata (in gradi Celsius)")
     tipo: Literal["TEMPERATURA"] = TIPO_SENSORE_TEMPERATURA
 
-    def to_dict(self) -> dict:
+    def dati_misurazione_to_dict(self) -> dict:
         """
         Restituisce un dizionario con i dati specifici della misurazione_in_ingresso di temperatura.
         """
         dati = {
-            "id_sensore": self.id_sensore,
             "valore": self.valore
         }
         return dati
