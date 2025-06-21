@@ -38,12 +38,11 @@ def elabora_payload(payload: DatiPayload, gestore_db: GestoreDatabase) -> bool:
     return True
 
 
-def costruisci_payload_per_batch(id_batch: int, gestore_db : GestoreDatabase) -> DatiPayload:
+def costruisci_mappa_id_hash_batch(id_batch: int, gestore_db : GestoreDatabase) -> dict[int, str]:
     risultati_query = gestore_db.estrai_dati_batch_misurazioni(id_batch)
     if not risultati_query:
         raise ValueError(f"Nessun batch trovato con ID {id_batch}")
 
     payload = CostruttorePayload()
     payload.estrai_dati_da_query(risultati_query)
-    print("ciao vito")
-    return payload.costruisci_payload()
+    return payload.ottieni_mappa_id_foglie()

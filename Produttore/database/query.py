@@ -212,7 +212,8 @@ OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     SELECT id_sensore, descrizione
     FROM sensore
     WHERE conferma_ricezione = 0
-    LIMIT 6;
+    ORDER BY id_sensore ASC
+    LIMIT 10;
 """
 
 AGGIORNA_CONFERMA_RICEZIONE_BATCH = """

@@ -34,6 +34,15 @@ class ModelliHashabili(BaseModel, ABC):
         """
         return Hashing.calcola_hash(self.to_json())
 
+class MetaDatiMisurazione(BaseModel):
+    id_sensore: str = Field(..., description="Identificativo del sensore che ha generato la misurazione")
+    timestamp: str = Field(..., description="Data e ora della misurazione")
+    id_batch: int = Field(..., description="Identificativo del batch a cui appartiene la misurazione")
+
+class MetaDatiBatch(BaseModel):
+    timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
+    numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
+
 
 class DatiSensore(ModelliHashabili):
     """
@@ -81,13 +90,11 @@ class DatiSensore(ModelliHashabili):
         prefisso = self.id_sensore[:4].strip("0123456789")
         self.tipo = mapping.get(prefisso, "generico")
 
-class DatiMisurazione(ModelliHashabili):
+class DatiMisurazione(ModelliHashabili, MetaDatiMisurazione):
     """
     Rappresenta una singola misurazione arricchita con metadata interni proveniente da un sensore.
     """
     id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")
-    id_sensore: str = Field(..., title="ID Sensore", description="Identificativo del sensore IoT che ha generato la misurazione")
-    timestamp: str = Field(..., title="Timestamp", description="Data e ora della misurazione in formato ISO 8601")
     dati: Dict = Field(..., title="Dati rilevati", description="Contenuto effettivo della misurazione in formato JSON")
 
     def to_json(self) -> str:
@@ -106,13 +113,11 @@ class DatiMisurazione(ModelliHashabili):
         )
 
 
-class DatiBatch(ModelliHashabili):
+class DatiBatch(ModelliHashabili, MetaDatiBatch):
     """
     Rappresenta i metadata di un batch di misurazioni.
     """
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
-    timestamp_creazione: str = Field(..., title="Timestamp di creazione", description="Data e ora di creazione del batch in formato ISO 8601")
-    numero_misurazioni: int = Field(..., title="Numero misurazioni", description="Numero totale di misurazioni contenute nel batch")
     """
     Il campo merkle_root non è inviato al cloud ma è un campo associato al batch
     Può essere usato se vogliamo che il cloud lo memorizzi insieme ai dati del batch
@@ -127,5 +132,3 @@ class DatiPayload(ModelliHashabili):
     """
     batch: DatiBatch = Field(..., title="Batch", description="Metadata del batch")
     misurazioni: List[DatiMisurazione] = Field(..., title="Lista di Misurazioni", description="Lista delle misurazioni associate al batch")
-
-

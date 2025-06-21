@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS misurazione (
     id_sensore    TEXT NOT NULL,
     timestamp     TEXT    NOT NULL,
     dati          JSONB   NOT NULL,
-    FOREIGN KEY (id_batch) REFERENCES batch(id_batch) ON DELETE CASCADE,
-    FOREIGN KEY (id_sensore) REFERENCES sensore(id_sensore) ON DELETE CASCADE
+    FOREIGN KEY (id_batch) REFERENCES batch(id_batch) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (id_sensore) REFERENCES sensore(id_sensore) ON DELETE CASCADE ON UPDATE CASCADE
 );
 """
 
@@ -62,4 +62,17 @@ ESTRAI_DATI_BATCH_MISURAZIONI = """
     INNER JOIN batch AS b ON m.id_batch = b.id_batch
     WHERE b.id_batch = %s
     ORDER BY m.id_misurazione ASC;
+"""
+
+#estrae le informazioni associate a una misurazione
+ESTRAI_METADATA_MISURAZIONE = """
+    SELECT id_batch, id_sensore, misurazione.timestamp
+    from misurazione
+    where id_misurazione = %s
+"""
+
+ESTRAI_METADATA_BATCH = """
+    SELECT numero_misurazioni, timestamp_creazione
+    from batch
+    where id_batch = %s
 """

@@ -22,6 +22,7 @@ def carica_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
     try:
         # Caricamento della stringa JSON in un dict Python
         diz = json.loads(json_string)
+        #dizionario vuoto
         paths: Dict[int, PathCompatto] = {}
 
         for key_string, values in diz.items():
@@ -41,20 +42,3 @@ def carica_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
     except (ValueError, KeyError, TypeError) as e:
         # Genera errore dettagliato in caso di formato inaspettato
         raise ValueError(f"Errore nella deserializzazione dei Merkle Path da JSON: {e}")
-
-
-def verifica_foglie_con_path(mappa_hash: dict[int, str],
-                              merkle_root_attesa: str,
-                              merkle_paths: dict[int, PathCompatto]) -> None:
-    """
-    Verifica ogni foglia rispetto alla root attesa usando i Merkle Path.
-    """
-    for id_foglia, foglia_hash in mappa_hash.items():
-        if id_foglia not in merkle_paths:
-            print(f"[ERRORE] Nessun Merkle Path per ID {id_foglia}")
-            continue
-
-        path = merkle_paths[id_foglia]
-        esito = MerkleTree.verifica_singola_foglia(foglia_hash, path, merkle_root_attesa)
-
-        print(f"[VERIFICA] ID {id_foglia} → {'✔ INTEGRO' if esito else '✘ ALTERATO'}")

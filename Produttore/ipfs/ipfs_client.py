@@ -81,21 +81,22 @@ class IpfsClient:
             contenuto = IpfsClient._genera_contenuto_gzip(stringa_json)
             nome_file += ".gz"
         else:
-            contenuto = stringa_json
+            contenuto = stringa_json.encode("utf-8")  # CORRETTO
         try:
             logger.info(f"Caricamento '{nome_file}' nel bucket '{nome_bucket}'...")
             params = {
                 "Bucket": nome_bucket,
                 "Key": nome_file,
                 "Body": contenuto,
-                "ContentType": "application/json",
             }
             if comprimi_dimensione:
-                params["ContentEncoding"] = "gzip"
+                params["ContentType"] = "application/gzip"
+            else:
+                params["ContentType"] = "application/json"
+
             #usando un dizionario (params), puoi aggiungere parametri solo quando servono
             #con ** sto creando un nuovo dizionario
             self.s3.put_object(**params)
-
             logger.info("✅ Upload completato.")
             return nome_file
 

@@ -60,20 +60,6 @@ class CostruttorePayload:
         self.misurazioni.sort(key=lambda m: m.id_misurazione)
         self.hash_misurazioni = [m.to_hash() for m in self.misurazioni]
 
-    def get_foglie_hash(self) -> List[str]:
-        """
-        Restituisce la lista degli hash da usare come foglie nel Merkle Tree:
-        - N hash delle misurazioni
-        - 1 hash del batch (come ultima foglia)
-        """
-        if not self.hash_batch:
-            raise ValueError("Hash del batch non calcolato. Chiama prima estrai_dati_query.")
-        if not self.hash_misurazioni:
-            raise ValueError("Hash delle misurazioni non calcolate. Chiama prima estrai_dati_query.")
-        # concatenazione delle liste di hash
-        # La prima foglia è hash del batch; le restanti sono delle misurazioni
-        return [self.hash_batch] + self.hash_misurazioni
-
     def costruisci_payload(self) -> DatiPayload:
         """
         Costruisce il payload da inviare al cloud.
@@ -97,27 +83,21 @@ class CostruttorePayload:
             misurazioni=list(self.misurazioni)  # copia esplicita
         )
 
-    def get_id_misurazioni(self) -> List[int]:
-        # restituisce la lista degli id della misurazione concatenato con la lista contenente
-        # IL PRIMO id FITTIZIO rappresentativo del batch = 0 (nessuna misurazione avrà mai id misurazione = 0
-        # essendo il campo id_misurazione con autoincrement partirà da 1
-        # Metodo necessario per la creazione dei merkle paths
-        if not self.misurazioni:
-            raise ValueError("Errore! Nessun id misurazione in elaborazione")
-        return [ID_BATCH_LOGICO] + [mis.id_misurazione for mis in self.misurazioni]
-
-    @staticmethod
-    def ricostruisci_hash_foglie(payload: DatiPayload) -> dict[int, str]:
+    def ottieni_mappa_id_foglie(self) -> dict[int, str]:
         """
-        Ricostruisce i singoli hash (foglie) da batch e misurazioni.
+        Costruisce una mappa id --> hash (foglie) a partire da DatiBatch e datiMisurazione.
         Restituisce un dizionario che mappa ogni ID logico al suo hash:
         - ID 0 per il batch
         - ID della misurazione per ogni misurazione
         """
-        payload.misurazioni.sort(key=lambda m: m.id_misurazione)
-        mappa_id_hash = {ID_BATCH_LOGICO: payload.batch.to_hash()}
-        for misurazione in payload.misurazioni:
+        if not self.hash_batch:
+            raise ValueError("Hash del batch non calcolato. Chiama prima estrai_dati_query.")
+        if not self.hash_misurazioni:
+            raise ValueError("Hash delle misurazioni non calcolate. Chiama prima estrai_dati_query.")
+        mappa_id_hash = {ID_BATCH_LOGICO: self.batch.to_hash()}
+        for mis in self.misurazioni:
             # 2047 --> ababhuduhjcdbjkcbkdshdcwi
-            mappa_id_hash[misurazione.id_misurazione] = misurazione.to_hash()
+            mappa_id_hash[mis.id_misurazione] = mis.to_hash()
 
-        return mappa_id_hash
+        # Ordinamento finale del dizionario per chiave (ID)
+        return dict(sorted(mappa_id_hash.items()))

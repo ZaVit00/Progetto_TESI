@@ -40,10 +40,11 @@ class PathCompatto:
         }
 
 class MerkleTree:
-    def __init__(self, foglie_hash: List[str]):
+    def __init__(self, foglie_hash: List[str], mappa_id: List[int]):
         self.foglie_hash = foglie_hash
         self.paths: Optional[Dict[int, PathCompatto]] = None  # Merkle Path compatte per ogni foglia
         self.root: Optional[str] = None
+        self.mappa_id = mappa_id
 
     def _aggiorna_paths(self, gruppo_sx: List[int], gruppo_dx: List[int],
                         elem_sx: str, elem_dx: str) -> None:
@@ -58,7 +59,7 @@ class MerkleTree:
             self.paths[idx].hash_fratelli.append(elem_sx)
             logger.debug(f"AGGIORNAMENTO MERKLE_PATH ↳ Foglia {idx} → aggiunge fratello SINISTRO {elem_sx}\n")
 
-    def costruisci_albero(self, mappa_id: List[int]) -> str:
+    def costruisci_albero(self) -> str:
         if not self.foglie_hash:
             raise ValueError("L'albero non può essere costruito senza foglie.")
         n = len(self.foglie_hash)
@@ -66,14 +67,14 @@ class MerkleTree:
         if not n > 0 and (n & (n - 1)) == 0:
             raise ValueError("Il numero di foglie deve essere una potenza di due")
 
-        if mappa_id is None:
+        if self.mappa_id is None:
             raise ValueError("È obbligatorio fornire una mappa_id per generare i Merkle Path.")
-        if len(mappa_id) != len(self.foglie_hash):
+        if len(self.mappa_id) != len(self.foglie_hash):
             raise ValueError("La lunghezza di mappa_id deve essere uguale al numero di foglie")
 
         # inizializzazione delle strutture dati importanti
-        self.paths = {id_logico: PathCompatto() for id_logico in mappa_id}
-        indici_correnti = [[id_logico] for id_logico in mappa_id]
+        self.paths = {id_logico: PathCompatto() for id_logico in self.mappa_id}
+        indici_correnti = [[id_logico] for id_logico in self.mappa_id]
         livello_corrente = list(self.foglie_hash)
 
         logger.info("🌱 Hash delle foglie iniziali:")
@@ -113,7 +114,7 @@ class MerkleTree:
         self.root = livello_corrente[0]
         return self.root
 
-    def get_paths(self) -> dict[int, PathCompatto]:
+    def ottieni_merkle_paths(self) -> dict[int, PathCompatto]:
         """
         Restituisce il dizionario completo dei Merkle Path compatti:
         - chiavi: ID delle misurazioni
@@ -123,7 +124,7 @@ class MerkleTree:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
         return self.paths
 
-    def get_paths_JSON(self) -> str:
+    def ottieni_merkle_paths_JSON(self) -> str:
         """
         Restituisce una stringa JSON formattata del dizionario dei Merkle Path compatti.
         Utile per la memorizzazione o l'invio su IPFS/Filebase.
@@ -153,7 +154,7 @@ class MerkleTree:
             indent=2
         )
 
-    def get_root(self) -> str:
+    def ottieni_merkle_root(self) -> str:
         if self.root is None:
             raise ValueError("Costruisci prima l'albero e poi ottieni la radice!")
         return self.root

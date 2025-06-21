@@ -13,7 +13,7 @@ from Cloud_Service_Provider.database.query import (
     INSERISCI_SENSORE,
     INSERISCI_MISURAZIONE,
     INSERISCI_BATCH,
-    ESTRAI_DATI_BATCH_MISURAZIONI
+    ESTRAI_DATI_BATCH_MISURAZIONI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH
 )
 
 logger = logging.getLogger(__name__)
@@ -116,6 +116,41 @@ class GestoreDatabase:
             logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
+    def estrai_metadata_misurazione(self, id_misurazione: int) -> dict:
+        """
+        Estrae i metadati associati a una singola misurazione, potenzialmente manomessi.
+        Restituisce un dizionario oppure None se la riga non esiste o in caso di errore.
+        """
+
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(ESTRAI_METADATA_MISURAZIONE, (id_misurazione,))
+            riga = cursor.fetchone()
+            if not riga:
+                raise ValueError(f"Nessuna misurazione trovata con ID {id_misurazione}")
+            return dict(riga)
+
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
+            return {}
+
+    def estrai_metadata_batch(self, id_batch):
+        """
+        Estrae i metadata associati alla tupla del batch, potenzialmente manomesso.
+        """
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(ESTRAI_METADATA_BATCH, (id_batch,))
+            riga = cursor.fetchone()
+            if not riga:
+                raise ValueError(f"Nessuna tupla batch trovata con ID {id_batch}")
+            return dict(riga)
+
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
+            return {}
+
+
     def chiudi_connessione(self):
         """
         Chiude la connessione al database PostgreSQL in modo sicuro.
@@ -131,6 +166,8 @@ class GestoreDatabase:
             logger.info("Connessione al database chiusa correttamente.")
         except Psycopg2Error as e:
             logger.error(f"Errore durante la chiusura della connessione: {e}")
+
+
 
 
 
