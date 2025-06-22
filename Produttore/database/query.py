@@ -213,7 +213,7 @@ OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     FROM sensore
     WHERE conferma_ricezione = 0
     ORDER BY id_sensore ASC
-    LIMIT 10;
+    LIMIT 20;
 """
 
 AGGIORNA_CONFERMA_RICEZIONE_BATCH = """

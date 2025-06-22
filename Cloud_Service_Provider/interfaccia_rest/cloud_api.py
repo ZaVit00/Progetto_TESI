@@ -9,11 +9,11 @@ from fastapi import Depends
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
-from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload, DatiMisurazione, DatiBatch
+from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload, DatiMisurazione, DatiBatch, DatiListaSensori
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
-from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload
+from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori
 from cloud_api_utils import costruisci_mappa_id_hash_batch
 from modelli_dati import MetaDatiBatch, MetaDatiMisurazione
 
@@ -47,27 +47,17 @@ async def lifespan(app: FastAPI):
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
 @app.post("/sensori")
-def registra_sensore(dati: DatiSensore, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
-    """
-    Endpoint per la registrazione di un sensore.
-    Riceve un oggetto DatiSensore, lo valida e lo salva nel database.
-    Restituisce un messaggio di conferma con l'id del sensore
-    per confermare la corretta registrazione del sensore
-    """
-    successo_operazione = gestore_db.inserisci_sensore(dati)
-    if successo_operazione:
-        logger.info(f"Sensore registrato: {dati.id_sensore}")
-        return JSONResponse(content={
-            "conferma_ricezione": True,
-            "id_sensore": dati.id_sensore,
-            "messaggio": "Sensore registrato correttamente"
-        })
-    else:
-        logger.warning(f"Registrazione sensore fallita: {dati.id_sensore}")
-        return JSONResponse(
-            content={"conferma_ricezione": False, "messaggio": "Errore nella registrazione del sensore"},
-            status_code=500
-        )
+def registra_lista_sensori(payload: DatiListaSensori, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
+    if not payload.sensori:
+        raise HTTPException(status_code=400, detail="Lista sensori vuota.")
+    id_inseriti = elabora_lista_sensori(payload, gestore_db)
+    conferma = bool(id_inseriti)
+    return JSONResponse(content={
+        "conferma_ricezione": conferma,
+        "id_sensori": id_inseriti,
+        "messaggio": f"{len(id_inseriti)} sensori registrati correttamente su {len(payload.sensori)}"
+    })
+
 
 @app.post("/batch")
 def ricevi_batch(payload: DatiPayload, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):

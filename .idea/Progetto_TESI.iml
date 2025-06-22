@@ -31,6 +31,9 @@
       <sourceFolder url="file://$MODULE_DIR$/Verificatore/api_client" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Verificatore/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Verificatore/verifica" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/config" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/verifica" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

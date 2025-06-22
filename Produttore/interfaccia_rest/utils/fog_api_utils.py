@@ -65,42 +65,24 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
     return True
 
 
-def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db : GestoreDatabase) -> bool:
+def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db: GestoreDatabase) -> bool:
     """
-    Invia il payload (dizionario) al servizio cloud tramite HTTP POST.
-
-    La funzione si aspetta una risposta JSON strutturata dal cloud, contenente almeno:
-    - "success": True/False
-    - "id_sensore" oppure "id_batch" a seconda del tipo di operazione
-    Ritorna True solo se la risposta HTTP ha status 2xx e se il campo "success" è True.
-    Eventuali errori di rete o risposte errate vengono loggati sul logger
+    Invia un payload al cloud e gestisce la conferma di ricezione.
+    Esegue la POST HTTP e, se la risposta è valida, richiama la funzione
+    che elabora e registra la conferma nel database.
     """
     try:
-        # Header con chiave API
         headers = {
             "X-API-Key": API_KEY_PRODUTTORE
         }
-
-        # Invia il payload con header e timeout
         response = requests.post(endpoint_cloud, json=payload_dict, headers=headers, timeout=10)
-        response.raise_for_status()  # genera eccezione se non 2xx
-        # Tenta di effettuare il parsing della risposta come JSON (in realtà il payload è un dizionario)
-        payload_dict = response.json()
-        logger.debug(payload_dict)
-        # Verifica che il campo "conferma_ricezione" sia presente e valga True
-        if payload_dict.get("conferma_ricezione") is True:
-            # Messaggio di log personalizzato in base al contenuto della risposta
-            if "id_sensore" in payload_dict:
-                logger.debug(f"Registrazione id Sensore confermata: {payload_dict['id_sensore']}")
-                gestore_db.aggiorna_conferma_ricezione_sensore(payload_dict['id_sensore'])
-            elif "id_batch" in payload_dict:
-                logger.debug(f"Registrazione id Batch confermato: {payload_dict['id_batch']}")
-                gestore_db.aggiorna_conferma_ricezione_batch(payload_dict['id_batch'])
-            return True
-        else:
-            #fallita la registrazione del sensore o del batch
-            logger.warning(f"Risposta dal cloud provider ricevuta ma non conferma"
-                           f"la ricezione del sensore o del batch: {payload_dict}")
+        response.raise_for_status()
+
+        risposta_json = response.json()
+        logger.debug(f"[HTTP] Risposta dal cloud: {risposta_json}")
+
+        # Elabora la risposta ricevuta, aggiorna il DB e ritorna True/False
+        return elabora_conferma_ricezione_cloud(risposta_json, gestore_db)
 
     except requests.exceptions.Timeout:
         logger.error("Timeout durante l'invio del payload al cloud.")
@@ -110,6 +92,27 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db : GestoreD
         logger.error(f"Invio del payload fallito: {e}")
     except ValueError:
         logger.error("Risposta del cloud non è in formato JSON valido.")
-    # In tutti i casi d’errore ritorna False per ritentare in seguito
+
+    return False
+
+def elabora_conferma_ricezione_cloud(risposta: dict, gestore_db: GestoreDatabase) -> bool:
+    """
+    Elabora la risposta ricevuta dal cloud e aggiorna la conferma nel database locale.
+    Restituisce True se la conferma è valida e gestita correttamente.
+    """
+    if not risposta or not risposta.get("conferma_ricezione"):
+        logger.warning(f"[CLOUD] Nessuna conferma ricevuta o struttura non valida: {risposta}")
+        return False
+
+    if "id_sensori" in risposta:
+        for id_sensore in risposta["id_sensori"]:
+            gestore_db.aggiorna_conferma_ricezione_sensore(id_sensore)
+        return True
+
+    elif "id_batch" in risposta:
+        gestore_db.aggiorna_conferma_ricezione_batch(risposta["id_batch"])
+        return True
+
+    logger.warning(f"[CLOUD] Risposta ricevuta ma mancano ID riconoscibili: {risposta}")
     return False
 

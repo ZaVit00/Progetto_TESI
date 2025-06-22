@@ -4,28 +4,33 @@ import logging
 
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from database.gestore_db import GestoreDatabase
+from modelli_dati import DatiListaSensori
 from utils.fog_api_utils import gestisci_batch_completo, invia_payload
 
 logger = logging.getLogger(__name__)
 
 # === TASK PER INVIO SENSORI NON CONFERMATI ===
-async def task_invio_sensori(gestore_database: GestoreDatabase, intervallo: int = 20):
+async def task_invio_sensori(gestore_database: GestoreDatabase, intervallo: int = 60):
     await asyncio.sleep(5)
     while True:
         logger.info("[SENSORI] Controllo sensori da inviare...")
-        lista_sensori = gestore_database.ottieni_sensori_non_conferma_ricezione()
-        for sensore in lista_sensori:
-            id_sensore = sensore.get("id_sensore", "??")
+        lista_sensori: DatiListaSensori = gestore_database.ottieni_sensori_non_conferma_ricezione()
+        if not lista_sensori.sensori:
+            logger.info("[SENSORI] Nessun sensore da inviare.")
+        else:
             try:
-                logger.debug(f"[SENSORI] Tentativo invio id_sensore={id_sensore}...")
-                if invia_payload(sensore, ENDPOINT_CLOUD_SENSORI, gestore_database):
-                    logger.info(f"[SENSORI] Inviato correttamente id_sensore={id_sensore}")
+                logger.debug(f"[SENSORI] Tentativo invio gruppo sensori ({len(lista_sensori.sensori)} sensori)...")
+                payload_dict = lista_sensori.model_dump()
+                esito = invia_payload(payload_dict, ENDPOINT_CLOUD_SENSORI, gestore_database)
+                if esito:
+                    logger.info(f"[SENSORI] Invio batch sensori confermato.")
                 else:
-                    logger.warning(f"[SENSORI] Invio fallito per id_sensore={id_sensore}")
-                    break # interrompi il ciclo in caso di errori
+                    logger.warning("[SENSORI] Invio batch sensori fallito.")
             except Exception as e:
-                logger.error(f"[SENSORI] Errore invio id_sensore={id_sensore}: {e}")
+                logger.error(f"[SENSORI] Errore durante l'invio batch dei sensori: {e}")
+
         await asyncio.sleep(intervallo)
+
 
 
 async def task_invio_batch(gestore_db: GestoreDatabase, intervallo: int = 60):

@@ -50,6 +50,7 @@ class CostruttorePayload:
                 mis = DatiMisurazione(
                     id_misurazione=riga["id_misurazione"],
                     id_sensore=riga["id_sensore"],
+                    id_batch=prima_riga["id_batch"],
                     timestamp=riga["timestamp"],
                     dati=riga["dati"]
                 )

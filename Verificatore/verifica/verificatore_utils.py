@@ -4,7 +4,7 @@ from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
 import json
 from typing import Dict
 
-def carica_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
+def carica_merkle_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
     """
     Converte una stringa JSON proveniente da IPFS in un dizionario di PathCompatto.
     Ogni PathCompatto rappresenta il Merkle Path compatto per una foglia,

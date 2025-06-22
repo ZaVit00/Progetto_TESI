@@ -2,7 +2,7 @@ import logging
 from Classi_comuni.entita.modelli_dati import DatiPayload
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
-from Verificatore.verifica.verificatore_utils import carica_paths_da_json_string
+from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
 from typing import TypedDict
 from costanti_comuni import ID_BATCH_LOGICO
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
@@ -56,8 +56,9 @@ class Verificatore:
         Recupera dalla blockchain la Merkle Root e il CID IPFS associato.
         (Attualmente sono placeholder – da implementare)
         """
-        self.merkle_root_immutabile = "873e5d26a8229de5129dca68027fe72bc6f9f185fe2d7a46f57da51b407722d1"  # placeholder da smart contract
-        self.cid_merkle_path = "QmYZdrLhnKuTDLX5hoSiAGs6Rz3hmPmB3ymqo7YFZLF2UE"         # placeholder da smart contract
+        self.merkle_root_immutabile = "55dcc152b2292b5bd846d984bc518ecd49d8bd354d52fb6af74be65b5d753bf4"  # placeholder da smart contract
+        self.cid_merkle_path = "Qmedf9QrLDy3QhB1amanhm2E2uRZrvhGpDNZsiqgt2fvXp"
+        # placeholder da smart contract
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
 
@@ -70,7 +71,7 @@ class Verificatore:
 
         logger.info(f"Scaricamento Merkle Path da IPFS tramite CID {self.cid_merkle_path}")
         json_string = ottieni_file_da_ipfs(self.cid_merkle_path)
-        self.merkle_paths = carica_paths_da_json_string(json_string)
+        self.merkle_paths = carica_merkle_paths_da_json_string(json_string)
 
     def _verifica_struttura(self) -> bool:
         """
@@ -199,7 +200,7 @@ class Verificatore:
             risultati["stato_elaborazione"] = f"Errore durante lo scaricamento dei Merkle Path da IPFS: {e}"
             return risultati
 
-        # 4. Verifica coerenza tra struttura IPFS e hash cloud
+        # 4. Verifica coerenza tra struttura IPFS (merkle path) e mappa-id-hash fornita dal cloud
         struttura_valida = self._verifica_struttura()
         if not struttura_valida:
             logger.warning("Verifica eseguita su batch con struttura manomessa")

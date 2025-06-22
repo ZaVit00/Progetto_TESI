@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 
 from database import query
+from modelli_dati import DatiSensore, DatiListaSensori
 
 logger = logging.getLogger(__name__)
 """
@@ -212,23 +213,28 @@ class GestoreDatabase:
             logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
 
-    def ottieni_sensori_non_conferma_ricezione(self) -> list[dict]:
+    def ottieni_sensori_non_conferma_ricezione(self) -> DatiListaSensori:
         """
         Estrae i sensori registrati localmente che non hanno ancora ricevuto
         conferma di registrazione da parte del cloud provider.
-        Restituisce una lista di dizionari con id_sensore e descrizione.
+        Restituisce un oggetto DatiListaSensori.
         """
         if not self.conn:
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
-            return []
+            return DatiListaSensori(sensori=[])
+
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE)
             righe = cursor.fetchall()
-            return [{"id_sensore": r["id_sensore"], "descrizione": r["descrizione"]} for r in righe]
+            lista = [
+                DatiSensore(id_sensore=r["id_sensore"], descrizione=r["descrizione"])
+                for r in righe
+            ]
+            return DatiListaSensori(sensori=lista)
         except sqlite3.Error as e:
             logger.error(f"[DB] Errore durante l'estrazione dei sensori non confermati: {e}")
-            return []
+            return DatiListaSensori(sensori=[])
 
 
     def aggiorna_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:

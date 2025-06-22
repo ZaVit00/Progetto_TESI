@@ -1,7 +1,7 @@
 import logging
 
 from Classi_comuni.costruttore_payload import CostruttorePayload
-from Classi_comuni.entita.modelli_dati import DatiPayload
+from Classi_comuni.entita.modelli_dati import DatiPayload, DatiListaSensori
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 
 logger = logging.getLogger(__name__)
@@ -46,3 +46,19 @@ def costruisci_mappa_id_hash_batch(id_batch: int, gestore_db : GestoreDatabase) 
     payload = CostruttorePayload()
     payload.estrai_dati_da_query(risultati_query)
     return payload.ottieni_mappa_id_foglie()
+
+def elabora_lista_sensori(payload: DatiListaSensori, gestore_db: GestoreDatabase) -> list[str]:
+    """
+    Tenta di inserire nel database tutti i sensori contenuti nel payload.
+    Restituisce una lista degli ID dei sensori inseriti con successo.
+    """
+    id_sensori_inseriti = []
+    for sensore in payload.sensori:
+        successo = gestore_db.inserisci_sensore(sensore)
+        if successo:
+            logger.info(f"[SENSORI] Sensore registrato: {sensore.id_sensore}")
+            id_sensori_inseriti.append(sensore.id_sensore)
+        else:
+            logger.warning(f"[SENSORI] Registrazione fallita per: {sensore.id_sensore}")
+
+    return id_sensori_inseriti
