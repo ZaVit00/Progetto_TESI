@@ -1,37 +1,16 @@
 import json
 import logging
 from typing import Tuple
-
 from costruttore_payload import CostruttorePayload
-from merkle_tree import MerkleTree, PathCompatto
-
-from costanti_produttore import BUCKET_MERKLE_PATH
-from  ipfs_client import IpfsClient
+from database.gestore_db import GestoreDatabase
+from fog_api_utils import logger
+from merkle_tree import MerkleTree
+from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
+from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
+from modelli_dati import DatiPayload
 
 # Logger del modulo
 logger = logging.getLogger(__name__)
-
-
-def debug_stampa_paths_json(paths: dict[int, PathCompatto], verbose: bool = False) -> None:
-    """
-    SERVE?
-    METODO [DEBUG]
-    Stampa compatta delle Merkle Proofs in formato JSON leggibile.
-    """
-    if not verbose:
-        return
-    json_serializzabile = {
-        str(k) if k != 0 else "batch": {
-            "d": p.get_direzione(),
-            "h": p.get_hash_fratelli()
-        }
-        for k, p in paths.items()
-    }
-    logger.info("📦 MERKLE PROOFS (Formato JSON)")
-    separator = "-" * 80
-    json_str = json.dumps(json_serializzabile, indent=2)
-    logger.debug(f"\n{separator}\n{json_str}\n{separator}")
-
 
 def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
     """
@@ -58,7 +37,6 @@ def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
     return merkle_root, merkle_path_json
 
 
-
 def carica_merkle_path_ipfs(merkle_path: str):
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
@@ -67,3 +45,56 @@ def carica_merkle_path_ipfs(merkle_path: str):
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
     cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
     return cid
+
+
+def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
+    """
+    Gestisce l'intero ciclo di elaborazione di un batch completo:
+    1. Estrae i dati del batch dal DB.
+    2. Costruisce il payload (modelli Pydantic).
+    3. Serializza il payload in JSON.
+    4. Costruisce Merkle Tree e Merkle Path.
+    5. Salva Merkle Path su IPFS.
+    6. Aggiorna DB con metadata del batch.
+    7. (Prossimamente) Salva su blockchain.
+    """
+    dati_query = gestore_db.estrai_dati_batch_misurazioni_sensori(id_batch)
+    if not dati_query:
+        logger.error(f"Nessun dato trovato per il batch {id_batch}")
+        return False
+
+    # === Costruzione del payload ===
+    payload = CostruttorePayload()
+    payload.estrai_dati_da_query(dati_query)
+    payload_da_inviare: DatiPayload = payload.costruisci_payload()
+    payload_json = payload_da_inviare.to_json()
+    # === Costruzione Merkle Tree e Path ===
+    merkle_root, merkle_path = costruisci_merkle_tree(payload)
+    # === Upload su IPFS ===
+    try:
+        cid = carica_merkle_path_ipfs(merkle_path)
+        #IPFS OK → aggiorna subito i metadata nel DB
+        gestore_db.aggiorna_metadata_batch(id_batch, merkle_root, cid, payload_json)
+        # (in futuro) Upload su blockchain
+        try:
+            # da implementare
+            # _carica_dati_su_blockchain(...)
+            pass
+        except Exception as e:
+            logger.error(f"Errore blockchain per batch {id_batch}: {e}")
+            gestore_db.aggiorna_batch_errore_elaborazione(
+                id_batch,
+                messaggio_errore=str(e),
+                tipo_errore=ERRORE_BLOCKCHAIN
+            )
+            return False
+    except (ErroreCaricamentoIPFS, ErroreRecuperoCID) as e:
+        logger.error(f"Errore IPFS per batch {id_batch}: {e}")
+        gestore_db.aggiorna_batch_errore_elaborazione(
+            id_batch,
+            messaggio_errore=str(e),
+            tipo_errore=ERRORE_IPFS
+        )
+        return False
+    # Tutto ok nell'elaborazione
+    return True

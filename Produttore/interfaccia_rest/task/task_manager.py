@@ -5,7 +5,8 @@ import logging
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from database.gestore_db import GestoreDatabase
 from modelli_dati import DatiListaSensori
-from utils.fog_api_utils import gestisci_batch_completo, invia_payload
+from utils.fog_api_utils import invia_payload
+from gestione_batch import gestisci_batch_completo
 
 logger = logging.getLogger(__name__)
 

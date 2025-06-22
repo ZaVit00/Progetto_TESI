@@ -50,16 +50,19 @@ ON CONFLICT (id_misurazione) DO NOTHING;
 
 
 # Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
-ESTRAI_DATI_BATCH_MISURAZIONI = """
+ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI = """
     SELECT m.id_misurazione,
     m.id_sensore,
     m.timestamp,
     m.dati,
     b.id_batch,
     b.timestamp_creazione,
-    b.numero_misurazioni
+    b.numero_misurazioni,
+    s.tipo,
+    s.descrizione
     FROM misurazione AS m
     INNER JOIN batch AS b ON m.id_batch = b.id_batch
+    INNER JOIN sensore as s ON m.id_sensore = s.id_sensore
     WHERE b.id_batch = %s
     ORDER BY m.id_misurazione ASC;
 """

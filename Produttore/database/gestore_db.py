@@ -121,14 +121,14 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE BATCH] {e}")
             return -1
 
-    def estrai_dati_batch_misurazioni(self, id_batch: int) -> list[dict]:
+    def estrai_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.ESTRAI_DATI_BATCH_MISURAZIONI, (id_batch,))
+            cursor.execute(query.ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
             righe = cursor.fetchall()
             #.fetchall() restituisce una lista di sqlite3.Row, che sembrano dizionari, ma non lo sono al 100%.
             # Se ti serve una lista di dizionari veri,

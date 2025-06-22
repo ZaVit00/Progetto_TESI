@@ -9,7 +9,7 @@ logging.basicConfig(
 )
 
 def main():
-    id_batch = 2 # ← cambia questo valore a piacimento
+    id_batch = 1 # ← cambia questo valore a piacimento
     verificatore = Verificatore(id_batch)
     risultati = verificatore.esegui_verifica_completa()
 

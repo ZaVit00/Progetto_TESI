@@ -56,8 +56,8 @@ class Verificatore:
         Recupera dalla blockchain la Merkle Root e il CID IPFS associato.
         (Attualmente sono placeholder – da implementare)
         """
-        self.merkle_root_immutabile = "55dcc152b2292b5bd846d984bc518ecd49d8bd354d52fb6af74be65b5d753bf4"  # placeholder da smart contract
-        self.cid_merkle_path = "Qmedf9QrLDy3QhB1amanhm2E2uRZrvhGpDNZsiqgt2fvXp"
+        self.merkle_root_immutabile = "69fc6d9eaf8f428e794bc09618072f30f4da8162b852675a9604908f79a325ea"  # placeholder da smart contract
+        self.cid_merkle_path = "Qmbt8tgsWgQgq82aKyUTJdne93KELhvEqFWeFN91J7NEYM"
         # placeholder da smart contract
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")

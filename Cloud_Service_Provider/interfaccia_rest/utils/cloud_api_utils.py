@@ -39,7 +39,7 @@ def elabora_payload(payload: DatiPayload, gestore_db: GestoreDatabase) -> bool:
 
 
 def costruisci_mappa_id_hash_batch(id_batch: int, gestore_db : GestoreDatabase) -> dict[int, str]:
-    risultati_query = gestore_db.estrai_dati_batch_misurazioni(id_batch)
+    risultati_query = gestore_db.estrai_dati_batch_misurazioni_sensori(id_batch)
     if not risultati_query:
         raise ValueError(f"Nessun batch trovato con ID {id_batch}")
 

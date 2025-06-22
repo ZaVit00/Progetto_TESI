@@ -1,68 +1,12 @@
 import logging
 
 import requests
-from costruttore_payload import CostruttorePayload
 
-from Classi_comuni.entita.modelli_dati import DatiPayload
-from costanti_produttore import ERRORE_IPFS, ERRORE_BLOCKCHAIN, API_KEY_PRODUTTORE
+from costanti_produttore import API_KEY_PRODUTTORE
 from database.gestore_db import GestoreDatabase
-from gestione_batch import costruisci_merkle_tree, carica_merkle_path_ipfs
-from ipfs_client import ErroreCaricamentoIPFS, ErroreRecuperoCID
 
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
-
-def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
-    """
-    Gestisce l'intero ciclo di elaborazione di un batch completo:
-    1. Estrae i dati del batch dal DB.
-    2. Costruisce il payload (modelli Pydantic).
-    3. Serializza il payload in JSON.
-    4. Costruisce Merkle Tree e Merkle Path.
-    5. Salva Merkle Path su IPFS.
-    6. Aggiorna DB con metadata del batch.
-    7. (Prossimamente) Salva su blockchain.
-    """
-    dati_query = gestore_db.estrai_dati_batch_misurazioni(id_batch)
-    if not dati_query:
-        logger.error(f"Nessun dato trovato per il batch {id_batch}")
-        return False
-
-    # === Costruzione del payload ===
-    payload = CostruttorePayload()
-    payload.estrai_dati_da_query(dati_query)
-    payload_da_inviare: DatiPayload = payload.costruisci_payload()
-    payload_json = payload_da_inviare.to_json()
-    # === Costruzione Merkle Tree e Path ===
-    merkle_root, merkle_path = costruisci_merkle_tree(payload)
-    # === Upload su IPFS ===
-    try:
-        cid = carica_merkle_path_ipfs(merkle_path)
-        #IPFS OK → aggiorna subito i metadata nel DB
-        gestore_db.aggiorna_metadata_batch(id_batch, merkle_root, cid, payload_json)
-        # (in futuro) Upload su blockchain
-        try:
-            # da implementare
-            # _carica_dati_su_blockchain(...)
-            pass
-        except Exception as e:
-            logger.error(f"Errore blockchain per batch {id_batch}: {e}")
-            gestore_db.aggiorna_batch_errore_elaborazione(
-                id_batch,
-                messaggio_errore=str(e),
-                tipo_errore=ERRORE_BLOCKCHAIN
-            )
-            return False
-    except (ErroreCaricamentoIPFS, ErroreRecuperoCID) as e:
-        logger.error(f"Errore IPFS per batch {id_batch}: {e}")
-        gestore_db.aggiorna_batch_errore_elaborazione(
-            id_batch,
-            messaggio_errore=str(e),
-            tipo_errore=ERRORE_IPFS
-        )
-        return False
-    # Tutto ok nell'elaborazione
-    return True
 
 
 def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db: GestoreDatabase) -> bool:

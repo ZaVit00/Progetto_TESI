@@ -13,7 +13,7 @@ from Cloud_Service_Provider.database.query import (
     INSERISCI_SENSORE,
     INSERISCI_MISURAZIONE,
     INSERISCI_BATCH,
-    ESTRAI_DATI_BATCH_MISURAZIONI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH
+    ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH
 )
 
 logger = logging.getLogger(__name__)
@@ -99,14 +99,14 @@ class GestoreDatabase:
             logger.error(f"Errore inserimento misurazione {misurazione.id_misurazione}: {e}")
             return False
 
-    def estrai_dati_batch_misurazioni(self, id_batch: int) -> list[dict]:
+    def estrai_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(ESTRAI_DATI_BATCH_MISURAZIONI, (id_batch,))
+            cursor.execute(ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
             righe = cursor.fetchall()
             #.fetchall() restituisce una lista di Row, che sembrano dizionari, ma non lo sono al 100%.
             # Se ti serve una lista di dizionari veri,
