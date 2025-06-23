@@ -14,4 +14,4 @@ ENDPOINT_IPFS_FILEBASE = "https://ipfs.filebase.io/ipfs"
 API_KEY_VERIFICATORE=os.getenv("API_KEY_VERIFICATORE")
 
 ENDPOINT_METADATA_BATCH ="http://localhost:8080/metadata/batch"
-ENDPOINT_METADATA_MISURAZIONE ="http://localhost:8080/metadata/misurazione"
+ENDPOINT_METADATA_MISURAZIONI ="http://localhost:8080/metadata/misurazioni"

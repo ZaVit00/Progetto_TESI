@@ -1,11 +1,11 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Dict
+from typing import Dict, List
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends
+from fastapi import Depends, Body
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -13,7 +13,8 @@ from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload, DatiMisu
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
-from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori
+from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori, \
+    recupera_metadata_misurazioni
 from cloud_api_utils import costruisci_mappa_id_hash_batch
 from modelli_dati import MetaDatiBatch, MetaDatiMisurazione
 
@@ -93,12 +94,12 @@ def ottieni_mappa_id_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_p
         logger.error(f"[ERRORE GET /batch] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/metadata/misurazione/{id_misurazione}", response_model=MetaDatiMisurazione)
-def ricostruisci_misurazione(id_misurazione: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    ris_query = gestore_db.estrai_metadata_misurazione(id_misurazione)
-    if not ris_query:
-        raise HTTPException(status_code=404, detail="Misurazione non trovata")
-    return MetaDatiMisurazione(**ris_query)
+@app.post("/metadata/misurazioni/", response_model=list[MetaDatiMisurazione])
+def ricostruisci_misurazioni(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    try:
+        return recupera_metadata_misurazioni(lista_id, gestore_db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 #
 @app.get("/metadata/batch/{id_batch}", response_model=MetaDatiBatch)
 def ricostruisci_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):

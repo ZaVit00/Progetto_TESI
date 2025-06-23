@@ -1,47 +1,36 @@
-import copy
 import logging
 import json
 from Verificatore.verifica.verificatore import Verificatore
-from api_cloud import richiedi_metadata_misurazione, richiedi_metadata_batch
+from api_cloud import richiedi_metadata_misurazioni, richiedi_metadata_batch
+from verificatore import RisultatoVerifica
 
 # Configura il logger
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s | %(levelname)s | %(message)s"
 )
+
+logger = logging.getLogger(__name__)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 def main():
     id_batch = 1 # ← cambia questo valore a piacimento
     verificatore = Verificatore(id_batch)
-    risultati = verificatore.esegui_verifica_completa()
+    risultati : RisultatoVerifica = verificatore.esegui_verifica_completa()
 
-    print("\n=== RISULTATO VERIFICA ===")
+    logger.info("\n=== RISULTATO VERIFICA ===")
 
     if risultati["esito_globale"]:
-        print("\n✅ Il batch è integro.")
+        logger.info("\n✅ Il batch è integro.")
     else:
-        print("\n❌ Il batch presenta alterazioni.")
+        logger.info("\n❌ Il batch presenta alterazioni.")
 
-    print("\n=== ANALISI DELLE ANOMALIE DETTAGLIATA ===")
+    logger.info("\n=== ANALISI DELLE ANOMALIE DETTAGLIATA ===")
     print(json.dumps(risultati, indent=2, ensure_ascii=False))
+    metadata_str = Verificatore.recupera_metadata_anomalie(risultati)
+    print(metadata_str)
 
-    # Recupero dei metadati delle sole anomalie
-    print("\n=== METADATI DELLE FOGLIE ALTERATE ===")
 
-    for record in risultati["dettagli"]["anomalie"]:
-        tipo = record["tipo"]
-        id_elemento = record["id"]
-        print(f"\n--- {tipo.upper()} ID {id_elemento} ---")
-        try:
-            if tipo == "batch":
-                metadati = richiedi_metadata_misurazione(id_elemento)
-            elif tipo == "misurazione":
-                metadati = richiedi_metadata_batch(id_elemento)
-
-            print(json.dumps(metadati, indent=2, ensure_ascii=False))
-
-        except ValueError as e:
-            print(f"Errore nel recupero dei metadati: {e}")
 
 if __name__ == "__main__":
     main()

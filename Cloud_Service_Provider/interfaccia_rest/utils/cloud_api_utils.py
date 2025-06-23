@@ -1,7 +1,7 @@
 import logging
 
 from Classi_comuni.costruttore_payload import CostruttorePayload
-from Classi_comuni.entita.modelli_dati import DatiPayload, DatiListaSensori
+from Classi_comuni.entita.modelli_dati import DatiPayload, DatiListaSensori, MetaDatiMisurazione
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 
 logger = logging.getLogger(__name__)
@@ -62,3 +62,15 @@ def elabora_lista_sensori(payload: DatiListaSensori, gestore_db: GestoreDatabase
             logger.warning(f"[SENSORI] Registrazione fallita per: {sensore.id_sensore}")
 
     return id_sensori_inseriti
+
+def recupera_metadata_misurazioni(lista_id: list[int], gestore_db : GestoreDatabase) -> list[MetaDatiMisurazione]:
+    """
+    Recupera i metadata delle misurazioni dati gli ID. Solleva ValueError se una misurazione non esiste.
+    """
+    metadata = []
+    for id_misurazione in lista_id:
+        record = gestore_db.estrai_metadata_misurazione(id_misurazione)
+        if not record:
+            raise ValueError(f"Misurazione con ID {id_misurazione} non trovata")
+        metadata.append(MetaDatiMisurazione(**record))
+    return metadata

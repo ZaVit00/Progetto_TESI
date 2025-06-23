@@ -1,12 +1,15 @@
+import json
 import logging
-from typing import TypedDict
+from typing import TypedDict, List
 
 from Classi_comuni.entita.modelli_dati import DatiPayload
-from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch
+from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
+    richiedi_metadata_misurazioni
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
 from costanti_comuni import ID_BATCH_LOGICO
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
+from modelli_dati import MetaDatiMisurazione, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +76,7 @@ class Verificatore:
             logger.warning(f"ID aggiunti nella struttura: {id_aggiunti}")
 
         if id_mancanti or id_aggiunti:
-            logger.error("Struttura batch manomessa")
+            logger.warning("Struttura batch manomessa")
         else:
             logger.info("Struttura batch integra")
 
@@ -176,3 +179,52 @@ class Verificatore:
         logger.info(f"Verifica completata – esito: {risultato['esito_globale']}")
 
         return risultato
+
+    @staticmethod
+    def recupera_metadata_anomalie(risultati: RisultatoVerifica) -> str:
+        """
+        Recupera i metadati relativi alle anomalie dal cloud e restituisce una stringa formattata.
+        Se il batch è anomalo (prima foglia), viene subito analizzato.
+        Le misurazioni vengono raccolte in blocco.
+        """
+        output = ["\n=== METADATI DELLE FOGLIE ALTERATE ==="]
+        id_misurazioni_anomale = []
+
+        anomalie = risultati["dettagli"]["anomalie"]
+        if not anomalie:
+            output.append("✅ Nessuna anomalia da analizzare.")
+            return "\n".join(output)
+
+        # 1. Se il batch è anomalo, è la prima foglia: lo verifichiamo subito
+        prima = anomalie[0]
+        if prima["tipo"] == "batch":
+            id_batch = prima["id"]
+            output.append(f"\n--- BATCH ID {id_batch} ---")
+            try:
+                metadata_batch : MetaDatiBatch = richiedi_metadata_batch(id_batch)
+                output.append(metadata_batch.to_json())
+            except ValueError as e:
+                output.append(f"❌ Errore nel recupero dei metadati per batch ID {id_batch}: {e}")
+            anomalie = anomalie[1:]  # rimuovi il primo elemento (batch) per il resto del ciclo
+
+        # 2. Raccogliamo tutte le misurazioni anomale
+        for record in anomalie:
+            #controllo di sicurezza
+            if record["tipo"] == "misurazione":
+                #aggrego tutti gli id di misurazioni
+                id_misurazioni_anomale.append(record["id"])
+
+        #se la lista non è vuota
+        if id_misurazioni_anomale:
+            output.append(f"\n--- MISURAZIONI ANOMALE ({len(id_misurazioni_anomale)} ID) ---")
+            try:
+                metadata_misurazioni : List[MetaDatiMisurazione] = (
+                    richiedi_metadata_misurazioni(id_misurazioni_anomale))
+                for mis in metadata_misurazioni:
+                    output.append(f"\n>> ID {mis.id_misurazione}")
+                    output.append(mis.to_json())
+            except ValueError as e:
+                output.append(f"❌ Errore nel recupero dei metadata delle misurazioni: {e}")
+
+        return "\n".join(output)
+
