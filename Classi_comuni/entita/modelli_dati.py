@@ -132,9 +132,11 @@ class DatiPayload(ModelliHashabili):
     batch: DatiBatch = Field(..., title="Batch", description="Metadata del batch")
     misurazioni: List[DatiMisurazione] = Field(..., title="Lista di Misurazioni", description="Lista delle misurazioni associate al batch")
 
-#==== SEMPLICI CLASSI BASEMODEL DI PYDANTIC
+#==== SEMPLICI CLASSI BASEMODEL DI PYDANTIC PER RESTITUIRE METADATI === #
+# utilizzati nel processo di verifica dell'integrità
 class MetaDatiMisurazione(BaseModel):
     id_sensore: str = Field(..., description="Identificativo del sensore che ha generato la misurazione")
+    tipo : str = Field(..., description="Tipo del sensore che ha originato la misurazione")
     timestamp: str = Field(..., description="Data e ora della misurazione")
     id_batch: int = Field(..., description="Identificativo del batch a cui appartiene la misurazione")
 

@@ -69,8 +69,8 @@ ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI = """
 
 #estrae le informazioni associate a una misurazione
 ESTRAI_METADATA_MISURAZIONE = """
-    SELECT id_batch, id_sensore, misurazione.timestamp
-    from misurazione
+    SELECT m.id_batch, m.id_sensore, m.timestamp, s.tipo
+    from misurazione as m inner join sensore as s on m.id_sensore = s.id_sensore
     where id_misurazione = %s
 """
 

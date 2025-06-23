@@ -82,11 +82,11 @@ def ricevi_batch(payload: DatiPayload, utente: UtenteAPI = Depends(richiede_perm
             status_code=500
         )
 
-@app.get("/batch/mappa-id-hash", response_model=Dict[int, str])
-def ottieni_mappa_id_batch(id: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+@app.get("/batch/mappa-id-hash/{id_batch}", response_model=Dict[int, str])
+def ottieni_mappa_id_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     try:
-        logger.debug(f"[DEBUG] Ricevuta richiesta batch con id = {id}")
-        mappa_id_hash = costruisci_mappa_id_hash_batch(id, gestore_db)
+        logger.debug(f"[DEBUG] Ricevuta richiesta batch con id = {id_batch}")
+        mappa_id_hash = costruisci_mappa_id_hash_batch(id_batch, gestore_db)
         #print(f"[DEBUG] Payload costruito: {payload}")
         return mappa_id_hash
     except Exception as e:
@@ -101,12 +101,11 @@ def ricostruisci_misurazione(id_misurazione: int, utente: UtenteAPI = Depends(ri
     return MetaDatiMisurazione(**ris_query)
 #
 @app.get("/metadata/batch/{id_batch}", response_model=MetaDatiBatch)
-def ricostruisci_batch(id_batch: int):
+def ricostruisci_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     ris_query = gestore_db.estrai_metadata_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")
     return MetaDatiBatch(**ris_query)
-#utente: UtenteAPI = Depends(richiede_permesso_verifica)
 
 def main():
     uvicorn.run(app, host="127.0.0.1", port=8080)
