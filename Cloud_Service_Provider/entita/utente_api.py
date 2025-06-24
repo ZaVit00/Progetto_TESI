@@ -4,8 +4,12 @@ class UtenteAPI:
         self.nome = nome
         self.ruolo = ruolo
 
-    def puo_scrivere(self) -> bool:
+    def permesso_scrittura(self) -> bool:
         return self.ruolo == RUOLO_PRODUTTORE
 
-    def puo_verificare(self) -> bool:
+    def permesso_verifica(self) -> bool:
         return self.ruolo in (RUOLO_PRODUTTORE, RUOLO_VERIFICATORE)
+
+    def permesso_verifica_profonda(self) -> bool:
+        #solo il produttore è abilitato alla verifica profonda
+        return self.ruolo == RUOLO_PRODUTTORE

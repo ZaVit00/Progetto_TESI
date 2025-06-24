@@ -79,3 +79,9 @@ ESTRAI_METADATA_BATCH = """
     from batch
     where id_batch = %s
 """
+
+ESTRAI_DATI_MISURAZIONI_SENSORI = """
+SELECT m.id_misurazione, m.id_batch, m.id_sensore, m.dati, m.timestamp, s.tipo, s.descrizione
+FROM misurazione m INNER JOIN sensore s ON m.id_sensore = s.id_sensore
+WHERE m.id_misurazione = ?
+"""

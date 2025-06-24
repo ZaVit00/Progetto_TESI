@@ -10,11 +10,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from Classi_comuni.entita.modelli_dati import DatiSensore, DatiPayload, DatiMisurazione, DatiBatch, DatiListaSensori
-from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica
+from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_profonda, \
+    richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
 from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori, \
-    recupera_metadata_misurazioni
+    recupera_metadata_misurazioni, recupera_dati_misurazioni
 from cloud_api_utils import costruisci_mappa_id_hash_batch
 from modelli_dati import MetaDatiBatch, MetaDatiMisurazione
 
@@ -88,25 +89,32 @@ def ottieni_mappa_id_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_p
     try:
         logger.debug(f"[DEBUG] Ricevuta richiesta batch con id = {id_batch}")
         mappa_id_hash = costruisci_mappa_id_hash_batch(id_batch, gestore_db)
-        #print(f"[DEBUG] Payload costruito: {payload}")
         return mappa_id_hash
     except Exception as e:
         logger.error(f"[ERRORE GET /batch] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/metadata/misurazioni/", response_model=list[MetaDatiMisurazione])
-def ricostruisci_misurazioni(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+def ricostruisci_metadata_misurazioni(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     try:
         return recupera_metadata_misurazioni(lista_id, gestore_db)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 #
 @app.get("/metadata/batch/{id_batch}", response_model=MetaDatiBatch)
-def ricostruisci_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    ris_query = gestore_db.estrai_metadata_batch(id_batch)
+def ricostruisci_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    ris_query : MetaDatiBatch = gestore_db.estrai_metadata_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")
-    return MetaDatiBatch(**ris_query)
+    return ris_query
+
+
+@app.post("/dati/misurazioni/", response_model=list[DatiMisurazione])
+def ricostruisci_dati_misurazioni(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
+    try:
+        return recupera_dati_misurazioni(lista_id, gestore_db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 def main():
     uvicorn.run(app, host="127.0.0.1", port=8080)

@@ -14,11 +14,16 @@ def get_utente(request: Request) -> UtenteAPI:
     return utente
 
 def richiede_permesso_scrittura(utente: UtenteAPI = Depends(get_utente)) -> UtenteAPI:
-    if not utente.puo_scrivere():
+    if not utente.permesso_scrittura():
         raise HTTPException(status_code=403, detail="Permessi insufficienti per scrivere.")
     return utente
 
 def richiede_permesso_verifica(utente: UtenteAPI = Depends(get_utente)) -> UtenteAPI:
-    if not utente.puo_verificare():
+    if not utente.permesso_verifica():
         raise HTTPException(status_code=403, detail="Permessi insufficienti per verificare.")
+    return utente
+
+def richiede_permesso_verifica_profonda(utente: UtenteAPI = Depends(get_utente)) -> UtenteAPI:
+    if not utente.permesso_verifica_profonda():
+        raise HTTPException(status_code=403, detail="Permessi insufficienti per effettuare la verifica profonda.")
     return utente

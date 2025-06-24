@@ -23,7 +23,6 @@ class GestoreDatabase:
 
     def __init__(self, soglia_batch: int = 1023):
         self.conn = sqlite3.connect(self._DBPATH)
-        #logger.debug("Usando database:", os.path.abspath(self._DBPATH))
         self.conn.row_factory = sqlite3.Row
         self.crea_tabelle()
         self.soglia_batch = soglia_batch

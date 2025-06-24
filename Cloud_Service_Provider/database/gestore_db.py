@@ -1,11 +1,9 @@
 import json
 import logging
-
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
 from psycopg2.extras import RealDictCursor
-
-from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch
+from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch, MetaDatiBatch
 from Cloud_Service_Provider.database.query import (
     CREA_TABELLA_SENSORE,
     CREA_TABELLA_BATCH,
@@ -13,8 +11,10 @@ from Cloud_Service_Provider.database.query import (
     INSERISCI_SENSORE,
     INSERISCI_MISURAZIONE,
     INSERISCI_BATCH,
-    ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH
+    ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH,
+    ESTRAI_DATI_MISURAZIONI_SENSORI
 )
+from modelli_dati import MetaDatiMisurazione
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class GestoreDatabase:
             logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
-    def estrai_metadata_misurazione(self, id_misurazione: int) -> dict:
+    def estrai_metadata_misurazione(self, id_misurazione: int) -> MetaDatiMisurazione | None:
         """
         Estrae i metadati associati a una singola misurazione, potenzialmente manomessi.
         Restituisce un dizionario oppure None se la riga non esiste o in caso di errore.
@@ -128,13 +128,13 @@ class GestoreDatabase:
             riga = cursor.fetchone()
             if not riga:
                 raise ValueError(f"Nessuna misurazione trovata con ID {id_misurazione}")
-            return dict(riga)
+            return MetaDatiMisurazione(**riga)
 
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
-            return {}
+            return None
 
-    def estrai_metadata_batch(self, id_batch):
+    def estrai_metadata_batch(self, id_batch) -> MetaDatiBatch | None:
         """
         Estrae i metadata associati alla tupla del batch, potenzialmente manomesso.
         """
@@ -144,12 +144,53 @@ class GestoreDatabase:
             riga = cursor.fetchone()
             if not riga:
                 raise ValueError(f"Nessuna tupla batch trovata con ID {id_batch}")
-            return dict(riga)
+            return MetaDatiBatch(**riga)
 
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
-            return {}
+            return None
 
+    from typing import Tuple
+    from modelli_dati import DatiMisurazione, DatiSensore
+
+    def estrai_dati_misurazione_sensore(self, id_misurazione: int) -> Tuple[DatiMisurazione, DatiSensore] | None:
+        """
+        Restituisce una tupla (DatiMisurazione, DatiSensore) corrispondente a una misurazione specifica.
+        """
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(ESTRAI_DATI_MISURAZIONI_SENSORI, (id_misurazione,))
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"Nessuna tupla misurazione trovata con ID {id_misurazione}")
+
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - JOIN MISURAZIONE + SENSORE] {e}")
+            return None
+
+        # Parsing del campo "dati"
+        try:
+            dati_dict = json.loads(row["dati"]) if isinstance(row["dati"], str) else row["dati"]
+        except json.JSONDecodeError as e:
+            logger.error(f"[ERRORE JSON - CAMPO 'dati' MISURAZIONE] {e}")
+            return None
+
+        # Costruzione degli oggetti
+        mis = DatiMisurazione(
+            id_misurazione=row["id_misurazione"],
+            id_batch=row["id_batch"],
+            id_sensore=row["id_sensore"],
+            dati=dati_dict,
+            timestamp=row["timestamp"]
+        )
+
+        sens = DatiSensore(
+            id_sensore=row["m.id_sensore"],
+            tipo=row["tipo"],
+            descrizione=row["descrizione"],
+        )
+
+        return mis, sens
 
     def chiudi_connessione(self):
         """
@@ -166,6 +207,7 @@ class GestoreDatabase:
             logger.info("Connessione al database chiusa correttamente.")
         except Psycopg2Error as e:
             logger.error(f"Errore durante la chiusura della connessione: {e}")
+
 
 
 

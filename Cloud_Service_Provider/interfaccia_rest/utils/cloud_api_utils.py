@@ -1,8 +1,10 @@
 import logging
+from typing import Tuple
 
 from Classi_comuni.costruttore_payload import CostruttorePayload
-from Classi_comuni.entita.modelli_dati import DatiPayload, DatiListaSensori, MetaDatiMisurazione
+from Classi_comuni.entita.modelli_dati import DatiPayload, DatiListaSensori, MetaDatiMisurazione, DatiMisurazione
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
+from modelli_dati import DatiSensore
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +71,20 @@ def recupera_metadata_misurazioni(lista_id: list[int], gestore_db : GestoreDatab
     """
     metadata = []
     for id_misurazione in lista_id:
-        record = gestore_db.estrai_metadata_misurazione(id_misurazione)
+        record : MetaDatiMisurazione = gestore_db.estrai_metadata_misurazione(id_misurazione)
         if not record:
             raise ValueError(f"Misurazione con ID {id_misurazione} non trovata")
-        metadata.append(MetaDatiMisurazione(**record))
+        metadata.append(record)
     return metadata
+
+def recupera_dati_misurazioni(lista_id: list[int], gestore_db: GestoreDatabase):
+    """
+    Recupera i dati completi delle misurazioni dati gli ID. Solleva ValueError se una misurazione non esiste.
+    """
+    risultato = []
+    for id_misurazione in lista_id:
+        record: Tuple[DatiMisurazione, DatiSensore] = gestore_db.estrai_dati_misurazione_sensore(id_misurazione)
+        if not record:
+            raise ValueError(f"Misurazione con ID {id_misurazione} non trovata")
+        risultato.append(record)
+    return risultato
