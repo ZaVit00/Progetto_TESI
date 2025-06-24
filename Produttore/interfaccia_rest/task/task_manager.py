@@ -4,9 +4,9 @@ import logging
 
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from database.gestore_db import GestoreDatabase
+from gestione_batch import gestisci_batch_completo
 from modelli_dati import DatiListaSensori
 from utils.fog_api_utils import invia_payload
-from gestione_batch import gestisci_batch_completo
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ async def task_invio_sensori(gestore_database: GestoreDatabase, intervallo: int 
     await asyncio.sleep(5)
     while True:
         logger.info("[SENSORI] Controllo sensori da inviare...")
-        lista_sensori: DatiListaSensori = gestore_database.ottieni_sensori_non_conferma_ricezione()
+        lista_sensori : DatiListaSensori  = gestore_database.ottieni_sensori_non_conferma_ricezione()
         if not lista_sensori.sensori:
             logger.info("[SENSORI] Nessun sensore da inviare.")
         else:

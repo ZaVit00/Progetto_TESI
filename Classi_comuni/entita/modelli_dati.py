@@ -1,32 +1,18 @@
 import json
 import re
-from abc import ABC
 from typing import Dict, List
 
+from pydantic import Field, field_validator
+
 from hash_utils import Hashing
-from pydantic import BaseModel, Field, field_validator
+from modelli_metadati import ModelliSerializzabili
 
 
-class ModelliHashabili(BaseModel, ABC):
+class ModelliHashabili(ModelliSerializzabili):
     """
     Classe base astratta per modelli che devono poter essere serializzati in JSON
     e da cui calcolare un hash univoco.
     """
-
-    def to_json(self) -> str:
-        """
-        Restituisce una rappresentazione JSON ordinata e leggibile della tupla.
-        Questa serializzazione viene utilizzata per il calcolo dell'hash e per eventuali
-        operazioni di debug o logging. APPLICABILE SOLO A ISTANZE DI PYDANTIC (modul_dump)
-        """
-        return json.dumps(
-            self.model_dump(),
-            #ordina le chiavi
-            sort_keys=True,
-            separators=(",", ":"),
-            indent=2
-        )
-
     def to_hash(self) -> str:
         """
         Calcola e restituisce hash SHA-256 della tupla,
@@ -81,10 +67,6 @@ class DatiSensore(ModelliHashabili):
         prefisso = self.id_sensore[:4].strip("0123456789")
         self.tipo = mapping.get(prefisso, "generico")
 
-
-class DatiListaSensori(BaseModel):
-    sensori: List[DatiSensore]
-
 class DatiMisurazione(ModelliHashabili):
     """
     Rappresenta una singola misurazione arricchita con metadata interni proveniente da un sensore.
@@ -112,35 +94,22 @@ class DatiMisurazione(ModelliHashabili):
 
 class DatiBatch(ModelliHashabili):
     """
-    Rappresenta i metadata di un batch di misurazioni.
+    Rappresenta i dati di un batch di misurazioni.
     """
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
     numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
-    """
-    Il campo merkle_root non è inviato al cloud ma è un campo associato al batch
-    Può essere usato se vogliamo che il cloud lo memorizzi insieme ai dati del batch
-    merkle_root: str = Field(
-        "", title="Merkle Root",
-        description="Hash radice dell’albero Merkle costruito sulle misurazioni del batch")
-    """
 
-class DatiPayload(ModelliHashabili):
+class PacchettoBatchMisurazioni(ModelliHashabili):
     """
     Payload completo da inviare al cloud: contiene un batch e le sue misurazioni associate.
     """
     batch: DatiBatch = Field(..., title="Batch", description="Metadata del batch")
     misurazioni: List[DatiMisurazione] = Field(..., title="Lista di Misurazioni", description="Lista delle misurazioni associate al batch")
 
-#==== SEMPLICI CLASSI BASEMODEL DI PYDANTIC PER RESTITUIRE METADATI === #
-# utilizzati nel processo di verifica dell'integrità
-class MetaDatiMisurazione(ModelliHashabili):
-    id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")
-    id_sensore: str = Field(..., description="Identificativo del sensore che ha generato la misurazione")
-    tipo : str = Field(..., description="Tipo del sensore che ha originato la misurazione")
-    timestamp: str = Field(..., description="Data e ora della misurazione")
-    id_batch: int = Field(..., description="Identificativo del batch a cui appartiene la misurazione")
+class DatiListaSensori(ModelliHashabili):
+    sensori : List[DatiSensore] = Field(..., title="Lista di Sensori", description="Lista di sensori presenti nel sistema")
 
-class MetaDatiBatch(ModelliHashabili):
-    timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
-    numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
+class DatiMisurazioneSensore(ModelliHashabili):
+    sensore : DatiSensore = Field(..., description="dati del sensore")
+    misurazione : DatiMisurazione = Field(..., description="dati della misurazioni")

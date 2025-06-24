@@ -1,9 +1,11 @@
 import json
 import logging
+
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
 from psycopg2.extras import RealDictCursor
-from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch, MetaDatiBatch
+
+from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione, DatiBatch
 from Cloud_Service_Provider.database.query import (
     CREA_TABELLA_SENSORE,
     CREA_TABELLA_BATCH,
@@ -11,10 +13,11 @@ from Cloud_Service_Provider.database.query import (
     INSERISCI_SENSORE,
     INSERISCI_MISURAZIONE,
     INSERISCI_BATCH,
-    ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, ESTRAI_METADATA_MISURAZIONE, ESTRAI_METADATA_BATCH,
-    ESTRAI_DATI_MISURAZIONI_SENSORI
+    OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, OTTIENI_METADATA_MISURAZIONE_SENSORE, OTTIENI_METADATA_BATCH,
+    OTTIENI_DATI_MISURAZIONE_SENSORE, OTTIENI_DATA_BATCH
 )
-from modelli_dati import MetaDatiMisurazione
+from modelli_dati import DatiMisurazioneSensore
+from modelli_metadati import MetaDatiMisurazione, MetaDatiMisurazioneSensore, MetaDatiSensore, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +55,7 @@ class GestoreDatabase:
         try:
             self.cursor.execute(
                 INSERISCI_SENSORE,
-                (sensore.id_sensore, sensore.descrizione, sensore.tipo)
+                (sensore.id_sensore.upper(), sensore.descrizione, sensore.tipo)
             )
             logger.info(f"Sensore inserito: {sensore.id_sensore}")
             return True
@@ -80,6 +83,9 @@ class GestoreDatabase:
         Inserisce una singola misurazione nel database.
         """
         try:
+            # misurazione.dati è un Dict (ad esempio: {"x": 10, "y": 5, "pressed": True})
+            # json.dumps(...) lo trasforma in una stringa JSON: '{"x": 10, "y": 5, "pressed": true}'
+            # questa stringa può essere salvata in PostgreSQL in una colonna JSON o TEXT
             self.cursor.execute(
                 INSERISCI_MISURAZIONE,
                 (
@@ -87,9 +93,6 @@ class GestoreDatabase:
                     id_batch,
                     misurazione.id_sensore,
                     misurazione.timestamp,
-                    #misurazione.dati è un Dict (ad esempio: {"x": 10, "y": 5, "pressed": True})
-                    # json.dumps(...) lo trasforma in una stringa JSON: '{"x": 10, "y": 5, "pressed": true}'
-                    #questa stringa può essere salvata in PostgreSQL in una colonna JSON o TEXT
                     json.dumps(misurazione.dati)
                 )
             )
@@ -99,67 +102,64 @@ class GestoreDatabase:
             logger.error(f"Errore inserimento misurazione {misurazione.id_misurazione}: {e}")
             return False
 
-    def estrai_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
+    def ottieni_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
+            cursor.execute(OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
             righe = cursor.fetchall()
             #.fetchall() restituisce una lista di Row, che sembrano dizionari, ma non lo sono al 100%.
-            # Se ti serve una lista di dizionari veri,
-            # fai righe = [dict(r) for r in cursor.fetchall()].
+            # Se ti serve una lista di dizionari veri, fai righe = [dict(r) for r in riga].
             return [dict(riga) for riga in righe]
         except Psycopg2Error as e:
             logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
-    def estrai_metadata_misurazione(self, id_misurazione: int) -> MetaDatiMisurazione | None:
-        """
-        Estrae i metadati associati a una singola misurazione, potenzialmente manomessi.
-        Restituisce un dizionario oppure None se la riga non esiste o in caso di errore.
-        """
-
-        try:
-            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(ESTRAI_METADATA_MISURAZIONE, (id_misurazione,))
-            riga = cursor.fetchone()
-            if not riga:
-                raise ValueError(f"Nessuna misurazione trovata con ID {id_misurazione}")
-            return MetaDatiMisurazione(**riga)
-
-        except Psycopg2Error as e:
-            logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
-            return None
-
-    def estrai_metadata_batch(self, id_batch) -> MetaDatiBatch | None:
+    def ottieni_metadata_batch(self, id_batch) -> MetaDatiBatch | None:
         """
         Estrae i metadata associati alla tupla del batch, potenzialmente manomesso.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(ESTRAI_METADATA_BATCH, (id_batch,))
+            cursor.execute(OTTIENI_METADATA_BATCH, (id_batch,))
             riga = cursor.fetchone()
             if not riga:
                 raise ValueError(f"Nessuna tupla batch trovata con ID {id_batch}")
+
             return MetaDatiBatch(**riga)
 
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-    from typing import Tuple
-    from modelli_dati import DatiMisurazione, DatiSensore
+    def ottieni_data_batch(self, id_batch) -> DatiBatch:
+        """
+        Estrae i metadata associati alla tupla del batch, potenzialmente manomesso.
+        """
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(OTTIENI_DATA_BATCH, (id_batch,))
+            riga = cursor.fetchone()
+            if not riga:
+                raise ValueError(f"Nessuna tupla batch trovata con ID {id_batch}")
 
-    def estrai_dati_misurazione_sensore(self, id_misurazione: int) -> Tuple[DatiMisurazione, DatiSensore] | None:
+            return DatiBatch(**riga)
+
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
+            return None
+
+
+    def ottieni_dati_misurazione_sensore(self, id_misurazione: int) -> DatiMisurazioneSensore | None:
         """
         Restituisce una tupla (DatiMisurazione, DatiSensore) corrispondente a una misurazione specifica.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(ESTRAI_DATI_MISURAZIONI_SENSORI, (id_misurazione,))
+            cursor.execute(OTTIENI_DATI_MISURAZIONE_SENSORE, (id_misurazione,))
             row = cursor.fetchone()
             if not row:
                 raise ValueError(f"Nessuna tupla misurazione trovata con ID {id_misurazione}")
@@ -185,12 +185,42 @@ class GestoreDatabase:
         )
 
         sens = DatiSensore(
-            id_sensore=row["m.id_sensore"],
+            id_sensore=row["id_sensore"],
             tipo=row["tipo"],
             descrizione=row["descrizione"],
         )
 
-        return mis, sens
+        return DatiMisurazioneSensore(sensore = sens, misurazione=mis)
+
+    def ottieni_metadata_misurazione_sensore(self, id_misurazione: int) -> MetaDatiMisurazioneSensore | None:
+        """
+        Ottieni i metadati associati a una singola misurazione, potenzialmente manomessi.
+        Restituisce un oppure None se la riga non esiste o in caso di errore.
+        """
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(OTTIENI_METADATA_MISURAZIONE_SENSORE, (id_misurazione,))
+            riga = cursor.fetchone()
+            if not riga:
+                raise ValueError(f"Nessuna misurazione trovata con ID {id_misurazione}")
+
+            metadati_misurazioni = MetaDatiMisurazione(
+                id_misurazione = riga["id_misurazione"],
+                id_batch = riga["id_batch"],
+                timestamp = riga["timestamp"])
+
+            metadati_sensore = MetaDatiSensore(
+                id_sensore=riga["id_sensore"],
+                tipo = riga["tipo"])
+
+            return MetaDatiMisurazioneSensore(
+                metadati_sensore = metadati_sensore,
+                metadati_misurazione=metadati_misurazioni)
+
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
+            return None
+
 
     def chiudi_connessione(self):
         """
@@ -207,6 +237,7 @@ class GestoreDatabase:
             logger.info("Connessione al database chiusa correttamente.")
         except Psycopg2Error as e:
             logger.error(f"Errore durante la chiusura della connessione: {e}")
+
 
 
 

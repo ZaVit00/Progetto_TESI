@@ -1,13 +1,13 @@
-import json
 import logging
 from typing import Tuple
+
+from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from database.gestore_db import GestoreDatabase
 from fog_api_utils import logger
-from merkle_tree import MerkleTree
-from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
-from modelli_dati import DatiPayload
+from merkle_tree import MerkleTree
+from modelli_dati import PacchettoBatchMisurazioni
 
 # Logger del modulo
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
     # === Costruzione del payload ===
     payload = CostruttorePayload()
     payload.estrai_dati_da_query(dati_query)
-    payload_da_inviare: DatiPayload = payload.costruisci_payload()
+    payload_da_inviare: PacchettoBatchMisurazioni = payload.costruisci_payload()
     payload_json = payload_da_inviare.to_json()
     # === Costruzione Merkle Tree e Path ===
     merkle_root, merkle_path = costruisci_merkle_tree(payload)

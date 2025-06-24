@@ -1,8 +1,11 @@
-from Classi_comuni.entita.modelli_dati import DatiPayload
-from Classi_comuni.merkle_tree import MerkleTree, PathCompatto
-from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
+from Classi_comuni.merkle_tree import PathCompatto
 import json
 from typing import Dict
+import json
+from typing import Dict
+
+from Classi_comuni.merkle_tree import PathCompatto
+
 
 def carica_merkle_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
     """

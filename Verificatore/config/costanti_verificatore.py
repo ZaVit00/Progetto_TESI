@@ -1,6 +1,6 @@
 import os
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 
 DIR_CORRENTE = os.path.dirname(__file__)
 PERCORSO_ENV_KEY = os.path.join(DIR_CORRENTE, '.env.key')
@@ -14,4 +14,4 @@ ENDPOINT_IPFS_FILEBASE = "https://ipfs.filebase.io/ipfs"
 API_KEY_VERIFICATORE=os.getenv("API_KEY_VERIFICATORE")
 
 ENDPOINT_METADATA_BATCH ="http://localhost:8080/metadata/batch"
-ENDPOINT_METADATA_MISURAZIONI ="http://localhost:8080/metadata/misurazioni"
+ENDPOINT_METADATA_MISURAZIONE_SENSORE ="http://localhost:8080/metadata/misurazione-sensore"

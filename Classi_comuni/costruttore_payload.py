@@ -1,8 +1,9 @@
 import json
 import logging
 from typing import List, Dict
+
 from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
-from Classi_comuni.entita.modelli_dati import DatiBatch, DatiPayload, DatiMisurazione
+from Classi_comuni.entita.modelli_dati import DatiBatch, PacchettoBatchMisurazioni, DatiMisurazione
 from Classi_comuni.hash_utils import Hashing
 from modelli_dati import DatiSensore
 
@@ -78,7 +79,7 @@ class CostruttorePayload:
             hash_concat : str = Hashing.hash_concat(dati_s.to_hash(), dati_m.to_hash())
             self.hash_misurazioni_sensori.append(hash_concat)
 
-    def costruisci_payload(self) -> DatiPayload:
+    def costruisci_payload(self) -> PacchettoBatchMisurazioni:
         """
         Costruisce il payload da inviare al cloud.
         La Merkle Root può essere inserita nel batch per scopi di debug
@@ -96,7 +97,7 @@ class CostruttorePayload:
         # DATIBATCH è una classe PYDANTIC
         #batch_con_root = self.batch.model_copy(update={"merkle_root": merkle_root})
 
-        return DatiPayload(
+        return PacchettoBatchMisurazioni(
             batch=self.batch,
             misurazioni=list(self.misurazioni)  # copia esplicita
         )

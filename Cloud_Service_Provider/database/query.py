@@ -47,10 +47,9 @@ VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (id_misurazione) DO NOTHING;
 """
 
-
-
-# Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
-ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI = """
+# Estrae tutte le misurazioni di un batch, includendo anche i dati delle misurazioni e del sensore
+# che lo ha generato
+OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI = """
     SELECT m.id_misurazione,
     m.id_sensore,
     m.timestamp,
@@ -68,19 +67,24 @@ ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI = """
 """
 
 #estrae le informazioni associate a una misurazione
-ESTRAI_METADATA_MISURAZIONE = """
-    SELECT m.id_misurazione, m.id_batch, m.id_sensore, m.timestamp, s.tipo
+OTTIENI_METADATA_MISURAZIONE_SENSORE = """
+    SELECT m.id_misurazione, m.id_batch, m.timestamp, s.id_sensore, s.tipo
     from misurazione as m inner join sensore as s on m.id_sensore = s.id_sensore
     where id_misurazione = %s
 """
 
-ESTRAI_METADATA_BATCH = """
-    SELECT numero_misurazioni, timestamp_creazione
+OTTIENI_METADATA_BATCH = """
+    SELECT id_batch, numero_misurazioni, timestamp_creazione
+    from batch
+    where id_batch = %s
+"""
+OTTIENI_DATA_BATCH = """
+    SELECT id_batch, numero_misurazioni, timestamp_creazione
     from batch
     where id_batch = %s
 """
 
-ESTRAI_DATI_MISURAZIONI_SENSORI = """
+OTTIENI_DATI_MISURAZIONE_SENSORE = """
 SELECT m.id_misurazione, m.id_batch, m.id_sensore, m.dati, m.timestamp, s.tipo, s.descrizione
 FROM misurazione m INNER JOIN sensore s ON m.id_sensore = s.id_sensore
 WHERE m.id_misurazione = ?

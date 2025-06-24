@@ -1,7 +1,7 @@
-import logging
 import json
+import logging
+
 from Verificatore.verifica.verificatore import Verificatore
-from api_cloud import richiedi_metadata_misurazioni, richiedi_metadata_batch
 from verificatore import RisultatoVerifica
 
 # Configura il logger

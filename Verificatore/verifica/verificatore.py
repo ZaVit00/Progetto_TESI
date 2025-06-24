@@ -1,15 +1,11 @@
-import json
 import logging
 from typing import TypedDict, List
-
-from Classi_comuni.entita.modelli_dati import DatiPayload
+from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
-    richiedi_metadata_misurazioni
+    richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
-from costanti_comuni import ID_BATCH_LOGICO
-from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
-from modelli_dati import MetaDatiMisurazione, MetaDatiBatch
+from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
@@ -218,10 +214,10 @@ class Verificatore:
         if id_misurazioni_anomale:
             output.append(f"\n--- MISURAZIONI ANOMALE ({len(id_misurazioni_anomale)} ID) ---")
             try:
-                metadata_misurazioni : List[MetaDatiMisurazione] = (
-                    richiedi_metadata_misurazioni(id_misurazioni_anomale))
-                for mis in metadata_misurazioni:
-                    output.append(f"\n>> ID {mis.id_misurazione}")
+                metadata_mis_sens : List[MetaDatiMisurazioneSensore] = (
+                    richiedi_metadata_misurazione_sensore(id_misurazioni_anomale))
+                for mis in metadata_mis_sens:
+                    output.append(f"\n>> ID {mis.metadati_misurazione.id_misurazione}")
                     output.append(mis.to_json())
             except ValueError as e:
                 output.append(f"❌ Errore nel recupero dei metadata delle misurazioni: {e}")

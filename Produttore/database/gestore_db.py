@@ -1,4 +1,4 @@
-import json
+import logging
 import logging
 import os
 import sqlite3
@@ -21,11 +21,16 @@ class GestoreDatabase:
     _DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
     _STRING_MAX_LENGTH = 12
 
-    def __init__(self, soglia_batch: int = 1023):
-        self.conn = sqlite3.connect(self._DBPATH)
-        self.conn.row_factory = sqlite3.Row
-        self.crea_tabelle()
+    def __init__(self, soglia_batch: int = 1023, sola_lettura: bool = False):
         self.soglia_batch = soglia_batch
+        if sola_lettura:
+            # Connessione in sola lettura (URI necessaria)
+            self.conn = sqlite3.connect(f"file:{self._DBPATH}?mode=ro", uri=True)
+        else:
+            self.conn = sqlite3.connect(self._DBPATH)
+            self.crea_tabelle()
+
+        self.conn.row_factory = sqlite3.Row
 
     def crea_tabelle(self):
         """
@@ -41,13 +46,14 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
-    def inserisci_dati_sensore(self, id_sensore: str, descrizione: str, tipo: str) -> bool:
+    def inserisci_dati_sensore(self, sensore : DatiSensore) -> bool:
         """
         Inserisce un nuovo sensore solo se non già presente.
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.INSERISCI_SENSORE, (id_sensore, descrizione, tipo))
+            cursor.execute(query.INSERISCI_SENSORE, (sensore.id_sensore.upper(),
+                                                     sensore.descrizione, sensore.tipo))
             self.conn.commit()
             return True
         except sqlite3.Error as e:
@@ -124,6 +130,8 @@ class GestoreDatabase:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
+        è l'unico metodo che delega la costruzione di oggetti pydantic a un altro metodo
+        vista la complessità e la criticità di questa operazione.
         """
         try:
             cursor = self.conn.cursor()
@@ -168,7 +176,6 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
-
 
     def ottieni_payload_batch_pronti_per_invio(self) -> list[tuple[int, str]]:
         """
@@ -235,7 +242,6 @@ class GestoreDatabase:
             logger.error(f"[DB] Errore durante l'estrazione dei sensori non confermati: {e}")
             return DatiListaSensori(sensori=[])
 
-
     def aggiorna_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
         """
         Segna un batch come impossibile da elaborare in seguito a errore grave
@@ -264,7 +270,7 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - aggiorna sensore conferma ricezione ERRORE] {e}")
 
-    # attualmente non utilizzato
+    # attualmente non utilizzato (da utilizzare prossimamente)
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:
         """
         Elimina tutte le misurazioni associate a un determinato
@@ -279,40 +285,6 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - ELIMINAZIONE MISURAZIONI] {e}")
             return False
-
-    #DEBUG ONLY
-    def svuota_tabelle(self):
-        """
-        Elimina tutti i dati da tutte le tabelle del database (reset completo).
-        L'ordine delle DELETE è importante per rispettare i vincoli di chiave esterna.
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM misurazione_in_ingresso")
-            cursor.execute("DELETE FROM batch")
-            cursor.execute("DELETE FROM sensore")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='misurazione_in_ingresso'")
-            cursor.execute("DELETE FROM sqlite_sequence WHERE name='batch'")
-            self.conn.commit()
-            logger.info("Tabelle svuotate e contatori ID resettati.")
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - SVUOTAMENTO TABELLE] {e}")
-
-    #DEBUG ONLY
-    def drop_tabelle(self):
-        """
-        Elimina tutte le tabelle del database.
-        ATTENZIONE: Questa operazione è distruttiva e irreversibile.
-        """
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("DROP TABLE IF EXISTS misurazione_in_ingresso")
-            cursor.execute("DROP TABLE IF EXISTS batch")
-            cursor.execute("DROP TABLE IF EXISTS sensore")
-            self.conn.commit()
-            logger.info("Tutte le tabelle sono state eliminate.")
-        except sqlite3.Error as e:
-            logger.error(f"QUERY - DROP TABELLE] {e}")
 
     def chiudi_connessione(self) -> None:
         """Chiude la connessione al database, se ancora aperta."""

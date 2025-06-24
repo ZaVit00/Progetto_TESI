@@ -43,8 +43,8 @@ async def registra_sensore(dati_sensore: DatiSensore):
     """
     Endpoint per la registrazione di un sensore.
     """
-    if not gestore_db.inserisci_dati_sensore(dati_sensore.id_sensore.upper(), dati_sensore.descrizione,
-                                             dati_sensore.tipo):
+
+    if not gestore_db.inserisci_dati_sensore(dati_sensore):
         logger.error(f"Errore nella registrazione del sensore {dati_sensore.id_sensore}")
         raise HTTPException(status_code=500, detail="Errore nella registrazione del sensore.")
 
