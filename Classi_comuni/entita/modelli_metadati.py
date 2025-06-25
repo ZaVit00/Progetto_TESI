@@ -1,28 +1,9 @@
 #==== SEMPLICI CLASSI BASEMODEL DI PYDANTIC PER RESTITUIRE METADATI === #
 # utilizzati nel processo di verifica dell'integrità da parte del verificatore
-import json
-from abc import ABC
 
-from pydantic import Field, BaseModel
+from pydantic import Field
+from modelli import ModelliSerializzabili
 
-
-class ModelliSerializzabili(BaseModel, ABC):
-    """
-    Classe base astratta per modelli che devono poter essere serializzati in JSON
-    """
-    def to_json(self) -> str:
-        """
-        Restituisce una rappresentazione JSON ordinata e leggibile della tupla.
-        Questa serializzazione viene utilizzata per il calcolo dell'hash e per eventuali
-        operazioni di debug o logging. APPLICABILE SOLO A ISTANZE DI PYDANTIC (modul_dump)
-        """
-        return json.dumps(
-            self.model_dump(),
-            #ordina le chiavi
-            sort_keys=True,
-            separators=(",", ":"),
-            indent=2
-        )
 
 class MetaDatiMisurazione(ModelliSerializzabili):
     id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")

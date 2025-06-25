@@ -35,6 +35,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/verifica" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/database" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/api_client" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -42,5 +43,12 @@
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
     <option name="myDocStringFormat" value="Plain" />
+  </component>
+  <component name="TemplatesService">
+    <option name="TEMPLATE_FOLDERS">
+      <list>
+        <option value="$MODULE_DIR$/Produttore_verificatore/api_client" />
+      </list>
+    </option>
   </component>
 </module>

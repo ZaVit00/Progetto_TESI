@@ -58,7 +58,7 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
     6. Aggiorna DB con metadata del batch.
     7. (Prossimamente) Salva su blockchain.
     """
-    dati_query = gestore_db.estrai_dati_batch_misurazioni_sensori(id_batch)
+    dati_query = gestore_db.ottieni_dati_batch_misurazioni_sensori(id_batch)
     if not dati_query:
         logger.error(f"Nessun dato trovato per il batch {id_batch}")
         return False

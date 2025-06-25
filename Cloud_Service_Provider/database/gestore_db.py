@@ -16,7 +16,7 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, OTTIENI_METADATA_MISURAZIONE_SENSORE, OTTIENI_METADATA_BATCH,
     OTTIENI_DATI_MISURAZIONE_SENSORE, OTTIENI_DATA_BATCH
 )
-from modelli_dati import DatiMisurazioneSensore
+from modelli_verifica_integrita import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazione, MetaDatiMisurazioneSensore, MetaDatiSensore, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
@@ -145,9 +145,7 @@ class GestoreDatabase:
             riga = cursor.fetchone()
             if not riga:
                 raise ValueError(f"Nessuna tupla batch trovata con ID {id_batch}")
-
             return DatiBatch(**riga)
-
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
@@ -190,7 +188,7 @@ class GestoreDatabase:
             descrizione=row["descrizione"],
         )
 
-        return DatiMisurazioneSensore(sensore = sens, misurazione=mis)
+        return DatiMisurazioneSensore(dati_sensore= sens, dati_misurazione=mis)
 
     def ottieni_metadata_misurazione_sensore(self, id_misurazione: int) -> MetaDatiMisurazioneSensore | None:
         """

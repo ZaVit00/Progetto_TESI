@@ -1,24 +1,9 @@
 import json
 import re
 from typing import Dict, List
-
 from pydantic import Field, field_validator
-
-from hash_utils import Hashing
-from modelli_metadati import ModelliSerializzabili
-
-
-class ModelliHashabili(ModelliSerializzabili):
-    """
-    Classe base astratta per modelli che devono poter essere serializzati in JSON
-    e da cui calcolare un hash univoco.
-    """
-    def to_hash(self) -> str:
-        """
-        Calcola e restituisce hash SHA-256 della tupla,
-        serializzandola prima in formato JSON.
-        """
-        return Hashing.calcola_hash(self.to_json())
+from Classi_comuni.utils import canonizza_dict
+from modelli import ModelliHashabili
 
 
 class DatiSensore(ModelliHashabili):
@@ -82,15 +67,52 @@ class DatiMisurazione(ModelliHashabili):
         # Classe pydantic --> Dizionario
         dump = self.model_dump()
         # Canonizza il campo "dati" separatamente
-        # cioè rende omogeneo il campo dati. Necessario per la verifica dell'integrità salvare
+        # cioè rende OMOGENEO il campo dati. Necessario per la verifica dell'integrità salvare
         # in modo omogeneo i campi dei dati nello stesso modo tra sqlite e postegreSQL
-        dump["dati"] = json.loads(json.dumps(self.dati, sort_keys=True, separators=(",", ":")))
+        dump["dati"] = canonizza_dict(self.dati)
         return json.dumps(
             dump,
             sort_keys=True,
             separators=(",", ":"),
             indent=2
         )
+
+
+    def differenza(self, altro: "DatiMisurazione") -> dict:
+        differenze = {}
+        # Confronta tutti i campi tranne 'dati'
+        dump_self = self.model_dump(exclude={"dati"})
+        dump_altro = altro.model_dump(exclude={"dati"})
+
+        for campo, val_self in dump_self.items():
+            val_altro = dump_altro.get(campo)
+            if val_self != val_altro:
+                differenze[campo] = {
+                    "locale": val_self,
+                    "ricevuto": val_altro
+                }
+        # Gestione dedicata per il campo 'dati'
+        dati_locale = canonizza_dict(self.dati)
+        dati_cloud = canonizza_dict(altro.dati)
+
+        chiavi = set(dati_locale.keys()) | set(dati_cloud.keys())
+        differenze_dati = {}
+
+        for chiave in chiavi:
+            val_locale = dati_locale.get(chiave)
+            val_ricevuto = dati_cloud.get(chiave)
+
+            if val_locale != val_ricevuto:
+                differenze_dati[chiave] = {
+                    "locale": val_locale,
+                    "ricevuto": val_ricevuto
+                }
+
+        if differenze_dati:
+            differenze["dati"] = differenze_dati
+
+        return differenze
+
 
 class DatiBatch(ModelliHashabili):
     """
@@ -110,6 +132,3 @@ class PacchettoBatchMisurazioni(ModelliHashabili):
 class DatiListaSensori(ModelliHashabili):
     sensori : List[DatiSensore] = Field(..., title="Lista di Sensori", description="Lista di sensori presenti nel sistema")
 
-class DatiMisurazioneSensore(ModelliHashabili):
-    sensore : DatiSensore = Field(..., description="dati del sensore")
-    misurazione : DatiMisurazione = Field(..., description="dati della misurazioni")

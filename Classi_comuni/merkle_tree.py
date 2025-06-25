@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
-from hash_utils import Hashing
+from Classi_comuni.utils import Hashing
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL + 1)

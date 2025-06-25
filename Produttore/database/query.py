@@ -112,7 +112,7 @@ CREA_BATCH = """
 """
 
 # Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
-ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI = """
+OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI = """
     SELECT
         m.id_misurazione,
         m.id_sensore,
@@ -232,3 +232,20 @@ AGGIORNA_CONFERMA_RICEZIONE_SENSORE = """
 """
 
 
+OTTIENI_DATI_SENSORI = """
+    SELECT id_sensore, tipo, descrizione
+    FROM sensore
+    where id_sensore = ?
+"""
+
+OTTIENI_DATI_BATCH = """
+    SELECT id_batch, timestamp_creazione, numero_misurazioni
+    FROM batch
+    where id_batch = ?
+"""
+
+OTTIENI_PAYLOAD_BATCH = """
+    SELECT payload_json
+    FROM batch
+    where id_batch = ? AND payload_json IS NOT NULL
+"""

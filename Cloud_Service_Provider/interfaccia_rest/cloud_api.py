@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiMisurazioneSensore, \
-    DatiBatch
+from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiBatch
+from modelli_verifica_integrita import DatiMisurazioneSensore
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_profonda, \
     richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
@@ -117,7 +117,7 @@ def ricostruisci_dati_misurazioni(lista_id: List[int], utente: UtenteAPI = Depen
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@app.post("/dati/batch/", response_model=list[DatiBatch])
+@app.post("/dati/batch/", response_model=DatiBatch)
 def ricostruisci_data_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
     ris_query : DatiBatch = gestore_db.ottieni_data_batch(id_batch)
     if not ris_query:

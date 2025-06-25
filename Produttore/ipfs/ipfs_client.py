@@ -6,7 +6,7 @@ from io import BytesIO
 import boto3
 import botocore.exceptions
 
-from Classi_comuni.hash_utils import Hashing
+from Classi_comuni.utils import Hashing
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
 
 logger = logging.getLogger(__name__)

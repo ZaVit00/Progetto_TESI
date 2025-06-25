@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime
 
 from database import query
-from modelli_dati import DatiSensore, DatiListaSensori
+from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
 
 logger = logging.getLogger(__name__)
 """
@@ -126,7 +126,47 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE BATCH] {e}")
             return -1
 
-    def estrai_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
+    def ottieni_dati_sensore(self, id_sensore) -> DatiSensore | None:
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_DATI_SENSORI, (id_sensore,))
+            ris = cursor.fetchone()
+            if ris is None:
+                logger.warning(f"[DB] Sensore con ID '{id_sensore}' non trovato.")
+                return None
+            return DatiSensore(**ris)
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - ESTRAZIONE DATI SENSORI] {e}")
+            return None
+
+    def ottieni_dati_batch(self, id_batch) -> DatiBatch | None:
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_DATI_BATCH, (id_batch,))
+            ris = cursor.fetchone()
+            if ris is None:
+                logger.warning(f"[DB] Batch con ID '{id_batch}' non trovato.")
+                return None
+            return DatiBatch(**ris)
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - ESTRAZIONE DATI BATCH] {e}")
+            return None
+
+    def ottieni_payload_batch(self, id_batch) -> str | None:
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_PAYLOAD_BATCH, (id_batch,))
+            ris = cursor.fetchone()
+            if ris is None:
+                logger.warning(f"[DB] Payload batch con ID '{id_batch}' non trovato.")
+                return None
+            return ris["payload_json"]
+        except sqlite3.Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE PAYLOAD BATCH] Errore: {e}")
+            return None
+
+
+    def ottieni_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
         """
         Estrae tutte le misurazioni associate a un batch ordinandole per ID.
         Utile per la verifica dell'integrità e la costruzione del Merkle Tree.
@@ -135,7 +175,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.ESTRAI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
+            cursor.execute(query.OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
             righe = cursor.fetchall()
             #.fetchall() restituisce una lista di sqlite3.Row, che sembrano dizionari, ma non lo sono al 100%.
             # Se ti serve una lista di dizionari veri,

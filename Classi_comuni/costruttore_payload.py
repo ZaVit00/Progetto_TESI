@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
 from Classi_comuni.entita.modelli_dati import DatiBatch, PacchettoBatchMisurazioni, DatiMisurazione
-from Classi_comuni.hash_utils import Hashing
+from Classi_comuni.utils import Hashing
 from modelli_dati import DatiSensore
 
 logger = logging.getLogger(__name__)
