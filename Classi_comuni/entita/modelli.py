@@ -1,5 +1,6 @@
 import json
 from abc import ABC
+from deepdiff import DeepDiff
 from pydantic import BaseModel
 from Classi_comuni.utils import Hashing
 
@@ -22,29 +23,6 @@ class ModelliSerializzabili(BaseModel, ABC):
             indent=2
         )
 
-
-    def differenza(self, altro: "ModelliSerializzabili") -> dict:
-        """
-        Confronta campo per campo due istanze Pydantic dello stesso tipo.
-        Restituisce un dizionario con le differenze riscontrate:
-        campo → {"locale": valore_self, "cloud": valore_altro}
-        """
-        differenze = {}
-        dump_self = self.model_dump()
-        dump_altro = altro.model_dump()
-
-        for campo in dump_self:
-            val_self = dump_self[campo]
-            val_altro = dump_altro.get(campo)
-            if val_self != val_altro:
-                differenze[campo] = {
-                    "locale": val_self,
-                    "ricevuto": val_altro
-                }
-
-        return differenze
-
-
 class ModelliHashabili(ModelliSerializzabili):
     """
     Classe base astratta per modelli che devono poter essere serializzati in JSON
@@ -56,3 +34,15 @@ class ModelliHashabili(ModelliSerializzabili):
         serializzandola prima in formato JSON.
         """
         return Hashing.calcola_hash(self.to_json())
+
+    def differenze_con(self, altro: "ModelliHashabili") -> dict:
+        """
+        Confronta l'istanza corrente con un'altra e restituisce un dizionario
+        con le differenze rilevate usando DeepDiff.
+        """
+        return DeepDiff(
+            self.model_dump(),
+            altro.model_dump(),
+            ignore_order=True,
+            verbose_level = 2
+        )

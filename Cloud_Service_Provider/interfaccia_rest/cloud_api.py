@@ -8,7 +8,7 @@ from fastapi import Depends
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiBatch
-from modelli_verifica_integrita import DatiMisurazioneSensore
+from modelli_dati import DatiMisurazioneSensore
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_profonda, \
     richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase

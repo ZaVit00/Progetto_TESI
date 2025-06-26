@@ -78,42 +78,6 @@ class DatiMisurazione(ModelliHashabili):
         )
 
 
-    def differenza(self, altro: "DatiMisurazione") -> dict:
-        differenze = {}
-        # Confronta tutti i campi tranne 'dati'
-        dump_self = self.model_dump(exclude={"dati"})
-        dump_altro = altro.model_dump(exclude={"dati"})
-
-        for campo, val_self in dump_self.items():
-            val_altro = dump_altro.get(campo)
-            if val_self != val_altro:
-                differenze[campo] = {
-                    "locale": val_self,
-                    "ricevuto": val_altro
-                }
-        # Gestione dedicata per il campo 'dati'
-        dati_locale = canonizza_dict(self.dati)
-        dati_cloud = canonizza_dict(altro.dati)
-
-        chiavi = set(dati_locale.keys()) | set(dati_cloud.keys())
-        differenze_dati = {}
-
-        for chiave in chiavi:
-            val_locale = dati_locale.get(chiave)
-            val_ricevuto = dati_cloud.get(chiave)
-
-            if val_locale != val_ricevuto:
-                differenze_dati[chiave] = {
-                    "locale": val_locale,
-                    "ricevuto": val_ricevuto
-                }
-
-        if differenze_dati:
-            differenze["dati"] = differenze_dati
-
-        return differenze
-
-
 class DatiBatch(ModelliHashabili):
     """
     Rappresenta i dati di un batch di misurazioni.
@@ -121,6 +85,16 @@ class DatiBatch(ModelliHashabili):
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
     numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
+
+    def differenze_con(self, altro: "DatiBatch") -> dict:
+        risultato = {}
+        diff_batch = super().differenze_con(altro)
+        if diff_batch:
+            #aggiungi solo se è cambiato qualcosa
+            risultato["dati_batch"] = diff_batch
+        return risultato
+
+
 
 class PacchettoBatchMisurazioni(ModelliHashabili):
     """
@@ -132,3 +106,21 @@ class PacchettoBatchMisurazioni(ModelliHashabili):
 class DatiListaSensori(ModelliHashabili):
     sensori : List[DatiSensore] = Field(..., title="Lista di Sensori", description="Lista di sensori presenti nel sistema")
 
+
+class DatiMisurazioneSensore(ModelliHashabili):
+    dati_sensore : DatiSensore = Field(..., description="dati del sensore")
+    dati_misurazione : DatiMisurazione = Field(..., description="dati della misurazioni")
+
+    def differenze_con(self, altro: "DatiMisurazioneSensore") -> dict:
+        risultato = {}
+        diff_sensore = self.dati_sensore.differenze_con(altro.dati_sensore)
+        if diff_sensore:
+            #aggiungi solo se è cambiato qualcosa
+            risultato["dati_sensore"] = diff_sensore
+
+        diff_misurazione = self.dati_misurazione.differenze_con(altro.dati_misurazione)
+        if diff_misurazione:
+            #aggiungi solo se è cambiato qualcosa
+            risultato["dati_misurazione"] = diff_misurazione
+
+        return risultato

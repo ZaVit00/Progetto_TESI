@@ -171,7 +171,7 @@ class Verificatore:
 
     def misurazioni_alterate(self) -> bool:
         """
-        Restituisce True se almeno una foglia di tipo 'misurazione' risulta alterata.
+        Restituisce True se ALMENO (any) una foglia di tipo 'misurazione' risulta alterata.
         """
         anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
         return any(record["tipo"] == "misurazione" for record in anomalie)
@@ -209,10 +209,23 @@ class Verificatore:
         id_batch: int = primo_record["id"]
         return id_batch
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     @staticmethod
     def recupera_metadata_anomalie(risultati: RisultatoVerifica) -> str:
 
-        # DA FIXARE
+        # TODO DA FIXARE NON PIU FUNZIONANTE
 
         """
         Recupera i metadati relativi alle anomalie dal cloud e restituisce una stringa formattata.

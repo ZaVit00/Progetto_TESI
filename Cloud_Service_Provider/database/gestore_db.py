@@ -16,7 +16,7 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, OTTIENI_METADATA_MISURAZIONE_SENSORE, OTTIENI_METADATA_BATCH,
     OTTIENI_DATI_MISURAZIONE_SENSORE, OTTIENI_DATA_BATCH
 )
-from modelli_verifica_integrita import DatiMisurazioneSensore
+from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazione, MetaDatiMisurazioneSensore, MetaDatiSensore, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
