@@ -77,13 +77,18 @@ def recupera_metadati_misurazione_sensore(lista_id: list[int], gestore_db : Gest
     return metadati
 
 def recupera_dati_misurazione_sensore(lista_id: list[int], gestore_db: GestoreDatabase) -> list[DatiMisurazioneSensore]:
-    """
-    Recupera i dati completi delle misurazioni dati gli ID. Solleva ValueError se una misurazione non esiste.
-    """
     risultato = []
-    for id_misurazione in lista_id:
-        record: DatiMisurazioneSensore = gestore_db.ottieni_dati_misurazione_sensore(id_misurazione)
-        if not record:
-            raise ValueError(f"Misurazione con ID {id_misurazione} non trovata")
-        risultato.append(record)
+    non_trovati = []
+
+    for id_mis in lista_id:
+        dati = gestore_db.ottieni_dati_misurazione_sensore(id_mis)
+        if dati:
+            risultato.append(dati)
+        else:
+            non_trovati.append(id_mis)
+
+    if non_trovati:
+        logger.warning(f"Alcuni ID non trovati nel DB: {non_trovati}")
+        # oppure raise HTTPException(...) se vuoi fallire
+
     return risultato

@@ -89,11 +89,7 @@ class DatiBatch(ModelliHashabili):
     def differenze_con(self, altro: "DatiBatch") -> dict:
         risultato = {}
         diff_batch = super().differenze_con(altro)
-        if diff_batch:
-            #aggiungi solo se è cambiato qualcosa
-            risultato["dati_batch"] = diff_batch
-        return risultato
-
+        return diff_batch
 
 
 class PacchettoBatchMisurazioni(ModelliHashabili):
@@ -110,17 +106,3 @@ class DatiListaSensori(ModelliHashabili):
 class DatiMisurazioneSensore(ModelliHashabili):
     dati_sensore : DatiSensore = Field(..., description="dati del sensore")
     dati_misurazione : DatiMisurazione = Field(..., description="dati della misurazioni")
-
-    def differenze_con(self, altro: "DatiMisurazioneSensore") -> dict:
-        risultato = {}
-        diff_sensore = self.dati_sensore.differenze_con(altro.dati_sensore)
-        if diff_sensore:
-            #aggiungi solo se è cambiato qualcosa
-            risultato["dati_sensore"] = diff_sensore
-
-        diff_misurazione = self.dati_misurazione.differenze_con(altro.dati_misurazione)
-        if diff_misurazione:
-            #aggiungi solo se è cambiato qualcosa
-            risultato["dati_misurazione"] = diff_misurazione
-
-        return risultato

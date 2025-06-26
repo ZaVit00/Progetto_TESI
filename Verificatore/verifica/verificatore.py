@@ -195,29 +195,6 @@ class Verificatore:
         id_alterati = [record["id"] for record in anomalie_misurazioni]
         return id_alterati
 
-    def ottieni_id_batch_alterato(self) -> int:
-        """
-        Restituisce l'ID del batch se è stato alterato.
-        Lancia un'eccezione se il batch risulta integro.
-        """
-        if not self.batch_alterato():
-            raise ValueError("Il batch risulta integro: nessuna alterazione rilevata nella prima foglia.")
-
-        # Per costruzione, la prima foglia anomala è il batch
-        anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
-        primo_record: DettagliVerifica = anomalie[0]
-        id_batch: int = primo_record["id"]
-        return id_batch
-
-
-
-
-
-
-
-
-
-
 
 
 

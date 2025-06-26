@@ -93,7 +93,9 @@ def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(rich
         logger.error(f"[ERRORE GET /batch] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/metadata/misurazione-sensore/", response_model=list[MetaDatiMisurazioneSensore])
+
+# === METODI a COMPLETAMENTO DELLA VERIFICA DELL'INTEGRITA' === #
+@app.post("/metadata/misurazione-sensore", response_model=list[MetaDatiMisurazioneSensore])
 def ricostruisci_metadata_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     if not lista_id:
         raise HTTPException(status_code=400, detail="Lista di ID vuota")
@@ -110,19 +112,20 @@ def ricostruisci_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richi
     return ris_query
 
 
-@app.post("/dati/misurazione-sensore/", response_model=list[DatiMisurazioneSensore])
-def ricostruisci_dati_misurazioni(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
+@app.post("/dati/misurazione-sensore", response_model=list[DatiMisurazioneSensore])
+def ricostruisci_dati_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
     try:
         return recupera_dati_misurazione_sensore(lista_id, gestore_db)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-@app.post("/dati/batch/", response_model=DatiBatch)
+@app.get("/dati/batch/{id_batch}", response_model=DatiBatch)
 def ricostruisci_data_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
     ris_query : DatiBatch = gestore_db.ottieni_data_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")
     return ris_query
+
 
 def main():
     uvicorn.run(app, host="127.0.0.1", port=8080)

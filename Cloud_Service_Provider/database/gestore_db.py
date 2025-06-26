@@ -20,6 +20,7 @@ from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazione, MetaDatiMisurazioneSensore, MetaDatiSensore, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL)
 
 class GestoreDatabase:
     def __init__(self, db_config: dict):
@@ -46,7 +47,6 @@ class GestoreDatabase:
         except Psycopg2Error as e:
             logger.error(f"Errore nella creazione delle tabelle: {e}")
             raise
-
 
     def inserisci_sensore(self, sensore: DatiSensore) -> bool:
         """
@@ -150,45 +150,61 @@ class GestoreDatabase:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-
     def ottieni_dati_misurazione_sensore(self, id_misurazione: int) -> DatiMisurazioneSensore | None:
         """
         Restituisce una tupla (DatiMisurazione, DatiSensore) corrispondente a una misurazione specifica.
         """
+        logger.info(f"[DB] Avvio ricerca per ID misurazione = {id_misurazione}")
+
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(OTTIENI_DATI_MISURAZIONE_SENSORE, (id_misurazione,))
             row = cursor.fetchone()
+            logger.debug(f"[DB] Riga ottenuta da DB: {row}")
+
             if not row:
-                raise ValueError(f"Nessuna tupla misurazione trovata con ID {id_misurazione}")
+                logger.warning(f"[DB] Nessuna tupla trovata per ID {id_misurazione}")
+                return None
 
         except Psycopg2Error as e:
-            logger.error(f"[QUERY - JOIN MISURAZIONE + SENSORE] {e}")
+            logger.error(f"[QUERY - JOIN MISURAZIONE + SENSORE] Errore durante l'esecuzione: {e}")
             return None
 
         # Parsing del campo "dati"
         try:
             dati_dict = json.loads(row["dati"]) if isinstance(row["dati"], str) else row["dati"]
+            logger.debug(f"[DB] Campo 'dati' dopo parsing: {dati_dict}")
         except json.JSONDecodeError as e:
-            logger.error(f"[ERRORE JSON - CAMPO 'dati' MISURAZIONE] {e}")
+            logger.error(f"[ERRORE JSON - CAMPO 'dati' MISURAZIONE] Errore durante il parsing: {e}")
             return None
 
-        # Costruzione degli oggetti
-        mis = DatiMisurazione(
-            id_misurazione=row["id_misurazione"],
-            id_batch=row["id_batch"],
-            id_sensore=row["id_sensore"],
-            dati=dati_dict,
-            timestamp=row["timestamp"]
-        )
+        # Costruzione oggetti
+        try:
+            mis = DatiMisurazione(
+                id_misurazione=row["id_misurazione"],
+                id_batch=row["id_batch"],
+                id_sensore=row["id_sensore"],
+                dati=dati_dict,
+                timestamp=row["timestamp"]
+            )
 
-        sens = DatiSensore(
-            id_sensore=row["id_sensore"],
-            tipo=row["tipo"],
-            descrizione=row["descrizione"],
-        )
+            sens = DatiSensore(
+                id_sensore=row["id_sensore"],
+                tipo=row["tipo"],
+                descrizione=row["descrizione"],
+            )
 
-        return DatiMisurazioneSensore(dati_sensore= sens, dati_misurazione=mis)
+            risultato = DatiMisurazioneSensore(
+                dati_sensore=sens.model_dump(),
+                dati_misurazione=mis.model_dump()
+            )
+            logger.info(f"[DB] Oggetto DatiMisurazioneSensore creato correttamente per ID {id_misurazione}")
+            logger.debug(f"[DB] Oggetto completo: {risultato}")
+            return risultato
+
+        except Exception as e:
+            logger.error(f"[DB] Errore nella costruzione dell'oggetto DatiMisurazioneSensore: {e}")
+            return None
 
     def ottieni_metadata_misurazione_sensore(self, id_misurazione: int) -> MetaDatiMisurazioneSensore | None:
         """
@@ -211,14 +227,12 @@ class GestoreDatabase:
                 id_sensore=riga["id_sensore"],
                 tipo = riga["tipo"])
 
-            return MetaDatiMisurazioneSensore(
-                metadati_sensore = metadati_sensore,
-                metadati_misurazione=metadati_misurazioni)
+            return MetaDatiMisurazioneSensore(metadati_sensore = metadati_sensore.model_dump(),
+                                              metadati_misurazione=metadati_misurazioni.model_dump())
 
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
             return None
-
 
     def chiudi_connessione(self):
         """

@@ -1,10 +1,9 @@
 import logging
 from typing import Tuple
-
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from database.gestore_db import GestoreDatabase
-from fog_api_utils import logger
+from api_cloud import logger
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
 from merkle_tree import MerkleTree
 from modelli_dati import PacchettoBatchMisurazioni

@@ -4,7 +4,6 @@ import requests
 
 from costanti_produttore import API_KEY_PRODUTTORE
 from database.gestore_db import GestoreDatabase
-
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 

@@ -86,6 +86,6 @@ OTTIENI_DATA_BATCH = """
 
 OTTIENI_DATI_MISURAZIONE_SENSORE = """
 SELECT m.id_misurazione, m.id_batch, m.id_sensore, m.dati, m.timestamp, s.tipo, s.descrizione
-FROM misurazione m INNER JOIN sensore s ON m.id_sensore = s.id_sensore
-WHERE m.id_misurazione = ?
+FROM misurazione as m INNER JOIN sensore as s ON m.id_sensore = s.id_sensore
+WHERE m.id_misurazione = %s
 """

@@ -1,0 +1,36 @@
+import json
+import logging
+
+from verificatore_esteso import VerificatoreEsteso
+# Configurazione globale del logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
+)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL)
+
+def main():
+    # 2. Imposta manualmente un id_batch per test
+    id_batch = 1
+
+    # 3. Crea il verificatore esteso
+    verificatore = VerificatoreEsteso(id_batch)
+    verificatore.esegui_verifica_completa()
+
+    # 4. Verifica se ci sono alterazioni e confronta i dati
+    print(f"\n🔍 Avvio verifica per batch {id_batch}...")
+
+    try:
+        differenze = verificatore.esegui_verifica_profonda()
+        if not differenze:
+            print("✅ Nessuna anomalia rilevata. Tutto integro.")
+        else:
+            print("⚠️  Differenze rilevate:")
+            print(json.dumps(differenze, indent=2, ensure_ascii=False))
+
+    except Exception as e:
+        print(f"❌ Errore durante la verifica: {e}")
+
+if __name__ == "__main__":
+    main()

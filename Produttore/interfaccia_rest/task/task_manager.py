@@ -6,7 +6,7 @@ from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BA
 from database.gestore_db import GestoreDatabase
 from gestione_batch import gestisci_batch_completo
 from modelli_dati import DatiListaSensori
-from utils.fog_api_utils import invia_payload
+from utils.api_cloud import invia_payload
 
 logger = logging.getLogger(__name__)
 
