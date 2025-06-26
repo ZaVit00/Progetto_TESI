@@ -92,8 +92,6 @@ def confronta_dati_sensore(s1: DatiSensore, s2: DatiSensore) -> dict:
     """
     Confronta due oggetti DatiSensore dopo aver verificato la corrispondenza degli ID.
     """
-    if s1.id_sensore != s2.id_sensore:
-        raise ValueError("ATTENZIONE! Non corrispondono gli ID dei sensori (bug)")
     return s1.differenze_con(s2)
 
 def confronta_dati_misurazioni(m1: DatiMisurazione, m2: DatiMisurazione) -> dict:
@@ -101,7 +99,7 @@ def confronta_dati_misurazioni(m1: DatiMisurazione, m2: DatiMisurazione) -> dict
     Confronta due oggetti DatiMisurazione dopo aver verificato la corrispondenza degli ID.
     """
     if m1.id_misurazione != m2.id_misurazione:
-        raise ValueError("ATTENZIONE! Non corrispondono gli ID delle misurazioni (bug)")
+        raise ValueError("ATTENZIONE! Non corrispondono gli ID delle misurazioni (bug programmatore)")
     return m1.differenze_con(m2)
 
 
