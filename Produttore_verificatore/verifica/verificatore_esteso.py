@@ -9,6 +9,7 @@ from modelli_dati import (
     DatiBatch,
     DatiMisurazioneSensore,
 )
+from Classi_comuni.utils import serializza_dict
 from verificatore import Verificatore
 from Produttore.database.gestore_db import GestoreDatabase
 from recupero_dati_utils import (
@@ -96,7 +97,7 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"Misurazioni ricostruite localmente: {ricostruite}")
         return ricostruite
 
-    def esegui_verifica_profonda(self) -> dict:
+    def esegui_verifica_profonda(self) -> str:
         """
         Confronta i dati locali e quelli cloud per batch e misurazioni alterate.
         Restituisce un dizionario con le differenze riscontrate.
@@ -134,4 +135,4 @@ class VerificatoreEsteso(Verificatore):
         else:
             logger.info(f"Differenze trovate: {differenze_totali}")
 
-        return differenze_totali
+        return serializza_dict(differenze_totali)

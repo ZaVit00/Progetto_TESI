@@ -6,6 +6,7 @@ from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, rich
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
+from Classi_comuni.utils import serializza_dict
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,8 @@ class Verificatore:
 
     def _recupera_root_e_cid(self) -> None:
         # TODO: implementare il recupero reale da blockchain
-        self.merkle_root_immutabile = "69fc6d9eaf8f428e794bc09618072f30f4da8162b852675a9604908f79a325ea"
-        self.cid_merkle_path = "Qmbt8tgsWgQgq82aKyUTJdne93KELhvEqFWeFN91J7NEYM"
+        self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
+        self.cid_merkle_path = "QmPQcoEuiSRyziYfm8HcmhzmgQcZGSb5CXxLSFGoiGeBR2"
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
 
@@ -116,7 +117,7 @@ class Verificatore:
 
         return anomalie
 
-    def esegui_verifica_completa(self):
+    def esegui_verifica_completa(self) -> str:
 
         # 1. Recupero dati hashati dal cloud
         try:
@@ -155,6 +156,8 @@ class Verificatore:
         anomalie_strutturali = len(id_mancanti)
         anomalie_integrita = len(self.risultato["anomalie_integrita"])
         self.risultato["numero_anomalie"] = anomalie_strutturali + anomalie_integrita
+
+        return serializza_dict(self.risultato)
 
     def ottieni_numero_anomalie(self) -> int:
         return self.risultato["numero_anomalie"]

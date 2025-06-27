@@ -15,7 +15,7 @@ ERRORE_BLOCKCHAIN= "ERRORE_BLOCKCHAIN"
 ERRORE_HTTP = "ERRORE_HTTP"
 
 #soglia potenza di due - 1
-SOGLIA_BATCH : int = 1023
+SOGLIA_BATCH : int = 4095
 
 # Costanti con valori ammissibili
 TIPO_SENSORE_JOYSTICK: Final = "JOYSTICK"

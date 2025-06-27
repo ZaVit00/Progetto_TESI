@@ -16,19 +16,22 @@ def main():
 
     # 3. Crea il verificatore esteso
     verificatore = VerificatoreEsteso(id_batch)
-    verificatore.esegui_verifica_completa()
+    anomalie_rilevate = verificatore.esegui_verifica_completa()
+    print(anomalie_rilevate)
 
     # 4. Verifica se ci sono alterazioni e confronta i dati
     print(f"\n🔍 Avvio verifica per batch {id_batch}...")
 
     try:
-        differenze = verificatore.esegui_verifica_profonda()
-        if not differenze:
-            print("✅ Nessuna anomalia rilevata. Tutto integro.")
+        if not verificatore.ottieni_esito_globale():
+            differenze = verificatore.esegui_verifica_profonda()
+            if not differenze:
+                print("✅ Nessuna anomalia rilevata. Tutto integro.")
+            else:
+                print("⚠️  Differenze rilevate:")
+                print(differenze)
         else:
-            print("⚠️  Differenze rilevate:")
-            print(json.dumps(differenze, indent=2, ensure_ascii=False))
-
+            print("<UNK> Nessuna anomalia rilevate.")
     except Exception as e:
         print(f"❌ Errore durante la verifica: {e}")
 

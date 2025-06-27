@@ -1,9 +1,12 @@
 import json
 import re
 from typing import Dict, List
+
+from deepdiff import DeepDiff
 from pydantic import Field, field_validator
 from Classi_comuni.utils import canonizza_dict
 from modelli import ModelliHashabili
+from Classi_comuni.utils import serializza_dict
 
 
 class DatiSensore(ModelliHashabili):
@@ -35,6 +38,11 @@ class DatiSensore(ModelliHashabili):
         return v
 
     def model_post_init(self, __context):
+        # Se tipo è già avvalorato (non stringa vuota), NON lo toccare
+        # SE VIENE ELIMINATO, IL CAMPO TIPO VIENE RIMPIAZZATO DAL TIPO CORRETTO
+        # INVALIDA L'ANOMALIA
+        if self.tipo:
+            return
         """
         Metodo speciale eseguito dopo l'inizializzazione del modello.
         Imposta automaticamente il campo `tipo` sulla base del prefisso dell'`id_sensore`.
@@ -49,8 +57,10 @@ class DatiSensore(ModelliHashabili):
         }
         # Estrae il prefisso alfabetico (primi quattro caratteri) ignorando eventuali numeri
         # esempio: JOY20-> JOY
+
         prefisso = self.id_sensore[:4].strip("0123456789")
         self.tipo = mapping.get(prefisso, "generico")
+
 
 class DatiMisurazione(ModelliHashabili):
     """
@@ -85,12 +95,6 @@ class DatiBatch(ModelliHashabili):
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
     numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
-
-    def differenze_con(self, altro: "DatiBatch") -> dict:
-        risultato = {}
-        diff_batch = super().differenze_con(altro)
-        return diff_batch
-
 
 class PacchettoBatchMisurazioni(ModelliHashabili):
     """
