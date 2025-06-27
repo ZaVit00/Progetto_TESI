@@ -11,15 +11,16 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL)
 
 def main():
-    # 2. Imposta manualmente un id_batch per test
+    # 1. Imposta manualmente un id_batch per test
     id_batch = 1
 
-    # 3. Crea il verificatore esteso
+    # 2. Crea il verificatore esteso
     verificatore = VerificatoreEsteso(id_batch)
     print(f"\n🔍 Avvio verifica per batch {id_batch}...")
     anomalie_rilevate = verificatore.esegui_verifica_completa()
     print(anomalie_rilevate)
-    # 4. Verifica se ci sono alterazioni e confronta i dati
+
+    # 3. Verifica se ci sono alterazioni e confronta i dati
     try:
         if not verificatore.ottieni_esito_globale():
             differenze = verificatore.esegui_verifica_profonda()

@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import TypedDict, List
+from typing import TypedDict, List, cast
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
     richiedi_metadata_misurazione_sensore
@@ -11,7 +11,7 @@ from Classi_comuni.utils import serializza_dict
 
 logger = logging.getLogger(__name__)
 
-# --- Tipi per l'output della verifica ---
+# --- Tipi ausiliari per la verifica ---#
 class DettagliVerifica(TypedDict):
     id : int
     tipo : str
@@ -25,7 +25,8 @@ class StrutturaVerifica(TypedDict):
 
 class RisultatoVerifica(TypedDict):
     id_batch : int
-    numero_anomalie: int
+    numero_anomalie_integrita: int
+    numero_anomalie_strutturali : int
     anomalie_integrita: list[DettagliVerifica]
     anomalie_strutturali: StrutturaVerifica
 
@@ -40,7 +41,8 @@ class Verificatore:
         self.merkle_paths: dict[int, PathCompatto] = {}
         self.risultato: RisultatoVerifica = {
             "id_batch": self.id_batch,
-            "numero_anomalie": 0,
+            "numero_anomalie_integrita": 0,
+            "numero_anomalie_strutturali" : 0,
             "anomalie_integrita": [],
             "anomalie_strutturali": {"id_mancanti": [], "id_aggiunti": []},
         }
@@ -52,7 +54,7 @@ class Verificatore:
     def _recupera_root_e_cid(self) -> None:
         # TODO: implementare il recupero reale da blockchain
         self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
-        self.cid_merkle_path = "QmPQcoEuiSRyziYfm8HcmhzmgQcZGSb5CXxLSFGoiGeBR2"
+        self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
 
@@ -154,17 +156,22 @@ class Verificatore:
 
         # Conteggio anomalie
         #gli id aggiunti compaiono già dentro anomalie in quanto manca il merkle path per quel specifico ID
-        anomalie_strutturali = len(id_mancanti)
+        anomalie_strutturali = len(id_mancanti) + len(id_aggiunti)
         anomalie_integrita = len(self.risultato["anomalie_integrita"])
-        self.risultato["numero_anomalie"] = anomalie_strutturali + anomalie_integrita
+        self.risultato["numero_anomalie_integrita"] = anomalie_integrita
+        self.risultato["numero_anomalie_strutturali"] = anomalie_strutturali
 
-        return serializza_dict(self.risultato)
+        #conversione esplicita in dict
+        return serializza_dict(cast(dict, self.risultato))
 
-    def ottieni_numero_anomalie(self) -> int:
-        return self.risultato["numero_anomalie"]
+    def ottieni_numero_anomalie_integrita(self) -> int:
+        return self.risultato["numero_anomalie_integrita"]
+
+    def ottieni_numero_anomalie_strutturali(self) -> int:
+        return self.risultato["numero_anomalie_strutturali"]
 
     def ottieni_esito_globale(self) -> bool:
-        return self.risultato["numero_anomalie"] == 0
+        return self.risultato["numero_anomalie_integrita"] == 0 and self.risultato["numero_anomalie_strutturali"] == 0
 
     def batch_alterato(self) -> bool:
         """
@@ -198,6 +205,16 @@ class Verificatore:
         # Estrai gli ID delle misurazioni alterate
         id_alterati = [record["id"] for record in anomalie_misurazioni]
         return id_alterati
+
+
+
+
+
+
+
+
+
+
 
 
 

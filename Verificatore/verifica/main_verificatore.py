@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 def main():
-    id_batch = 1 # ← cambia questo valore a piacimento
+    id_batch = 2 # ← cambia questo valore a piacimento
     verificatore = Verificatore(id_batch)
-    verificatore.esegui_verifica_completa()
+    differenze : str = verificatore.esegui_verifica_completa()
 
     logger.info("\n=== RISULTATO VERIFICA ===")
 
@@ -24,12 +24,8 @@ def main():
         logger.info("\n✅ Il batch è integro.")
     else:
         logger.info("\n❌ Il batch presenta alterazioni.")
-
-    logger.info("\n=== ANALISI DELLE ANOMALIE DETTAGLIATA ===")
-    #print(json.dumps(risultati, indent=2, ensure_ascii=False))
-    #metadata_str = Verificatore.recupera_metadata_anomalie(risultati)
-    #print(metadata_str)
-
+        logger.info("\n=== ANALISI DELLE ANOMALIE DETTAGLIATA ===")
+        print(differenze)
 
 
 if __name__ == "__main__":
