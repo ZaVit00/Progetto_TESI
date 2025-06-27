@@ -16,12 +16,10 @@ def main():
 
     # 3. Crea il verificatore esteso
     verificatore = VerificatoreEsteso(id_batch)
+    print(f"\n🔍 Avvio verifica per batch {id_batch}...")
     anomalie_rilevate = verificatore.esegui_verifica_completa()
     print(anomalie_rilevate)
-
     # 4. Verifica se ci sono alterazioni e confronta i dati
-    print(f"\n🔍 Avvio verifica per batch {id_batch}...")
-
     try:
         if not verificatore.ottieni_esito_globale():
             differenze = verificatore.esegui_verifica_profonda()
@@ -31,7 +29,7 @@ def main():
                 print("⚠️  Differenze rilevate:")
                 print(differenze)
         else:
-            print("<UNK> Nessuna anomalia rilevate.")
+            print("Nessuna anomalia rilevate.")
     except Exception as e:
         print(f"❌ Errore durante la verifica: {e}")
 

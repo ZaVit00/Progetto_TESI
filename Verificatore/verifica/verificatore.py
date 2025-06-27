@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import TypedDict, List
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
