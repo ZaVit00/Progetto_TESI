@@ -1,6 +1,7 @@
 import json
 import logging
 
+from file_utils import salva_risultato_verifica_su_file
 from verificatore_esteso import VerificatoreEsteso
 # Configurazione globale del logging
 logging.basicConfig(
@@ -12,7 +13,7 @@ logger.setLevel(logging.CRITICAL)
 
 def main():
     # 1. Imposta manualmente un id_batch per test
-    id_batch = 1
+    id_batch = 2
 
     # 2. Crea il verificatore esteso
     verificatore = VerificatoreEsteso(id_batch)
@@ -25,10 +26,10 @@ def main():
         if not verificatore.ottieni_esito_globale():
             differenze = verificatore.esegui_verifica_profonda()
             if not differenze:
-                print("✅ Nessuna anomalia rilevata. Tutto integro.")
+                # debug
+                salva_risultato_verifica_su_file(id_batch, anomalie_rilevate, verificatore.ottieni_esito_globale(), differenze)
             else:
-                print("⚠️  Differenze rilevate:")
-                print(differenze)
+                raise ValueError("ANOMALIA DEL SISTEMA (BUG")
         else:
             print("Nessuna anomalia rilevate.")
     except Exception as e:

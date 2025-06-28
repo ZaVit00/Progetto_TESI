@@ -1,13 +1,12 @@
 # Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
-import gzip
 import logging
-from io import BytesIO
-
 import boto3
 import botocore.exceptions
 
 from Classi_comuni.utils import Hashing
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
+from Classi_comuni.file_utils import genera_contenuto_gzip
+
 
 logger = logging.getLogger(__name__)
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
@@ -78,7 +77,7 @@ class IpfsClient:
         self.verifica_o_crea_bucket(nome_bucket)
         nome_file = IpfsClient._genera_nome_file(stringa_json)
         if comprimi_dimensione:
-            contenuto = IpfsClient._genera_contenuto_gzip(stringa_json)
+            contenuto = genera_contenuto_gzip(stringa_json)
             nome_file += ".gz"
         else:
             contenuto = stringa_json.encode("utf-8")  # CORRETTO
@@ -139,15 +138,6 @@ class IpfsClient:
         #.gz: indica che è stato compresso con gzip.
         return f"merkle_path_{short_hash}.json"
 
-    @staticmethod
-    def _genera_contenuto_gzip(json_string: str) -> bytes:
-        """
-        Comprimi una stringa JSON in formato GZIP e restituisce i byte compressi.
-        """
-        buffer = BytesIO()
-        with gzip.GzipFile(fileobj=buffer, mode='wb') as gzip_file:
-            gzip_file.write(json_string.encode('utf-8'))
-        return buffer.getvalue()
 
 """
 # FUNZIONE DI AUSILIO/DEBUG (serve per testare il comportamento della classe in modo indipendente)

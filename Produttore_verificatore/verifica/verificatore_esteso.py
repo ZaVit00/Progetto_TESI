@@ -36,7 +36,7 @@ from recupero_dati_utils import (
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class VerificatoreEsteso(Verificatore):
