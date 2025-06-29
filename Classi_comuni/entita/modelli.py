@@ -1,7 +1,9 @@
 import json
 from abc import ABC
+
 from deepdiff import DeepDiff
 from pydantic import BaseModel
+
 from Classi_comuni.utils import Hashing
 
 

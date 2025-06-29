@@ -1,4 +1,3 @@
-import json
 import logging
 
 from Verificatore.verifica.verificatore import Verificatore
@@ -13,8 +12,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+
+
 def main():
-    id_batch = 2 # ← cambia questo valore a piacimento
+    id_batch = 1 # ← cambia questo valore a piacimento
     verificatore = Verificatore(id_batch)
     differenze : str = verificatore.esegui_verifica_completa()
 

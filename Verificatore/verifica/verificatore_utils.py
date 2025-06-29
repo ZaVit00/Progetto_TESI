@@ -1,6 +1,3 @@
-from Classi_comuni.merkle_tree import PathCompatto
-import json
-from typing import Dict
 import json
 from typing import Dict
 

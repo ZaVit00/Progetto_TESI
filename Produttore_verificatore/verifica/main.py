@@ -1,8 +1,8 @@
-import json
 import logging
 
 from file_utils import salva_risultato_verifica_su_file
 from verificatore_esteso import VerificatoreEsteso
+
 # Configurazione globale del logging
 logging.basicConfig(
     level=logging.DEBUG,

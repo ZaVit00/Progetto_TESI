@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from database.gestore_db import GestoreDatabase
 from gestione_batch import gestisci_batch_completo

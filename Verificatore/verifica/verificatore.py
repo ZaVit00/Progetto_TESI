@@ -1,13 +1,21 @@
-import copy
 import logging
 from typing import TypedDict, List, cast
+
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
+from Classi_comuni.utils import serializza_dict
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
     richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
+from costanti_comuni import PROVIDER_URL
+from gestore_blockchain import LettoreBlockchain, inizializza_configurazione_blockchain
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
-from Classi_comuni.utils import serializza_dict
+
+#RICORDATI DI SPOSTARLO POI IN UN PACKAGE COMUNE VITUZ
+
+#istanza del lettore blockchain
+abi, indirizzo = inizializza_configurazione_blockchain()
+lettore_blockchain = LettoreBlockchain(PROVIDER_URL, abi, indirizzo)
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +55,18 @@ class Verificatore:
             "anomalie_strutturali": {"id_mancanti": [], "id_aggiunti": []},
         }
 
-    def _recupera_dati(self) -> None:
+    def _recupera_dati_batch_cloud(self) -> None:
         logger.info(f"Recupero dei dati per il batch ID {self.id_batch}")
         self.mappa_id_hash = richiedi_mappa_id_hash_batch(self.id_batch)
 
-    def _recupera_root_e_cid(self) -> None:
-        # TODO: implementare il recupero reale da blockchain
-        self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
-        self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
+    def _recupera_root_e_cid_blockchain(self) -> None:
+        self.merkle_root_immutabile,self.cid_merkle_path =  lettore_blockchain.leggi_valore(self.id_batch)
+        #self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
+        #self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
 
-    def _scarica_merkle_path(self) -> None:
+    def _scarica_merkle_path_ipfs(self) -> None:
         if not self.cid_merkle_path:
             raise ValueError("CID IPFS non inizializzato")
         logger.info(f"Scarico Merkle Path da IPFS tramite CID {self.cid_merkle_path}")
@@ -124,21 +132,21 @@ class Verificatore:
 
         # 1. Recupero dati hashati dal cloud
         try:
-            self._recupera_dati()
+            self._recupera_dati_batch_cloud()
         except Exception as e:
             logger.exception("[ERRORE] Errore nella richiesta HTTP al cloud provider")
-            raise RuntimeError(f"Errore nel recupero dei dati dal cloud: {e}") from e
+            raise RuntimeError(f"Errore nel recupero dei dati dal cloud: {e}")
 
         # 2. Recupero root e CID da blockchain (placeholder)
         try:
-            self._recupera_root_e_cid()
+            self._recupera_root_e_cid_blockchain()
         except Exception as e:
             logger.exception("[ERRORE] Errore nel recupero della root e del CID da blockchain")
-            raise RuntimeError(f"Errore nel recupero dei metadati blockchain: {e}") from e
+            raise RuntimeError(f"Errore nel recupero dei metadati blockchain: {e}")
 
         # 3. Scaricamento Merkle Path da IPFS
         try:
-            self._scarica_merkle_path()
+            self._scarica_merkle_path_ipfs()
         except Exception as e:
             logger.exception("[ERRORE] Errore nello scaricamento dei Merkle Path da IPFS")
             raise RuntimeError(f"Errore nel download da IPFS: {e}") from e

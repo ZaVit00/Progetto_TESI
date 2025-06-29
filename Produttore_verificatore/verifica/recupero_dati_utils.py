@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import List
+
 from Produttore.database.gestore_db import GestoreDatabase
 from modelli_dati import DatiBatch, DatiMisurazione, DatiSensore, DatiMisurazioneSensore
 

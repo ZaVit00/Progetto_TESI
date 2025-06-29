@@ -1,8 +1,9 @@
 import logging
+
 from Classi_comuni.costruttore_payload import CostruttorePayload
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori
-from modelli_dati import DatiMisurazioneSensore
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
+from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)

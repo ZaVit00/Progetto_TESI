@@ -1,10 +1,12 @@
 import logging
 from typing import Tuple
+
+from api_cloud import logger
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from database.gestore_db import GestoreDatabase
-from api_cloud import logger
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
+from istanze_globali import scrittore_blockchain
 from merkle_tree import MerkleTree
 from modelli_dati import PacchettoBatchMisurazioni
 
@@ -74,13 +76,13 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
         cid = carica_merkle_path_ipfs(merkle_path)
         #IPFS OK → aggiorna subito i metadata nel DB
         gestore_db.aggiorna_metadata_batch(id_batch, merkle_root, cid, payload_json)
-        # (in futuro) Upload su blockchain
+        # Upload su blockchain
         try:
-            # da implementare
-            # _carica_dati_su_blockchain(...)
-            pass
+            logger.debug(f"Merkle Root calcolata: {merkle_root}")
+            logger.debug(f"CID Merkle Path: {cid}")
+            scrittore_blockchain.scrivi_valore(id_batch, merkle_root, cid)
         except Exception as e:
-            logger.error(f"Errore blockchain per batch {id_batch}: {e}")
+            logger.exception(f"Errore blockchain per batch {id_batch}")
             gestore_db.aggiorna_batch_errore_elaborazione(
                 id_batch,
                 messaggio_errore=str(e),
@@ -88,7 +90,7 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
             )
             return False
     except (ErroreCaricamentoIPFS, ErroreRecuperoCID) as e:
-        logger.error(f"Errore IPFS per batch {id_batch}: {e}")
+        logger.exception(f"Errore IPFS per batch {id_batch}")
         gestore_db.aggiorna_batch_errore_elaborazione(
             id_batch,
             messaggio_errore=str(e),

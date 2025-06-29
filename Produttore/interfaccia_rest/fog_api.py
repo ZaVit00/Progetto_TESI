@@ -3,13 +3,14 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Union, Annotated
-
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
-
 from Classi_comuni.entita.modelli_dati import DatiSensore
 from config.costanti_produttore import SOGLIA_BATCH
+from costanti_comuni import PROVIDER_URL
+from costanti_produttore import ACCOUNT_ADDRESS_BLOCKCHAIN, PRIVATE_KEY_BLOCKCHAIN
 from database.gestore_db import GestoreDatabase
+from gestore_blockchain import inizializza_configurazione_blockchain, ScrittoreBlockchain
 # Import dei modelli di misurazione_in_ingresso specifici
 # i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
 from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
@@ -43,7 +44,6 @@ async def registra_sensore(dati_sensore: DatiSensore):
     """
     Endpoint per la registrazione di un sensore.
     """
-
     if not gestore_db.inserisci_dati_sensore(dati_sensore):
         logger.error(f"Errore nella registrazione del sensore {dati_sensore.id_sensore}")
         raise HTTPException(status_code=500, detail="Errore nella registrazione del sensore.")

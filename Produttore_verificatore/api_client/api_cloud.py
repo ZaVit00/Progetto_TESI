@@ -1,10 +1,11 @@
-from typing import List
-import requests
 import logging
+from typing import List
 
+import requests
+
+from Produttore_verificatore.config.costanti import ENDPOINT_DATI_BATCH, API_KEY_VERIFICATORE_ESTESO
 from costanti import ENDPOINT_DATI_MISURAZIONE_SENSORE
 from modelli_dati import DatiBatch, DatiMisurazioneSensore
-from Produttore_verificatore.config.costanti import ENDPOINT_DATI_BATCH, API_KEY_VERIFICATORE_ESTESO
 
 logger = logging.getLogger(__name__)
 

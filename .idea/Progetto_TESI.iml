@@ -36,6 +36,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/verifica" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/database" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore_verificatore/api_client" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Classi_comuni/blockchain" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (PyCharmMiscProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

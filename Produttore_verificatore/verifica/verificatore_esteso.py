@@ -2,27 +2,20 @@
 import logging
 from typing import List
 
+# Funzione per serializzare un dizionario in stringa JSON
+from Classi_comuni.utils import serializza_dict
+# Gestore locale del database in sola lettura
+from Produttore.database.gestore_db import GestoreDatabase
 # Import di funzioni API per richiedere dati dal cloud
 from Produttore_verificatore.api_client.api_cloud import (
     richiedi_dato_cloud_batch,
     richiedi_dati_cloud_completi_misurazioni
 )
-
 # Modelli dei dati utilizzati
 from modelli_dati import (
     DatiBatch,
     DatiMisurazioneSensore, DatiMisurazione, DatiSensore,
 )
-
-# Funzione per serializzare un dizionario in stringa JSON
-from Classi_comuni.utils import serializza_dict
-
-# Classe base del verificatore
-from verificatore import Verificatore
-
-# Gestore locale del database in sola lettura
-from Produttore.database.gestore_db import GestoreDatabase
-
 # Utility per l’elaborazione e il confronto dei dati
 from recupero_dati_utils import (
     carica_payload_json,
@@ -33,6 +26,8 @@ from recupero_dati_utils import (
     confronta_dati_batch,
     confronta_dati_misurazioni_sensori
 )
+# Classe base del verificatore
+from verificatore import Verificatore
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)

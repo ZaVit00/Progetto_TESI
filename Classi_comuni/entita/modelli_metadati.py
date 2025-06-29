@@ -2,6 +2,7 @@
 # utilizzati nel processo di verifica dell'integrità da parte del verificatore
 
 from pydantic import Field
+
 from modelli import ModelliSerializzabili
 
 

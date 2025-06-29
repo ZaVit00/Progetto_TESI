@@ -1,6 +1,7 @@
 from typing import Dict
 
 import requests
+
 from Verificatore.config.costanti_verificatore import API_KEY_VERIFICATORE, \
     ENDPOINT_MAPPA_ID_HASH, ENDPOINT_METADATA_MISURAZIONE_SENSORE
 from costanti_verificatore import ENDPOINT_METADATA_BATCH

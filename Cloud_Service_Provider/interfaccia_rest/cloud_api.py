@@ -2,13 +2,14 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, List
+
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiBatch
-from modelli_dati import DatiMisurazioneSensore
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_profonda, \
     richiede_permesso_verifica
 from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
@@ -16,7 +17,8 @@ from Cloud_Service_Provider.entita.utente_api import UtenteAPI
 from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori, \
     recupera_metadati_misurazione_sensore, recupera_dati_misurazione_sensore
 from cloud_api_utils import costruisci_mappa_id_hash_foglie
-from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch, MetaDatiMisurazione
+from modelli_dati import DatiMisurazioneSensore
+from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch
 
 # Configurazione globale del logging
 logging.basicConfig(

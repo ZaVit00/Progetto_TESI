@@ -138,7 +138,7 @@ OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI = """
 # del batch)
 AGGIORNA_ERRORE_ELABORAZIONE_BATCH = """
     UPDATE batch
-    SET elaborabile = ?,
+    SET elaborabile = 0,
         messaggio_errore = ?,
         tipo_errore = ?
     WHERE id_batch = ?

@@ -2,11 +2,10 @@ import json
 import re
 from typing import Dict, List
 
-from deepdiff import DeepDiff
 from pydantic import Field, field_validator
+
 from Classi_comuni.utils import canonizza_dict
 from modelli import ModelliHashabili
-from Classi_comuni.utils import serializza_dict
 
 
 class DatiSensore(ModelliHashabili):
