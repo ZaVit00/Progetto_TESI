@@ -1,6 +1,5 @@
 import gzip
 from io import BytesIO
-
 import requests
 
 
@@ -18,7 +17,7 @@ def ottieni_file_da_ipfs(cid: str) -> str:
     content_type = response.headers.get("Content-Type", "").lower()
     raw_bytes = response.content
     try:
-        if "gzip" in content_type or cid.endswith(".gz"):
+        if "gzip" in content_type:
             with gzip.GzipFile(fileobj=BytesIO(raw_bytes)) as f:
                 return f.read().decode("utf-8")  # qui abbiamo il JSON completo
         else:

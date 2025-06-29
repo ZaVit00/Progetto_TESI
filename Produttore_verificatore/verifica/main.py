@@ -13,7 +13,7 @@ logger.setLevel(logging.CRITICAL)
 
 def main():
     # 1. Imposta manualmente un id_batch per test
-    id_batch = 2
+    id_batch = 1
 
     # 2. Crea il verificatore esteso
     verificatore = VerificatoreEsteso(id_batch)
@@ -25,11 +25,12 @@ def main():
     try:
         if not verificatore.ottieni_esito_globale():
             differenze = verificatore.esegui_verifica_profonda()
+            print(differenze)
             if not differenze:
                 # debug
                 salva_risultato_verifica_su_file(id_batch, anomalie_rilevate, verificatore.ottieni_esito_globale(), differenze)
             else:
-                raise ValueError("ANOMALIA DEL SISTEMA (BUG")
+                raise ValueError("ANOMALIA DEL SISTEMA (BUG vito")
         else:
             print("Nessuna anomalia rilevate.")
     except Exception as e:
