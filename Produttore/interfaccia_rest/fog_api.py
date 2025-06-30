@@ -6,14 +6,11 @@ from typing import Union, Annotated
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
 from Classi_comuni.entita.modelli_dati import DatiSensore
-from config.costanti_produttore import SOGLIA_BATCH
-from costanti_comuni import PROVIDER_URL
-from costanti_produttore import ACCOUNT_ADDRESS_BLOCKCHAIN, PRIVATE_KEY_BLOCKCHAIN
-from database.gestore_db import GestoreDatabase
-from gestore_blockchain import inizializza_configurazione_blockchain, ScrittoreBlockchain
+from istanze_globali import gestore_db
 # Import dei modelli di misurazione_in_ingresso specifici
 # i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
-from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura
+from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura, \
+    MisurazioneInIngressoUmidita
 from task_manager import avvia_task_periodici
 
 # Configurazione globale del logging
@@ -24,14 +21,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL)
 
-# Istanza del database (con soglia per batch)
-gestore_db = GestoreDatabase(soglia_batch=SOGLIA_BATCH)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Avvio dei task periodici per invio dati sensori, invio payload al cloud,"
                 "elaborazione dei batch completi")
-    asyncio.create_task(avvia_task_periodici(gestore_db))
+    asyncio.create_task(avvia_task_periodici())
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
@@ -62,7 +58,7 @@ Con discriminator="tipo", FastAPI:
 - se vale "temperatura", usa MisurazioneInIngressoTemperatura altrimenti
 - valida il resto del contenuto (i campi) in base al modello di classe selezionato
 """
-MisurazioneInIngresso = Annotated[Union[MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura],
+MisurazioneInIngresso = Annotated[Union[MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura, MisurazioneInIngressoUmidita],
                          Body(discriminator="tipo")]
 @app.post("/misurazioni", summary="Registra una misurazione", response_model=dict)
 async def registra_misurazione(misurazione: MisurazioneInIngresso):

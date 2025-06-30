@@ -3,13 +3,13 @@ import logging
 import requests
 
 from costanti_produttore import API_KEY_PRODUTTORE
-from database.gestore_db import GestoreDatabase
+from istanze_globali import gestore_db
 
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 
 
-def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db: GestoreDatabase) -> bool:
+def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
     """
     Invia un payload al cloud e gestisce la conferma di ricezione.
     Esegue la POST HTTP e, se la risposta è valida, richiama la funzione
@@ -26,7 +26,7 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db: GestoreDa
         logger.debug(f"[HTTP] Risposta dal cloud: {risposta_json}")
 
         # Elabora la risposta ricevuta, aggiorna il DB e ritorna True/False
-        return elabora_conferma_ricezione_cloud(risposta_json, gestore_db)
+        return elabora_conferma_ricezione_cloud(risposta_json)
 
     except requests.exceptions.Timeout:
         logger.error("Timeout durante l'invio del payload al cloud.")
@@ -39,7 +39,7 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str, gestore_db: GestoreDa
 
     return False
 
-def elabora_conferma_ricezione_cloud(risposta: dict, gestore_db: GestoreDatabase) -> bool:
+def elabora_conferma_ricezione_cloud(risposta: dict) -> bool:
     """
     Elabora la risposta ricevuta dal cloud e aggiorna la conferma nel database locale.
     Restituisce True se la conferma è valida e gestita correttamente.

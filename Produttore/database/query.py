@@ -22,6 +22,7 @@ CREA_TABELLA_SENSORE = """
 # payload_json: JSON aggregato da inviare al cloud.
 # elaborabile: 1 = batch valido, 0 = errore grave (non elaborabile).
 # messaggio_errore e tipo_errore: info per il debug in caso di errore.
+# transazione_hash utilizzato per determinare a quale transazione corrisponde un certo batch (scopi di debug/log)
 CREA_TABELLA_BATCH = """
     CREATE TABLE IF NOT EXISTS batch (
         id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,6 +33,7 @@ CREA_TABELLA_BATCH = """
         elaborabile INTEGER DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
         cid_merkle_path TEXT DEFAULT NULL,
+        transazione_hash TEXT DEFAULT NULL,
         payload_json TEXT DEFAULT NULL,
         messaggio_errore TEXT DEFAULT NULL,
         tipo_errore TEXT DEFAULT  NULL
@@ -76,7 +78,13 @@ AGGIORNA_BATCH_NUM_MISURAZIONI = """
     SET numero_misurazioni = ?
     WHERE id_batch = ?
 """
-
+# Aggiorna l'hash di transazione di un batch quando avviene il salvataggio su blockchain do
+# di merkle root e cid ipfs
+AGGIORNA_TRANSAZIONE_HASH_BATCH = """
+    UPDATE batch
+    SET transazione_hash = ?
+    WHERE id_batch = ?
+"""
 # Restituisce l’ultimo batch attivo (non completo), da usare per nuove misurazioni
 OTTIENI_BATCH_ATTIVO = """
     SELECT id_batch, numero_misurazioni

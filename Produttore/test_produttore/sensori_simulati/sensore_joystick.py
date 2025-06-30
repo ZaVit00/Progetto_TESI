@@ -1,7 +1,9 @@
 import random
 import threading
 import time
+
 import requests
+
 import costanti_produttore
 
 ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"

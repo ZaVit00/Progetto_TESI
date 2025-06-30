@@ -1,6 +1,5 @@
 import json
 import logging
-
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
 from psycopg2.extras import RealDictCursor
@@ -16,7 +15,7 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, OTTIENI_METADATA_MISURAZIONE_SENSORE, OTTIENI_METADATA_BATCH,
     OTTIENI_DATI_MISURAZIONE_SENSORE, OTTIENI_DATA_BATCH
 )
-from modelli_dati import DatiMisurazioneSensore
+from modelli_dati import DatiMisurazioneSensore, DatiBatch
 from modelli_metadati import MetaDatiMisurazione, MetaDatiMisurazioneSensore, MetaDatiSensore, MetaDatiBatch
 
 logger = logging.getLogger(__name__)
@@ -135,7 +134,7 @@ class GestoreDatabase:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-    def ottieni_data_batch(self, id_batch) -> DatiBatch:
+    def ottieni_data_batch(self, id_batch) -> DatiBatch | None:
         """
         Estrae i metadata associati alla tupla del batch, potenzialmente manomesso.
         """

@@ -1,27 +1,28 @@
 import asyncio
 import json
 import logging
+
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
-from database.gestore_db import GestoreDatabase
 from gestione_batch import gestisci_batch_completo
+from istanze_globali import gestore_db
 from modelli_dati import DatiListaSensori
 from utils.api_cloud import invia_payload
 
 logger = logging.getLogger(__name__)
 
 # === TASK PER INVIO SENSORI NON CONFERMATI ===
-async def task_invio_sensori(gestore_database: GestoreDatabase, intervallo: int = 60):
+async def task_invio_sensori(intervallo: int = 60):
     await asyncio.sleep(5)
     while True:
         logger.info("[SENSORI] Controllo sensori da inviare...")
-        lista_sensori : DatiListaSensori  = gestore_database.ottieni_sensori_non_conferma_ricezione()
+        lista_sensori : DatiListaSensori  = gestore_db.ottieni_sensori_non_conferma_ricezione()
         if not lista_sensori.sensori:
             logger.info("[SENSORI] Nessun sensore da inviare.")
         else:
             try:
                 logger.debug(f"[SENSORI] Tentativo invio gruppo sensori ({len(lista_sensori.sensori)} sensori)...")
                 payload_dict = lista_sensori.model_dump()
-                esito = invia_payload(payload_dict, ENDPOINT_CLOUD_SENSORI, gestore_database)
+                esito = invia_payload(payload_dict, ENDPOINT_CLOUD_SENSORI)
                 if esito:
                     logger.info(f"[SENSORI] Invio batch sensori confermato.")
                 else:
@@ -33,7 +34,7 @@ async def task_invio_sensori(gestore_database: GestoreDatabase, intervallo: int 
 
 
 
-async def task_invio_batch(gestore_db: GestoreDatabase, intervallo: int = 60):
+async def task_invio_batch(intervallo: int = 60):
     await asyncio.sleep(5)
     while True:
         logger.info("[BATCH-JSON] Controllo batch da inviare...")
@@ -46,7 +47,7 @@ async def task_invio_batch(gestore_db: GestoreDatabase, intervallo: int = 60):
                 else:
                     payload = payload_json
                 logger.debug(f"[BATCH-JSON] Tentativo invio id_batch={id_batch}...")
-                if invia_payload(payload, ENDPOINT_CLOUD_BATCH, gestore_db):
+                if invia_payload(payload, ENDPOINT_CLOUD_BATCH):
                     logger.info(f"[BATCH-JSON] Inviato correttamente id_batch={id_batch}")
                 else:
                     logger.warning(f"[BATCH-JSON] Invio fallito per id_batch={id_batch}")
@@ -57,7 +58,7 @@ async def task_invio_batch(gestore_db: GestoreDatabase, intervallo: int = 60):
         await asyncio.sleep(intervallo)
 
 # === TASK PER ELABORAZIONE PERIODICA DEI BATCH COMPLETI ===
-async def task_elabora_batch_completi(db, intervallo: int = 60):
+async def task_elabora_batch_completi(intervallo: int = 60):
     """
     Controlla periodicamente se esistono batch completi (hanno raggiunto la soglia)
     ma non ancora elaborati (manca Merkle Root o JSON), e li elabora.
@@ -65,12 +66,12 @@ async def task_elabora_batch_completi(db, intervallo: int = 60):
     await asyncio.sleep(10)
     while True:
         logger.info("[BATCH-ELAB] Controllo batch completi da elaborare...")
-        lista_id_batch = db.ottieni_id_batch_completi()
+        lista_id_batch = gestore_db.ottieni_id_batch_completi()
         logger.debug(f"[BATCH-ELAB] Lista batch chiusi {lista_id_batch}")
         for id_batch in lista_id_batch:
             try:
                 logger.debug(f"[BATCH-ELAB] INIZIO ELABORAZIONE batch {id_batch}...")
-                if not gestisci_batch_completo(id_batch, db):
+                if not gestisci_batch_completo(id_batch):
                     logger.debug(f"[BATCH-ELAB] Elaborazione batch {id_batch} FALLITA")
             except Exception as e:
                 logger.error(f"[BATCH-ELAB] Errore durante elaborazione batch {id_batch}: {e}")
@@ -78,10 +79,10 @@ async def task_elabora_batch_completi(db, intervallo: int = 60):
 
 
 # === AVVIO DEI TASK ASINCRONI ===
-async def avvia_task_periodici(db: GestoreDatabase):
-    task1 = asyncio.create_task(task_invio_sensori(db))
-    task2 = asyncio.create_task(task_invio_batch(db))
-    task3 = asyncio.create_task(task_elabora_batch_completi(db))
+async def avvia_task_periodici():
+    task1 = asyncio.create_task(task_invio_sensori())
+    task2 = asyncio.create_task(task_invio_batch())
+    task3 = asyncio.create_task(task_elabora_batch_completi())
     try:
         await asyncio.gather(task1, task2, task3)
     except Exception as e:

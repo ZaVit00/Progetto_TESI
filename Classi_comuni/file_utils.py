@@ -20,7 +20,7 @@ def salva_risultato_verifica_su_file(
     contenuto_json: str,
     esito: bool,
     base_dir: str,
-    differenze_json: str | None = None  # nuovo parametro opzionale
+    differenze_json: str | None = None,  # nuovo parametro opzionale
 ):
     """
     Salva la verifica nella struttura:

@@ -23,7 +23,7 @@ def richiede_permesso_verifica(utente: UtenteAPI = Depends(get_utente)) -> Utent
         raise HTTPException(status_code=403, detail="Permessi insufficienti per verificare.")
     return utente
 
-def richiede_permesso_verifica_profonda(utente: UtenteAPI = Depends(get_utente)) -> UtenteAPI:
-    if not utente.permesso_verifica_profonda():
+def richiede_permesso_verifica_estesa(utente: UtenteAPI = Depends(get_utente)) -> UtenteAPI:
+    if not utente.permesso_verifica_estesa():
         raise HTTPException(status_code=403, detail="Permessi insufficienti per effettuare la verifica profonda.")
     return utente

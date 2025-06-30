@@ -1,5 +1,4 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import Dict, List
 
@@ -10,15 +9,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiBatch
-from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_profonda, \
+from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_estesa, \
     richiede_permesso_verifica
-from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
 from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori, \
     recupera_metadati_misurazione_sensore, recupera_dati_misurazione_sensore
 from cloud_api_utils import costruisci_mappa_id_hash_foglie
 from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch
+from Cloud_Service_Provider.config.istanze_globali import gestore_db
 
 # Configurazione globale del logging
 logging.basicConfig(
@@ -27,17 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL)
-#Path assoluto al file .env
-env_path = os.path.join(os.path.dirname(__file__), "..", "config", ".env")
-load_dotenv(dotenv_path=os.path.abspath(env_path))
-config_db = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "database": os.getenv("DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD")
-}
-gestore_db = GestoreDatabase(config_db)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,7 +42,7 @@ app = FastAPI(lifespan=lifespan)
 def registra_lista_sensori(payload: DatiListaSensori, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     if not payload.sensori:
         raise HTTPException(status_code=400, detail="Lista sensori vuota.")
-    id_inseriti = elabora_lista_sensori(payload, gestore_db)
+    id_inseriti = elabora_lista_sensori(payload)
     conferma = bool(id_inseriti)
     return JSONResponse(content={
         "conferma_ricezione": conferma,
@@ -69,7 +58,7 @@ def ricevi_batch(payload: PacchettoBatchMisurazioni, utente: UtenteAPI = Depends
     Il payload contiene un oggetto DatiBatch e una lista di DatiMisurazione.
     """
     logger.info(f"Ricezione batch {payload.batch.id_batch} con {len(payload.misurazioni)} misurazioni...")
-    successo_operazione = elabora_payload(payload, gestore_db)
+    successo_operazione = elabora_payload(payload)
 
     if successo_operazione:
         logger.info(f"Batch {payload.batch.id_batch} salvato correttamente.")
@@ -89,7 +78,7 @@ def ricevi_batch(payload: PacchettoBatchMisurazioni, utente: UtenteAPI = Depends
 def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     try:
         logger.debug(f"[DEBUG] Ricevuta richiesta batch con id = {id_batch}")
-        mappa_id_hash = costruisci_mappa_id_hash_foglie(id_batch, gestore_db)
+        mappa_id_hash = costruisci_mappa_id_hash_foglie(id_batch)
         return mappa_id_hash
     except Exception as e:
         logger.error(f"[ERRORE GET /batch] {e}")
@@ -102,7 +91,7 @@ def ricostruisci_metadata_misurazione_sensore(lista_id: List[int], utente: Utent
     if not lista_id:
         raise HTTPException(status_code=400, detail="Lista di ID vuota")
     try:
-        return recupera_metadati_misurazione_sensore(lista_id, gestore_db)
+        return recupera_metadati_misurazione_sensore(lista_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 #
@@ -115,14 +104,14 @@ def ricostruisci_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richi
 
 
 @app.post("/dati/misurazione-sensore", response_model=list[DatiMisurazioneSensore])
-def ricostruisci_dati_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
+def ricostruisci_dati_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_estesa)):
     try:
-        return recupera_dati_misurazione_sensore(lista_id, gestore_db)
+        return recupera_dati_misurazione_sensore(lista_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 @app.get("/dati/batch/{id_batch}", response_model=DatiBatch)
-def ricostruisci_data_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica_profonda)):
+def ricostruisci_data_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica_estesa)):
     ris_query : DatiBatch = gestore_db.ottieni_data_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")

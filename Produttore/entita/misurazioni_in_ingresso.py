@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from typing import Literal
 
 from pydantic import BaseModel, Field
-
-from config.costanti_produttore import TIPO_SENSORE_JOYSTICK
+from config.costanti_produttore import TIPO_SENSORE_JOYSTICK, TIPO_SENSORE_UMIDITA
 from config.costanti_produttore import TIPO_SENSORE_TEMPERATURA
+from Classi_comuni.utils import serializza_dict
 
-TipoSensore = Literal["JOYSTICK", "TEMPERATURA"]
+TipoSensore = Literal["JOYSTICK", "TEMPERATURA", "UMIDITA"]
 
 class MisurazioneInIngresso(BaseModel, ABC):
     """
@@ -50,7 +50,7 @@ class MisurazioneInIngresso(BaseModel, ABC):
                 d[key] = round(value, 6)  # Arrotonda a 6 cifre decimali
 
         # Serializzazione ordinata e compatta per uso coerente (es. hashing, confronto)
-        return json.dumps(d, sort_keys=True, separators=(",", ":"))
+        return serializza_dict(d)
 
 
 
@@ -83,6 +83,24 @@ class MisurazioneInIngressoTemperatura(MisurazioneInIngresso):
     """
     valore: float = Field(..., description="Valore della temperatura rilevata (in gradi Celsius)")
     tipo: Literal["TEMPERATURA"] = TIPO_SENSORE_TEMPERATURA
+
+    def dati_misurazione_to_dict(self) -> dict:
+        """
+        Restituisce un dizionario con i dati specifici della misurazione_in_ingresso di temperatura.
+        """
+        dati = {
+            "valore": self.valore
+        }
+        return dati
+
+
+class MisurazioneInIngressoUmidita(MisurazioneInIngresso):
+    """
+    Rappresenta una misurazione_in_ingresso effettuata da un sensore di Umidita.
+    Estende la classe astratta Misurazione.
+    """
+    valore: float = Field(..., description="Valore dell'umidità rilevata")
+    tipo: Literal["UMIDITA"] = TIPO_SENSORE_UMIDITA
 
     def dati_misurazione_to_dict(self) -> dict:
         """

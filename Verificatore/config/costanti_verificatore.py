@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 DIR_CORRENTE = os.path.dirname(__file__)

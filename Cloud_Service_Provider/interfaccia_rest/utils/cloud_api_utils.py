@@ -2,13 +2,13 @@ import logging
 
 from Classi_comuni.costruttore_payload import CostruttorePayload
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori
-from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
+from Cloud_Service_Provider.config.istanze_globali import gestore_db
 from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
-def elabora_payload(payload: PacchettoBatchMisurazioni, gestore_db: GestoreDatabase) -> bool:
+def elabora_payload(payload: PacchettoBatchMisurazioni) -> bool:
     """
     Riceve un oggetto DatiPayload contenente:
     - Un batch (DatiBatch)
@@ -40,7 +40,7 @@ def elabora_payload(payload: PacchettoBatchMisurazioni, gestore_db: GestoreDatab
     return True
 
 
-def costruisci_mappa_id_hash_foglie(id_batch: int, gestore_db : GestoreDatabase) -> dict[int, str]:
+def costruisci_mappa_id_hash_foglie(id_batch: int) -> dict[int, str]:
     risultati_query = gestore_db.ottieni_dati_batch_misurazioni_sensori(id_batch)
     if not risultati_query:
         raise ValueError(f"Nessun batch trovato con ID {id_batch}")
@@ -49,7 +49,7 @@ def costruisci_mappa_id_hash_foglie(id_batch: int, gestore_db : GestoreDatabase)
     payload.estrai_dati_da_query(risultati_query)
     return payload.ottieni_mappa_id_foglie()
 
-def elabora_lista_sensori(payload: DatiListaSensori, gestore_db: GestoreDatabase) -> list[str]:
+def elabora_lista_sensori(payload: DatiListaSensori) -> list[str]:
     """
     Tenta di inserire nel database tutti i sensori contenuti nel payload.
     Restituisce una lista degli ID dei sensori inseriti con successo.
@@ -65,7 +65,7 @@ def elabora_lista_sensori(payload: DatiListaSensori, gestore_db: GestoreDatabase
 
     return id_sensori_inseriti
 
-def recupera_metadati_misurazione_sensore(lista_id: list[int], gestore_db : GestoreDatabase) -> list[MetaDatiMisurazioneSensore]:
+def recupera_metadati_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiMisurazioneSensore]:
     """
     Recupera i metadati delle misurazioni dati gli ID. Solleva ValueError se una misurazione non esiste.
     """
@@ -77,10 +77,9 @@ def recupera_metadati_misurazione_sensore(lista_id: list[int], gestore_db : Gest
         metadati.append(record)
     return metadati
 
-def recupera_dati_misurazione_sensore(lista_id: list[int], gestore_db: GestoreDatabase) -> list[DatiMisurazioneSensore]:
+def recupera_dati_misurazione_sensore(lista_id: list[int]) -> list[DatiMisurazioneSensore]:
     risultato = []
     non_trovati = []
-
     for id_mis in lista_id:
         dati = gestore_db.ottieni_dati_misurazione_sensore(id_mis)
         if dati:

@@ -10,6 +10,6 @@ class UtenteAPI:
     def permesso_verifica(self) -> bool:
         return self.ruolo in (RUOLO_PRODUTTORE, RUOLO_VERIFICATORE)
 
-    def permesso_verifica_profonda(self) -> bool:
-        #solo il produttore è abilitato alla verifica profonda
+    def permesso_verifica_estesa(self) -> bool:
+        #solo il produttore è abilitato alla verifica estesa
         return self.permesso_scrittura()

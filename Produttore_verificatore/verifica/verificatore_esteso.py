@@ -28,6 +28,7 @@ from recupero_dati_utils import (
 )
 # Classe base del verificatore
 from verificatore import Verificatore
+from Produttore_verificatore.config.istanze_globali import gestore_db
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)
@@ -47,7 +48,6 @@ class VerificatoreEsteso(Verificatore):
         """
         logger.info(f"Inizializzazione VerificatoreEsteso per batch ID {id_batch}")
         super().__init__(id_batch)
-        self.gestore_db = GestoreDatabase(sola_lettura=True)
 
     def _recupera_dati_cloud_batch(self) -> DatiBatch:
         """
@@ -67,7 +67,7 @@ class VerificatoreEsteso(Verificatore):
         if not self.batch_alterato():
             raise ValueError("Il batch risulta integro. Nessun dato da recuperare.")
         logger.info("Recupero dati batch alterato dal database locale")
-        batch: DatiBatch = self.gestore_db.ottieni_dati_batch(self.id_batch)
+        batch: DatiBatch = gestore_db.ottieni_dati_batch(self.id_batch)
         if not batch:
             raise ValueError(f"Nessun batch trovato nel database locale con ID {self.id_batch}")
         logger.debug(f"Dati batch locale ottenuti: {batch}")
@@ -99,14 +99,14 @@ class VerificatoreEsteso(Verificatore):
         logger.info("Caricamento payload locale e ricostruzione misurazioni alterate")
 
         # Carica il payload JSON dal database
-        payload_dict : dict = carica_payload_json(self.gestore_db, self.id_batch)
+        payload_dict : dict = carica_payload_json(self.id_batch)
 
         # Estrae solo le misurazioni alterate dal payload
         lista_dati_misurazioni : list[DatiMisurazione]= filtra_misurazioni_alterate(payload_dict, id_alterati)
 
         # Estrae gli ID dei sensori coinvolti nelle misurazioni e recupera i dati associati
         lista_id_sensori : list[str] = estrai_lista_id_sensori_dal_payload(payload_dict)
-        lista_dati_sensori : list[DatiSensore] = estrai_dati_sensori_locali(lista_id_sensori, self.gestore_db)
+        lista_dati_sensori : list[DatiSensore] = estrai_dati_sensori_locali(lista_id_sensori)
 
         logger.debug(f"ID misurazioni alterate: {id_alterati}")
         logger.debug(f"ID sensori estratti: {lista_id_sensori}")
@@ -116,7 +116,7 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"Misurazioni ricostruite localmente: {ricostruite}")
         return ricostruite
 
-    def esegui_verifica_profonda(self) -> str:
+    def esegui_verifica_estesa(self) -> str:
         """
         Esegue un confronto completo tra dati locali e cloud per batch e misurazioni alterate.
         Restituisce un JSON con tutte le differenze trovate.

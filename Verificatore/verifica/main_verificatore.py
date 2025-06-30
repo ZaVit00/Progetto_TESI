@@ -15,7 +15,7 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 def main():
-    id_batch = 1 # ← cambia questo valore a piacimento
+    id_batch =  2 # ← cambia questo valore a piacimento
     verificatore = Verificatore(id_batch)
     differenze : str = verificatore.esegui_verifica_completa()
 
@@ -28,7 +28,7 @@ def main():
         logger.info("\n=== ANALISI DELLE ANOMALIE DETTAGLIATA ===")
         print(differenze)
         try:
-            salva_risultato_verifica_su_file(id_batch, differenze, verificatore.ottieni_esito_globale(), "verifiche_profonde")
+            salva_risultato_verifica_su_file(id_batch, differenze, verificatore.ottieni_esito_globale(), "verifiche_leggere")
             logger.info("File salvato correttamente")
         except Exception as e:
             logger.error(f"Errore nel salvataggio del file {e}")

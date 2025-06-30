@@ -1,13 +1,12 @@
 import json
 import logging
 from typing import List
-
-from Produttore.database.gestore_db import GestoreDatabase
+from Produttore_verificatore.config.istanze_globali import gestore_db
 from modelli_dati import DatiBatch, DatiMisurazione, DatiSensore, DatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
-def carica_payload_json(gestore_db: GestoreDatabase, id_batch: int) -> dict:
+def carica_payload_json(id_batch: int) -> dict:
     """
     Recupera il campo `payload_json` dal database, lo decodifica da stringa JSON
     e lo restituisce come dizionario Python.
@@ -35,7 +34,7 @@ def estrai_lista_id_sensori_dal_payload(payload: dict) -> list[str]:
     return list(id_sensori)
 
 
-def estrai_dati_sensori_locali(lista_id_sensori: List[str], gestore_db: GestoreDatabase) -> List[DatiSensore]:
+def estrai_dati_sensori_locali(lista_id_sensori: List[str]) -> List[DatiSensore]:
     """
     Dato un elenco di ID sensori, restituisce gli oggetti `DatiSensore`
     corrispondenti recuperati dal database locale.

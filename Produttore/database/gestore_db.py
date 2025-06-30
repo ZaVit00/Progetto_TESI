@@ -1,8 +1,8 @@
 import logging
-import os
 import sqlite3
 from datetime import datetime
 
+from costanti_produttore import DBPATH
 from database import query
 from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
 
@@ -15,18 +15,15 @@ Il chiamante è responsabile nel controllare i valori restituiti.
 Tutti gli errori vengono loggati.
 """
 class GestoreDatabase:
-    # Trova la directory root del progetto (2 livelli sopra gestore_db.py)
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    _DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
-    _STRING_MAX_LENGTH = 12
+
 
     def __init__(self, soglia_batch: int = 1023, sola_lettura: bool = False):
         self.soglia_batch = soglia_batch
         if sola_lettura:
             # Connessione in sola lettura (URI necessaria)
-            self.conn = sqlite3.connect(f"file:{self._DBPATH}?mode=ro", uri=True)
+            self.conn = sqlite3.connect(f"file:{DBPATH}?mode=ro", uri=True)
         else:
-            self.conn = sqlite3.connect(self._DBPATH)
+            self.conn = sqlite3.connect(DBPATH)
             self.crea_tabelle()
 
         self.conn.row_factory = sqlite3.Row
@@ -300,6 +297,14 @@ class GestoreDatabase:
             self.conn.commit()
         except sqlite3.Error as e:
             logger.error(f"QUERY - aggiorna batch conferma ricezione ERRORE] {e}")
+
+    def aggiorna_transazione_hash_batch(self, id_batch: int, tx_hash : str):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.AGGIORNA_TRANSAZIONE_HASH_BATCH, (tx_hash, id_batch,))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - aggiorna transazione hash batch ERRORE] {e}")
 
     def aggiorna_conferma_ricezione_sensore(self, id_sensore: str):
         try:

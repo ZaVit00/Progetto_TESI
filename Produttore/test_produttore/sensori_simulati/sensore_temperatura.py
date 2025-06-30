@@ -24,7 +24,6 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
             "id_sensore": id_sensore.upper(),
             "tipo": costanti_produttore.TIPO_SENSORE_TEMPERATURA,
             "valore": round(random.uniform(20.0, 30.0), 2),  # temperatura in °C
-            "unita": "°C"
         }
 
         try:

@@ -4,8 +4,8 @@ from typing import Tuple
 from api_cloud import logger
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
-from database.gestore_db import GestoreDatabase
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
+from istanze_globali import gestore_db
 from istanze_globali import scrittore_blockchain
 from merkle_tree import MerkleTree
 from modelli_dati import PacchettoBatchMisurazioni
@@ -48,7 +48,7 @@ def carica_merkle_path_ipfs(merkle_path: str):
     return cid
 
 
-def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
+def gestisci_batch_completo(id_batch: int) -> bool:
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
     1. Estrae i dati del batch dal DB.
@@ -80,7 +80,8 @@ def gestisci_batch_completo(id_batch: int, gestore_db: GestoreDatabase) -> bool:
         try:
             logger.debug(f"Merkle Root calcolata: {merkle_root}")
             logger.debug(f"CID Merkle Path: {cid}")
-            scrittore_blockchain.scrivi_valore(id_batch, merkle_root, cid)
+            transaction_hash : str = scrittore_blockchain.scrivi_valore(id_batch, merkle_root, cid)
+            gestore_db.aggiorna_transazione_hash_batch(id_batch, transaction_hash)
         except Exception as e:
             logger.exception(f"Errore blockchain per batch {id_batch}")
             gestore_db.aggiorna_batch_errore_elaborazione(

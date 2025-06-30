@@ -61,10 +61,17 @@ class Verificatore:
 
     def _recupera_root_e_cid_blockchain(self) -> None:
         self.merkle_root_immutabile,self.cid_merkle_path =  lettore_blockchain.leggi_valore(self.id_batch)
-        #self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
-        #self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
+        #self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
+        #self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
+        # Verifica integrità dei dati letti dalla blockchain
+        if not self.merkle_root_immutabile or not self.cid_merkle_path:
+            raise ValueError(
+                f"❌ Batch ID {self.id_batch}: struttura compromessa. "
+                f"Merkle root o CID assenti — possibile manomissione o ID errato."
+            )
+
 
     def _scarica_merkle_path_ipfs(self) -> None:
         if not self.cid_merkle_path:
