@@ -1,7 +1,7 @@
 # Import dei moduli necessari
 import logging
+from copy import deepcopy
 from typing import List
-
 # Funzione per serializzare un dizionario in stringa JSON
 from Classi_comuni.utils import serializza_dict
 # Gestore locale del database in sola lettura
@@ -31,7 +31,7 @@ from verificatore import Verificatore
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class VerificatoreEsteso(Verificatore):
@@ -47,6 +47,23 @@ class VerificatoreEsteso(Verificatore):
         """
         logger.info(f"Inizializzazione VerificatoreEsteso per batch ID {id_batch}")
         super().__init__(id_batch)
+
+    @classmethod
+    def from_verificatore(cls, verificatore: Verificatore) -> "VerificatoreEsteso":
+        """
+        Crea un VerificatoreEsteso partendo da un oggetto Verificatore,
+        copiando tutti gli attributi rilevanti.
+        """
+        esteso = cls(verificatore.id_batch)
+
+        # Copia esplicita degli attributi
+        esteso.mappa_id_hash = verificatore.mappa_id_hash.copy()
+        esteso.merkle_root_immutabile = verificatore.merkle_root_immutabile
+        esteso.cid_merkle_path = verificatore.cid_merkle_path
+        esteso.merkle_paths = verificatore.merkle_paths.copy()
+        esteso.risultato = deepcopy(verificatore.risultato)
+
+        return esteso
 
     def _recupera_dati_cloud_batch(self) -> DatiBatch:
         """

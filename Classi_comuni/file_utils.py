@@ -19,7 +19,7 @@ def salva_risultato_verifica_su_file(
     contenuto_json: str,
     esito: bool,
     base_dir: str,
-    differenze_json: str | None = None,  # nuovo parametro opzionale
+    differenze: str | None = None,  # nuovo parametro opzionale
 ):
     """
     Salva la verifica nella struttura:
@@ -41,10 +41,10 @@ def salva_risultato_verifica_su_file(
     salva_file_generico(percorso_file_esito, contenuto_json)
 
     # Salvataggio differenze, se fornite
-    if differenze_json is not None:
+    if differenze is not None:
         nome_file_diff = f"differenze_{timestamp_file}.json"
         percorso_file_diff = os.path.join(cartella_destinazione, nome_file_diff)
-        salva_file_generico(percorso_file_diff, differenze_json)
+        salva_file_generico(percorso_file_diff, differenze)
 
 
 def salva_file_generico(percorso_file: str, contenuto: str):

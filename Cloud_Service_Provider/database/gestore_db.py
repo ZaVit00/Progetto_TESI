@@ -18,13 +18,14 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_METADATA_MISURAZIONE_SENSORE,
     OTTIENI_METADATA_BATCH,
     OTTIENI_DATI_MISURAZIONE_SENSORE,
-    OTTIENI_DATA_BATCH
+    OTTIENI_DATA_BATCH,
+    OTTIENI_TUTTI_METADATA_BATCH
 )
 from modelli_dati import DatiBatch
 from modelli_metadati import MetaDatiBatch
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.INFO)
 
 class GestoreDatabase:
     """
@@ -166,17 +167,32 @@ class GestoreDatabase:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-    def ottieni_metadata_misurazione_sensore(self, id_misurazione: int) -> dict | None:
+    def ottieni_tutti_metadata_batch(self) -> list[MetaDatiBatch]:
         """
-        Recupera i metadati associati a una misurazione.
-        Restituisce un dizionario (raw) o None.
-        La costruzione dell’oggetto MetaDatiMisurazioneSensore va fatta all’esterno.
+        Estrae i metadati di TUTTI i batch presenti nel sistema.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(OTTIENI_METADATA_MISURAZIONE_SENSORE, (id_misurazione,))
-            riga = cursor.fetchone()
-            return riga if riga else None
+            cursor.execute(OTTIENI_TUTTI_METADATA_BATCH)
+            righe = cursor.fetchall()
+            return [MetaDatiBatch(**r) for r in righe]
+        except Psycopg2Error as e:
+            logger.error(f"[QUERY - ESTRAZIONE METADATI TUTTI BATCH] {e}")
+            return []
+
+    def ottieni_metadata_misurazione_sensore(self, lista_id_mis: list[int]) -> List[dict] | None:
+        try:
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            # Costruisci la parte IN con tanti placeholder %s quanti sono gli ID
+            placeholders = ','.join(['%s'] * len(lista_id_mis))
+            # Prepara la query completa con WHERE IN
+            query = f"{OTTIENI_METADATA_MISURAZIONE_SENSORE} WHERE id_misurazione IN ({placeholders})"
+            # Esegui la query passando la lista di ID come parametri
+            cursor.execute(query, lista_id_mis)
+            righe = cursor.fetchall()
+            logger.info(f"[DB] Richieste {len(lista_id_mis)} misurazioni, recuperate {len(righe)} righe.")
+            return righe
+
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI MISURAZIONE] {e}")
             return None

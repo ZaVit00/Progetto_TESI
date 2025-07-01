@@ -98,21 +98,26 @@ def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(rich
 
 # === METODI a COMPLETAMENTO DELLA VERIFICA DELL'INTEGRITA' === #
 @app.post("/metadata/misurazione-sensore", response_model=list[MetaDatiMisurazioneSensore])
-def ricostruisci_metadata_misurazione_sensore(lista_id_mis: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    if not lista_id_mis:
-        raise HTTPException(status_code=400, detail="Lista di ID vuota")
-    try:
-        return recupera_metadati_misurazione_sensore(lista_id_mis)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+def ottieni_metadata_misurazione_sensore(lista_id_mis: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    ris_query : List[MetaDatiMisurazioneSensore]= recupera_metadati_misurazione_sensore(lista_id_mis)
+    if not ris_query:
+        raise HTTPException(status_code=404, detail="Misurazioni non trovate")
+    return ris_query
 #
 @app.get("/metadata/batch/{id_batch}", response_model=MetaDatiBatch)
-def ricostruisci_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+def ottieni_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     ris_query : MetaDatiBatch = gestore_db.ottieni_metadata_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")
     return ris_query
 
+@app.get("/metadata/batch", response_model=list[MetaDatiBatch])
+def ottieni_metadata_batch(utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    #restituisce l'elenco di metadati dei batch attualmente memorizzati nel sistema
+    ris_query: MetaDatiBatch = gestore_db.ottieni_tutti_metadata_batch()
+    if not ris_query:
+        raise HTTPException(status_code=404, detail="Nessun Batch attualmente memorizzato nel sistema")
+    return ris_query
 
 @app.post("/dati/misurazione-sensore", response_model=list[DatiMisurazioneSensore])
 def ricostruisci_dati_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica_estesa)):

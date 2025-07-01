@@ -66,12 +66,7 @@ OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI = """
     ORDER BY m.id_misurazione ASC;
 """
 
-#estrae le informazioni associate a una misurazione
-OTTIENI_METADATA_MISURAZIONE_SENSORE = """
-    SELECT m.id_misurazione, m.id_batch, m.timestamp, s.id_sensore, s.tipo
-    from misurazione as m inner join sensore as s on m.id_sensore = s.id_sensore
-    where id_misurazione = %s
-"""
+
 
 OTTIENI_METADATA_BATCH = """
     SELECT id_batch, numero_misurazioni, timestamp_creazione
@@ -89,4 +84,17 @@ SELECT m.id_misurazione, m.id_batch, m.id_sensore, m.dati, m.timestamp, s.tipo, 
 FROM misurazione AS m
 INNER JOIN sensore AS s ON m.id_sensore = s.id_sensore
 WHERE m.id_misurazione = ANY(%s)
+"""
+
+#estrae le informazioni metdati associate a una misurazione
+OTTIENI_METADATA_MISURAZIONE_SENSORE = """
+SELECT m.id_misurazione, m.id_batch, m.timestamp, s.id_sensore, s.tipo
+from misurazione as m 
+INNER JOIN sensore as s on m.id_sensore = s.id_sensore
+"""
+
+OTTIENI_TUTTI_METADATA_BATCH = """
+SELECT * 
+FROM BATCH
+ORDER BY id_batch ASC
 """

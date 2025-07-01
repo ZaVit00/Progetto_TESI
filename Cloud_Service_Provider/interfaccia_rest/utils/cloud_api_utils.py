@@ -107,7 +107,7 @@ def recupera_metadati_misurazione_sensore(lista_id_mis: list[int]) -> list[MetaD
     metadati: list[MetaDatiMisurazioneSensore] = []
 
     if not righe:
-        raise ValueError(f"Nessun metadato trovato per le misurazioni: {lista_id_mis}")
+        raise ValueError(f"Nessun metadata trovato per le misurazioni: {lista_id_mis}")
 
     for riga in righe:
         # Parsing dei metadati singoli

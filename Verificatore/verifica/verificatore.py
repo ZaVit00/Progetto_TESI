@@ -7,15 +7,8 @@ from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, rich
     richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
-from costanti_comuni import PROVIDER_URL
-from gestore_blockchain import LettoreBlockchain, inizializza_configurazione_blockchain
+from Verificatore.config.istanze_globali import lettore_blockchain
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
-
-#RICORDATI DI SPOSTARLO POI IN UN PACKAGE COMUNE VITUZ
-
-#istanza del lettore blockchain
-abi, indirizzo = inizializza_configurazione_blockchain()
-lettore_blockchain = LettoreBlockchain(PROVIDER_URL, abi, indirizzo)
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +128,7 @@ class Verificatore:
 
         return anomalie
 
-    def esegui_verifica_completa(self) -> str:
+    def esegui_verifica_integrita(self) -> str:
 
         # 1. Recupero dati hashati dal cloud
         try:
@@ -186,7 +179,8 @@ class Verificatore:
         return self.risultato["numero_anomalie_strutturali"]
 
     def ottieni_esito_globale(self) -> bool:
-        return self.risultato["numero_anomalie_integrita"] == 0 and self.risultato["numero_anomalie_strutturali"] == 0
+        return (self.risultato["numero_anomalie_integrita"] == 0
+                and self.risultato["numero_anomalie_strutturali"] == 0)
 
     def batch_alterato(self) -> bool:
         """
@@ -222,67 +216,38 @@ class Verificatore:
         return id_alterati
 
 
+    # METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI
+    def _recupera_metadata_batch(self) -> MetaDatiBatch:
+        try:
+            metadati_batch = richiedi_metadata_batch(self.id_batch)
+            return metadati_batch
+        except Exception as e:
+            raise ValueError(f"❌ Errore nel recupero dei metadati batch ID {self.id_batch}: {e}")
 
+    def _recupera_metadata_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensore]:
+        try:
+            id_list = self.ottieni_id_misurazioni_alterate()
+            return richiedi_metadata_misurazione_sensore(id_list)
+        except Exception as e:
+            raise ValueError(f"Errore nel recupero dei metadati misurazioni: {e}")
 
+    def recupera_metadata_anomalie(self) -> str:
+        risultati = {}
 
+        if self.batch_alterato():
+            metadati_batch = self._recupera_metadata_batch()
+            risultati['metadata_batch'] = metadati_batch.to_json()
 
+        if self.misurazioni_alterate():
+            metadati_mis_sens : List[MetaDatiMisurazioneSensore] = self._recupera_metadata_misurazione_sensore()
+            lista_serializzata = []
+            for elem in metadati_mis_sens:
+                dict_elem = {
+                    "metadati_sensore": elem.metadati_sensore.model_dump(),
+                    "metadati_misurazioni": elem.metadati_misurazione.model_dump()
+                }
+                lista_serializzata.append(dict_elem)
 
+            risultati['metadata_misurazioni_sensori'] = lista_serializzata
 
-
-
-
-
-
-
-
-    @staticmethod
-    def recupera_metadata_anomalie(risultati: RisultatoVerifica) -> str:
-
-        # TODO DA FIXARE NON PIU FUNZIONANTE
-
-        """
-        Recupera i metadati relativi alle anomalie dal cloud e restituisce una stringa formattata.
-        Se il batch è anomalo (prima foglia), viene subito analizzato.
-        Le misurazioni vengono raccolte in blocco.
-        """
-        output = ["\n=== METADATI DELLE FOGLIE ALTERATE ==="]
-        id_misurazioni_anomale = []
-
-        anomalie = risultati["dettagli"]["anomalie_integrita"]
-        if not anomalie:
-            output.append("✅ Nessuna anomalia da analizzare.")
-            return "\n".join(output)
-
-        # 1. Se il batch è anomalo, è la prima foglia: lo verifichiamo subito
-        prima = anomalie[0]
-        if prima["tipo"] == "batch":
-            id_batch = prima["id"]
-            output.append(f"\n--- BATCH ID {id_batch} ---")
-            try:
-                metadata_batch : MetaDatiBatch = richiedi_metadata_batch(id_batch)
-                output.append(metadata_batch.to_json())
-            except ValueError as e:
-                output.append(f"❌ Errore nel recupero dei metadati per batch ID {id_batch}: {e}")
-            anomalie = anomalie[1:]  # rimuovi il primo elemento (batch) per il resto del ciclo
-
-        # 2. Raccogliamo tutte le misurazioni anomale
-        for record in anomalie:
-            #controllo di sicurezza
-            if record["tipo"] == "misurazione":
-                #aggrego tutti gli id di misurazioni
-                id_misurazioni_anomale.append(record["id"])
-
-        #se la lista non è vuota
-        if id_misurazioni_anomale:
-            output.append(f"\n--- MISURAZIONI ANOMALE ({len(id_misurazioni_anomale)} ID) ---")
-            try:
-                metadata_mis_sens : List[MetaDatiMisurazioneSensore] = (
-                    richiedi_metadata_misurazione_sensore(id_misurazioni_anomale))
-                for mis in metadata_mis_sens:
-                    output.append(f"\n>> ID {mis.metadati_misurazione.id_misurazione}")
-                    output.append(mis.to_json())
-            except ValueError as e:
-                output.append(f"❌ Errore nel recupero dei metadata delle misurazioni: {e}")
-
-        return "\n".join(output)
-
+        return serializza_dict(risultati)

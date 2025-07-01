@@ -39,3 +39,17 @@ def richiedi_metadata_batch(id_batch: int) -> MetaDatiBatch:
     response.raise_for_status()
     batch : Dict = response.json()
     return MetaDatiBatch(**batch)
+
+def richiedi_tutti_metadata_batch() -> list[MetaDatiBatch]:
+    """
+    Richiede tutti i metadati dei batch disponibili dal cloud provider.
+    Restituisce una lista di oggetti MetaDatiBatch.
+    """
+    url = ENDPOINT_METADATA_BATCH  # Senza /{id_batch} come parametro query
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise ValueError(f"Errore nella richiesta: {response.status_code} - {response.text}")
+
+    lista_batch = response.json()
+    return [MetaDatiBatch(**batch) for batch in lista_batch]
