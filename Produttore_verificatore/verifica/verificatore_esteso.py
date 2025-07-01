@@ -5,12 +5,12 @@ from typing import List
 # Funzione per serializzare un dizionario in stringa JSON
 from Classi_comuni.utils import serializza_dict
 # Gestore locale del database in sola lettura
-from Produttore.database.gestore_db import GestoreDatabase
 # Import di funzioni API per richiedere dati dal cloud
 from Produttore_verificatore.api_client.api_cloud import (
     richiedi_dato_cloud_batch,
     richiedi_dati_cloud_completi_misurazioni
 )
+from Produttore_verificatore.config.istanze_globali import gestore_db
 # Modelli dei dati utilizzati
 from modelli_dati import (
     DatiBatch,
@@ -28,7 +28,6 @@ from recupero_dati_utils import (
 )
 # Classe base del verificatore
 from verificatore import Verificatore
-from Produttore_verificatore.config.istanze_globali import gestore_db
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)

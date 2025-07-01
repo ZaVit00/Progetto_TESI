@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from typing import Dict, List
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -11,13 +10,13 @@ from fastapi.responses import JSONResponse
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori, DatiBatch
 from Cloud_Service_Provider.auth.auth_utils import richiede_permesso_scrittura, richiede_permesso_verifica_estesa, \
     richiede_permesso_verifica
+from Cloud_Service_Provider.config.istanze_globali import gestore_db
 from Cloud_Service_Provider.entita.utente_api import UtenteAPI
-from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_payload, elabora_lista_sensori, \
+from Cloud_Service_Provider.interfaccia_rest.utils.cloud_api_utils import elabora_pacchetto_batch_misurazioni, \
     recupera_metadati_misurazione_sensore, recupera_dati_misurazione_sensore
 from cloud_api_utils import costruisci_mappa_id_hash_foglie
 from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch
-from Cloud_Service_Provider.config.istanze_globali import gestore_db
 
 # Configurazione globale del logging
 logging.basicConfig(
@@ -25,7 +24,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 
 
 @asynccontextmanager
@@ -38,16 +37,28 @@ async def lifespan(app: FastAPI):
 
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
+
+
 @app.post("/sensori")
 def registra_lista_sensori(payload: DatiListaSensori, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     if not payload.sensori:
         raise HTTPException(status_code=400, detail="Lista sensori vuota.")
-    id_inseriti = elabora_lista_sensori(payload)
-    conferma = bool(id_inseriti)
+
+    #inserisci la lista di sensori
+    id_sensori_inseriti = gestore_db.inserisci_lista_sensori(payload.sensori)
+
+    # controlla se la lista è vuota
+    if not id_sensori_inseriti:
+        messaggio = "Nessun sensore registrato. Errore del database."
+    else:
+        messaggio = f"{len(id_sensori_inseriti)} sensori registrati correttamente su {len(payload.sensori)}"
+
+    conferma = bool(id_sensori_inseriti)
+
     return JSONResponse(content={
         "conferma_ricezione": conferma,
-        "id_sensori": id_inseriti,
-        "messaggio": f"{len(id_inseriti)} sensori registrati correttamente su {len(payload.sensori)}"
+        "id_sensori": id_sensori_inseriti,
+        "messaggio": messaggio
     })
 
 
@@ -58,14 +69,14 @@ def ricevi_batch(payload: PacchettoBatchMisurazioni, utente: UtenteAPI = Depends
     Il payload contiene un oggetto DatiBatch e una lista di DatiMisurazione.
     """
     logger.info(f"Ricezione batch {payload.batch.id_batch} con {len(payload.misurazioni)} misurazioni...")
-    successo_operazione = elabora_payload(payload)
+    successo_operazione = elabora_pacchetto_batch_misurazioni(payload)
 
     if successo_operazione:
-        logger.info(f"Batch {payload.batch.id_batch} salvato correttamente.")
+        logger.info(f"Batch {payload.batch.id_batch} salvato correttamente con {len(payload.misurazioni)} misurazioni....")
         return JSONResponse(content={
             "conferma_ricezione": True,
             "id_batch": payload.batch.id_batch,
-            "messaggio": "Batch salvato correttamente"
+            "messaggio": "Batch e Misurazioni salvate correttamente"
         })
     else:
         logger.warning(f"Errore durante il salvataggio del batch {payload.batch.id_batch}.")
@@ -77,7 +88,7 @@ def ricevi_batch(payload: PacchettoBatchMisurazioni, utente: UtenteAPI = Depends
 @app.get("/batch/mappa-id-hash/{id_batch}", response_model=Dict[int, str])
 def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
     try:
-        logger.debug(f"[DEBUG] Ricevuta richiesta batch con id = {id_batch}")
+        logger.debug(f"[DEBUG] Ricevuta richiesta per costruzione mappa id-hash del batch con id = {id_batch}")
         mappa_id_hash = costruisci_mappa_id_hash_foglie(id_batch)
         return mappa_id_hash
     except Exception as e:
@@ -87,11 +98,11 @@ def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(rich
 
 # === METODI a COMPLETAMENTO DELLA VERIFICA DELL'INTEGRITA' === #
 @app.post("/metadata/misurazione-sensore", response_model=list[MetaDatiMisurazioneSensore])
-def ricostruisci_metadata_misurazione_sensore(lista_id: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    if not lista_id:
+def ricostruisci_metadata_misurazione_sensore(lista_id_mis: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    if not lista_id_mis:
         raise HTTPException(status_code=400, detail="Lista di ID vuota")
     try:
-        return recupera_metadati_misurazione_sensore(lista_id)
+        return recupera_metadati_misurazione_sensore(lista_id_mis)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 #

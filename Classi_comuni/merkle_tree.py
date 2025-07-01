@@ -1,9 +1,8 @@
-import json
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
-from Classi_comuni.utils import Hashing
+from Classi_comuni.utils import Hashing, serializza_dict
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.CRITICAL + 1)
@@ -145,15 +144,7 @@ class MerkleTree:
         }
 
         # Serializza il dizionario finale in stringa JSON leggibile
-        # - sort_keys=True → ordina le chiavi (utile per confronti o diff)
-        # - separators → compatta leggermente il JSON
-        # - indent=2 → lo rende leggibile a occhio umano
-        return json.dumps(
-            paths_dict,
-            sort_keys=True,
-            separators=(",", ":"),
-            indent=2
-        )
+        return serializza_dict(paths_dict)
 
     def ottieni_merkle_root(self) -> str:
         if self.root is None:

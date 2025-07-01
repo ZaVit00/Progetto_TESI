@@ -3,8 +3,10 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Union, Annotated
+
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
+
 from Classi_comuni.entita.modelli_dati import DatiSensore
 from istanze_globali import gestore_db
 # Import dei modelli di misurazione_in_ingresso specifici
@@ -19,7 +21,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 
 
 

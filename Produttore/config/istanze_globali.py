@@ -4,6 +4,7 @@ from costanti_produttore import PRIVATE_KEY_BLOCKCHAIN, ACCOUNT_ADDRESS_BLOCKCHA
 from gestore_blockchain import inizializza_configurazione_blockchain, ScrittoreBlockchain
 
 #istanza singleton globale al progetto Produttore dello scrittore blockchain
+
 abi, indirizzo = inizializza_configurazione_blockchain()
 scrittore_blockchain = ScrittoreBlockchain(PROVIDER_URL, abi, indirizzo, ACCOUNT_ADDRESS_BLOCKCHAIN,
                                            PRIVATE_KEY_BLOCKCHAIN)

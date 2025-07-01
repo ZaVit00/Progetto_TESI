@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import List
+
 from Produttore_verificatore.config.istanze_globali import gestore_db
 from modelli_dati import DatiBatch, DatiMisurazione, DatiSensore, DatiMisurazioneSensore
 

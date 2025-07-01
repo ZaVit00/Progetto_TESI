@@ -12,6 +12,7 @@ from modelli_dati import PacchettoBatchMisurazioni
 
 # Logger del modulo
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
     """

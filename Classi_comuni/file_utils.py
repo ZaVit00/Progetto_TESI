@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 from io import BytesIO
 
-
 def genera_contenuto_gzip(json_string: str) -> bytes:
     """
     Comprimi una stringa JSON in formato GZIP e restituisce i byte compressi.

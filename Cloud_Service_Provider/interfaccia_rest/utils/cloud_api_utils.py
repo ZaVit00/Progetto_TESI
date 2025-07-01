@@ -1,94 +1,123 @@
 import logging
 
 from Classi_comuni.costruttore_payload import CostruttorePayload
-from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni, DatiListaSensori
+from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni
 from Cloud_Service_Provider.config.istanze_globali import gestore_db
 from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
-def elabora_payload(payload: PacchettoBatchMisurazioni) -> bool:
+def elabora_pacchetto_batch_misurazioni(payload: PacchettoBatchMisurazioni) -> bool:
     """
-    Riceve un oggetto DatiPayload contenente:
-    - Un batch (DatiBatch)
-    - Una lista di misurazioni (DatiMisurazione)
-    Esegue:
-    1. Inserimento del batch nel database
-    2. Inserimento di ogni misurazione associata
+    Riceve un oggetto `PacchettoBatchMisurazioni` contenente:
+    - Un oggetto `DatiBatch` con i metadati del batch.
+    - Una lista di `DatiMisurazione` con le misurazioni associate.
 
-    Ritorna:
-    - True se tutte le operazioni vanno a buon fine
-    - False se una qualsiasi operazione fallisce
+    Esegue:
+    1. Inserimento del batch nel database.
+    2. Inserimento delle misurazioni associate.
+
+    Restituisce:
+        True se entrambe le operazioni vanno a buon fine, False altrimenti.
     """
     batch = payload.batch
-    #lista di misurazioni
     misurazioni = payload.misurazioni
 
-    # Prima l'inserimento del batch e poi delle misurazioni associate
-    if not gestore_db.inserisci_batch(batch):
-        logger.error(f"Inserimento batch {batch.id_batch} fallito.")
+    if not gestore_db.inserisci_dati_batch(batch):
+        logger.error(f"[ERRORE] Inserimento del batch {batch.id_batch} fallito.")
         return False
 
-    # Inserisce le misurazioni
-    for m in misurazioni:
-        if not gestore_db.inserisci_misurazione(m, batch.id_batch):
-            logger.error(f"Inserimento misurazione {m.id_misurazione} fallito.")
-            return False
+    if not gestore_db.inserisci_dati_misurazione(misurazioni):
+        logger.error(f"[ERRORE] Inserimento delle misurazioni per il batch {batch.id_batch} fallito.")
+        return False
 
-    #entrambe le operazioni sono andate a buon fine
     return True
 
 
 def costruisci_mappa_id_hash_foglie(id_batch: int) -> dict[int, str]:
+    """
+    Estrae i dati relativi a un batch e costruisce la mappa id_misurazione → hash foglia.
+
+    Args:
+        id_batch: ID del batch da elaborare.
+
+    Returns:
+        Un dizionario che mappa l'ID della misurazione al relativo hash foglia.
+
+    Raises:
+        ValueError: se il batch non esiste o non contiene misurazioni.
+    """
     risultati_query = gestore_db.ottieni_dati_batch_misurazioni_sensori(id_batch)
     if not risultati_query:
-        raise ValueError(f"Nessun batch trovato con ID {id_batch}")
+        raise ValueError(f"Nessuna misurazione trovata per il batch {id_batch}.")
 
     payload = CostruttorePayload()
     payload.estrai_dati_da_query(risultati_query)
     return payload.ottieni_mappa_id_foglie()
 
-def elabora_lista_sensori(payload: DatiListaSensori) -> list[str]:
-    """
-    Tenta di inserire nel database tutti i sensori contenuti nel payload.
-    Restituisce una lista degli ID dei sensori inseriti con successo.
-    """
-    id_sensori_inseriti = []
-    for sensore in payload.sensori:
-        successo = gestore_db.inserisci_sensore(sensore)
-        if successo:
-            logger.info(f"[SENSORI] Sensore registrato: {sensore.id_sensore}")
-            id_sensori_inseriti.append(sensore.id_sensore)
-        else:
-            logger.warning(f"[SENSORI] Registrazione fallita per: {sensore.id_sensore}")
-
-    return id_sensori_inseriti
-
-def recupera_metadati_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiMisurazioneSensore]:
-    """
-    Recupera i metadati delle misurazioni dati gli ID. Solleva ValueError se una misurazione non esiste.
-    """
-    metadati = []
-    for id_misurazione in lista_id:
-        record : MetaDatiMisurazioneSensore = gestore_db.ottieni_metadata_misurazione_sensore(id_misurazione)
-        if not record:
-            raise ValueError(f"Misurazione con ID {id_misurazione} non trovata")
-        metadati.append(record)
-    return metadati
 
 def recupera_dati_misurazione_sensore(lista_id: list[int]) -> list[DatiMisurazioneSensore]:
-    risultato = []
-    non_trovati = []
-    for id_mis in lista_id:
-        dati = gestore_db.ottieni_dati_misurazione_sensore(id_mis)
-        if dati:
-            risultato.append(dati)
-        else:
-            non_trovati.append(id_mis)
+    """
+    Recupera i dati completi (misurazione + sensore) per una lista di ID misurazione.
 
-    if non_trovati:
-        logger.warning(f"Alcuni ID non trovati nel DB: {non_trovati}")
-        # oppure raise HTTPException(...) se vuoi fallire
+    Args:
+        lista_id: Lista degli ID delle misurazioni da recuperare.
+
+    Returns:
+        Lista di oggetti `DatiMisurazioneSensore` pronti per la verifica.
+
+    Raises:
+        ValueError: se non viene trovata alcuna riga corrispondente.
+    """
+    righe: list[dict] = gestore_db.ottieni_dati_misurazione_sensore(lista_id)
+    risultato: list[DatiMisurazioneSensore] = []
+
+    if not righe:
+        raise ValueError(f"Nessuna misurazione trovata per gli ID richiesti: {lista_id}")
+
+    for riga in righe:
+        # Parsing dei dati singoli
+        dati_misurazione = CostruttorePayload.costruisci_dati_misurazione_da_query(riga)
+        dati_sensore = CostruttorePayload.costruisci_dati_sensore_da_query(riga)
+
+        # Combinazione finale
+        risultato.append(DatiMisurazioneSensore(
+            dati_sensore=dati_sensore.model_dump(),
+            dati_misurazione=dati_misurazione.model_dump()
+        ))
 
     return risultato
+
+
+def recupera_metadati_misurazione_sensore(lista_id_mis: list[int]) -> list[MetaDatiMisurazioneSensore]:
+    """
+    Recupera i metadati completi (sensore + misurazione) per una lista di ID.
+
+    Args:
+        lista_id_mis: Lista di ID misurazione.
+
+    Returns:
+        Lista di oggetti `MetaDatiMisurazioneSensore` per la verifica strutturale.
+
+    Raises:
+        ValueError: se nessuna delle misurazioni è presente nel database.
+    """
+    righe: list[dict] = gestore_db.ottieni_metadata_misurazione_sensore(lista_id_mis)
+    metadati: list[MetaDatiMisurazioneSensore] = []
+
+    if not righe:
+        raise ValueError(f"Nessun metadato trovato per le misurazioni: {lista_id_mis}")
+
+    for riga in righe:
+        # Parsing dei metadati singoli
+        metadati_misurazione = CostruttorePayload.costruisci_metadati_misurazione_da_query(riga)
+        metadati_sensore = CostruttorePayload.costruisci_metadati_sensore_da_query(riga)
+
+        # Combinazione finale
+        metadati.append(MetaDatiMisurazioneSensore(
+            metadati_misurazione=metadati_misurazione.model_dump(),
+            metadati_sensore=metadati_sensore.model_dump()
+        ))
+
+    return metadati

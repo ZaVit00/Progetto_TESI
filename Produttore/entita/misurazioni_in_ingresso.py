@@ -1,11 +1,11 @@
-import json
 from abc import ABC, abstractmethod
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from Classi_comuni.utils import serializza_dict
 from config.costanti_produttore import TIPO_SENSORE_JOYSTICK, TIPO_SENSORE_UMIDITA
 from config.costanti_produttore import TIPO_SENSORE_TEMPERATURA
-from Classi_comuni.utils import serializza_dict
 
 TipoSensore = Literal["JOYSTICK", "TEMPERATURA", "UMIDITA"]
 
