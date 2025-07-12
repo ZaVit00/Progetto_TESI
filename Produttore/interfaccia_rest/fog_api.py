@@ -7,12 +7,12 @@ from typing import Union, Annotated
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
 
-from Classi_comuni.entita.modelli_dati import DatiSensore
+from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from istanze_globali import gestore_db
 # Import dei modelli di misurazione_in_ingresso specifici
 # i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
-from misurazioni_in_ingresso import MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura, \
-    MisurazioneInIngressoUmidita
+from misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, \
+    DatiMisurazioneInIngressoUmidita
 from task_manager import avvia_task_periodici
 
 # Configurazione globale del logging
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
 @app.post("/sensori", summary="Registra un sensore", response_model=dict)
-async def registra_sensore(dati_sensore: DatiSensore):
+async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
     """
     Endpoint per la registrazione di un sensore.
     """
@@ -60,7 +60,7 @@ Con discriminator="tipo", FastAPI:
 - se vale "temperatura", usa MisurazioneInIngressoTemperatura altrimenti
 - valida il resto del contenuto (i campi) in base al modello di classe selezionato
 """
-MisurazioneInIngresso = Annotated[Union[MisurazioneInIngressoJoystick, MisurazioneInIngressoTemperatura, MisurazioneInIngressoUmidita],
+MisurazioneInIngresso = Annotated[Union[DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, DatiMisurazioneInIngressoUmidita],
                          Body(discriminator="tipo")]
 @app.post("/misurazioni", summary="Registra una misurazione", response_model=dict)
 async def registra_misurazione(misurazione: MisurazioneInIngresso):

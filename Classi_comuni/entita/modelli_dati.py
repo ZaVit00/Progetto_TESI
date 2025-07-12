@@ -1,18 +1,22 @@
-import json
-import re
 from typing import Dict, List
 
-from pydantic import Field, field_validator
+from pydantic import Field
 
-from Classi_comuni.utils import canonizza_dict
+from Classi_comuni.utils import canonizza_dict, serializza_dict
 from modelli import ModelliHashabili
 
 
 class DatiSensore(ModelliHashabili):
     """
-    Modello che rappresenta un sensore generico registrabile nel sistema fog.
-    Il tipo del sensore (joystick, temperatura, ecc.) Viene dedotto automaticamente
-    dal prefisso dell'ID del sensore.
+    Modello che rappresenta i dati essenziali di un sensore memorizzati nel sistema.
+    Attenzione: questa classe è distinta da `DatiSensoreInIngresso`, che viene usata
+    solo durante la fase di registrazione iniziale di un sensore. In particolare:
+    - `DatiSensoreInIngresso` contiene anche la frequenza di invio dei dati (frequenza_hz),
+      necessaria per il calcolo dinamico della soglia di batch, ma che non viene trasmessa al cloud e non
+      viene coinvolta nel processo di calcolo del merkle tree (necessaria solo in locale)
+    - `DatiSensore` rappresenta il modello persistente e condivisibile dei dati del sensore,
+      privo di informazioni locali interne (come la frequenza) e che viene utilizzato per serializzare,
+      salvare e trasmettere i dati verso il cloud
     """
     id_sensore: str = Field(..., description="Identificatore del sensore."
                                              "Deve essere nel formato JOY001, TEMP042, HUM123 ecc.")
@@ -21,44 +25,6 @@ class DatiSensore(ModelliHashabili):
         default="",
         description="Tipo del sensore (es. joystick, temperatura, umidità, pressione)."
     )
-
-    @field_validator("id_sensore")
-    @classmethod
-    def id_formato_standard(cls, v: str) -> str:
-        """
-        Valida il formato dell'ID del sensore:
-        - Deve iniziare con uno dei prefissi ammessi: JOY, TEMP, HUM o PRESS
-        - Deve essere seguito da esattamente tre cifre numeriche
-        - L'ID viene automaticamente convertito in maiuscolo
-        """
-        v = v.upper()
-        if not re.fullmatch(r"(JOY|TEMP|HUM|PRESS)\d{3}", v):
-            raise ValueError("id_sensore non segue il formato previsto (es. JOY001, TEMP042, HUM123)")
-        return v
-
-    def model_post_init(self, __context):
-        # Se tipo è già avvalorato (non stringa vuota), NON lo toccare
-        # SE VIENE ELIMINATO, IL CAMPO TIPO VIENE RIMPIAZZATO DAL TIPO CORRETTO
-        # INVALIDA L'ANOMALIA
-        if self.tipo:
-            return
-        """
-        Metodo speciale eseguito dopo l'inizializzazione del modello.
-        Imposta automaticamente il campo `tipo` sulla base del prefisso dell'`id_sensore`.
-        La mappatura è: JOY  → joystick, TEMP → temperatura, HUM  → umidità, PRESS→ pressione
-        Se il prefisso non è riconosciuto, il tipo viene impostato su 'generico'.
-        """
-        mapping = {
-            "JOY": "joystick",
-            "TEMP": "temperatura",
-            "HUM": "umidità",
-            "PRESS": "pressione"
-        }
-        # Estrae il prefisso alfabetico (primi quattro caratteri) ignorando eventuali numeri
-        # esempio: JOY20-> JOY
-
-        prefisso = self.id_sensore[:4].strip("0123456789")
-        self.tipo = mapping.get(prefisso, "generico")
 
 
 class DatiMisurazione(ModelliHashabili):
@@ -79,12 +45,8 @@ class DatiMisurazione(ModelliHashabili):
         # cioè rende OMOGENEO il campo dati. Necessario per la verifica dell'integrità salvare
         # in modo omogeneo i campi dei dati nello stesso modo tra sqlite e postegreSQL
         dump["dati"] = canonizza_dict(self.dati)
-        return json.dumps(
-            dump,
-            sort_keys=True,
-            separators=(",", ":"),
-            indent=2
-        )
+        #serializza in modo omogeno il dict (dict --> stringa json)
+        return serializza_dict(dump)
 
 
 class DatiBatch(ModelliHashabili):

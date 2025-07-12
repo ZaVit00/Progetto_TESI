@@ -6,8 +6,8 @@ from Classi_comuni.utils import serializza_dict
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
     richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
-from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
 from Verificatore.config.istanze_globali import lettore_blockchain
+from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)

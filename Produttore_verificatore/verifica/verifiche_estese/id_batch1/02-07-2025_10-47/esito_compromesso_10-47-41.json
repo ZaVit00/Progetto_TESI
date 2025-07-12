@@ -1,0 +1,34 @@
+{
+  "id_batch":1,
+  "numero_anomalie_integrita":3,
+  "numero_anomalie_strutturali":1,
+  "anomalie_integrita":[
+    {
+      "id":1,
+      "tipo":"misurazione",
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA"
+    },
+    {
+      "id":3,
+      "tipo":"misurazione",
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA"
+    },
+    {
+      "id":4,
+      "tipo":"misurazione",
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA"
+    }
+  ],
+  "anomalie_strutturali":{
+    "id_mancanti":[
+      2
+    ],
+    "id_aggiunti":[]
+  }
+}

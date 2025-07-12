@@ -2,6 +2,7 @@
 import logging
 from copy import deepcopy
 from typing import List
+
 # Funzione per serializzare un dizionario in stringa JSON
 from Classi_comuni.utils import serializza_dict
 # Gestore locale del database in sola lettura

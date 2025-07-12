@@ -1,0 +1,10 @@
+{
+  "id_batch":1,
+  "numero_anomalie_integrita":0,
+  "numero_anomalie_strutturali":0,
+  "anomalie_integrita":[],
+  "anomalie_strutturali":{
+    "id_mancanti":[],
+    "id_aggiunti":[]
+  }
+}

@@ -1,6 +1,6 @@
 from Produttore.database.gestore_db import GestoreDatabase
 from costanti_comuni import PROVIDER_URL
-from costanti_produttore import PRIVATE_KEY_BLOCKCHAIN, ACCOUNT_ADDRESS_BLOCKCHAIN, SOGLIA_BATCH
+from costanti_produttore import PRIVATE_KEY_BLOCKCHAIN, ACCOUNT_ADDRESS_BLOCKCHAIN
 from gestore_blockchain import inizializza_configurazione_blockchain, ScrittoreBlockchain
 
 #istanza singleton globale al progetto Produttore dello scrittore blockchain
@@ -10,4 +10,4 @@ scrittore_blockchain = ScrittoreBlockchain(PROVIDER_URL, abi, indirizzo, ACCOUNT
                                            PRIVATE_KEY_BLOCKCHAIN)
 
 # Istanza del database (con soglia per batch)
-gestore_db = GestoreDatabase(soglia_batch=SOGLIA_BATCH)
+gestore_db = GestoreDatabase()

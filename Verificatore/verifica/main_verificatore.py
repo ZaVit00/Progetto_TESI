@@ -1,11 +1,11 @@
 import logging
 
-from Verificatore.verifica.verificatore import Verificatore
+from IO.input import acquisisci_input_id_batch
+from IO.output import stampa_tabella_batch, stampa_risultato_verifica, stampa_anomalie
 from Verificatore.api_client.api_cloud import richiedi_tutti_metadata_batch
+from Verificatore.verifica.verificatore import Verificatore
 from file_utils import salva_risultato_verifica_su_file
 from modelli_metadati import MetaDatiBatch
-from Verificatore.input.selezione_batch import acquisisci_input_id_batch
-from Verificatore.output.visualizza_output import stampa_tabella_batch, stampa_risultato_verifica, stampa_anomalie
 
 # Configura il logger
 logging.basicConfig(
