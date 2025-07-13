@@ -1,73 +1,93 @@
 import asyncio
 import json
 import logging
-
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from gestione_batch import gestisci_batch_completo
 from istanze_globali import gestore_db
 from modelli_dati import DatiListaSensori
 from utils.api_cloud import invia_payload
-
 logger = logging.getLogger(__name__)
 
-# === TASK PER INVIO SENSORI NON CONFERMATI ===
+
+# === TASK PERIODICO: INVIO SENSORI NON ANCORA CONFERMATI ===
 async def task_invio_sensori(intervallo: int = 60):
+    # Breve pausa iniziale per evitare conflitti all'avvio
     await asyncio.sleep(5)
+
     while True:
         logger.info("[SENSORI] Controllo sensori da inviare...")
-        lista_sensori : DatiListaSensori  = gestore_db.ottieni_sensori_non_conferma_ricezione()
+
+        # Ottiene dal DB la lista dei sensori che non hanno ancora ricevuto conferma dal cloud
+        lista_sensori: DatiListaSensori = gestore_db.ottieni_sensori_non_conferma_ricezione()
+
         if not lista_sensori.sensori:
             logger.info("[SENSORI] Nessun sensore da inviare.")
         else:
             try:
                 logger.debug(f"[SENSORI] Tentativo invio gruppo sensori ({len(lista_sensori.sensori)} sensori)...")
+
+                # Serializza il modello Pydantic in dizionario JSON
                 payload_dict = lista_sensori.model_dump()
+
+                # Invia il payload al cloud
                 esito = invia_payload(payload_dict, ENDPOINT_CLOUD_SENSORI)
+
                 if esito:
-                    logger.info(f"[SENSORI] Invio batch sensori confermato.")
+                    logger.info("[SENSORI] Invio batch sensori confermato.")
                 else:
                     logger.warning("[SENSORI] Invio batch sensori fallito.")
             except Exception as e:
                 logger.error(f"[SENSORI] Errore durante l'invio batch dei sensori: {e}")
 
+        # Attende il prossimo ciclo
         await asyncio.sleep(intervallo)
 
-
-
+# === TASK PERIODICO: INVIO DEI BATCH PRONTI ===
 async def task_invio_batch(intervallo: int = 60):
-    await asyncio.sleep(5)
+    await asyncio.sleep(5)  # breve delay iniziale
+
     while True:
         logger.info("[BATCH-JSON] Controllo batch da inviare...")
-        # restituisce lista di tuple (id_batch, payload_json)
+
+        # Recupera i batch chiusi e con JSON già pronto (id + payload_json)
         lista_id_payload = gestore_db.ottieni_payload_batch_pronti_per_invio()
+
         for id_batch, payload_json in lista_id_payload:
             try:
+                # Parsing JSON se necessario
                 if isinstance(payload_json, str):
                     payload = json.loads(payload_json)
                 else:
                     payload = payload_json
+
                 logger.debug(f"[BATCH-JSON] Tentativo invio id_batch={id_batch}...")
+
+                # Invia il batch al cloud
                 if invia_payload(payload, ENDPOINT_CLOUD_BATCH):
                     logger.info(f"[BATCH-JSON] Inviato correttamente id_batch={id_batch}")
                 else:
                     logger.warning(f"[BATCH-JSON] Invio fallito per id_batch={id_batch}")
-                    break  # se fallisce, interrompi per evitare retry inutili
+                    break  # se un invio fallisce, esce dal ciclo per evitare retry continui
             except Exception as e:
                 logger.error(f"[BATCH-JSON] Errore invio id_batch={id_batch}: {e}")
 
         await asyncio.sleep(intervallo)
 
-# === TASK PER ELABORAZIONE PERIODICA DEI BATCH COMPLETI ===
+# === TASK PERIODICO: ELABORAZIONE DEI BATCH COMPLETI ===
 async def task_elabora_batch_completi(intervallo: int = 60):
     """
-    Controlla periodicamente se esistono batch completi (hanno raggiunto la soglia)
-    ma non ancora elaborati (manca Merkle Root o JSON), e li elabora.
+    Controlla periodicamente se esistono batch chiusi (completati)
+    ma non ancora elaborati (manca Merkle Root o JSON), ed esegue l'elaborazione.
     """
-    await asyncio.sleep(10)
+    await asyncio.sleep(10)  # ritardo iniziale maggiore per evitare conflitti iniziali
+
     while True:
         logger.info("[BATCH-ELAB] Controllo batch completi da elaborare...")
+
+        # Ottiene la lista di ID dei batch completi ma non ancora elaborati nella pipeline di processo
         lista_id_batch = gestore_db.ottieni_id_batch_completi()
         logger.debug(f"[BATCH-ELAB] Lista batch chiusi {lista_id_batch}")
+
         for id_batch in lista_id_batch:
             try:
                 logger.debug(f"[BATCH-ELAB] INIZIO ELABORAZIONE batch {id_batch}...")
@@ -75,16 +95,23 @@ async def task_elabora_batch_completi(intervallo: int = 60):
                     logger.debug(f"[BATCH-ELAB] Elaborazione batch {id_batch} FALLITA")
             except Exception as e:
                 logger.error(f"[BATCH-ELAB] Errore durante elaborazione batch {id_batch}: {e}")
+
         await asyncio.sleep(intervallo)
 
-
-# === AVVIO DEI TASK ASINCRONI ===
+# === FUNZIONE DI AVVIO DEI TASK PERIODICI ===
 async def avvia_task_periodici():
+    """
+    Avvia in parallelo i 3 task asincroni principali:
+    - Invio sensori non confermati al cloud
+    - Invio pacchetto batchMisurazioni in formato JSON al cloud
+    - Elaborazione batch completi
+    """
     task1 = asyncio.create_task(task_invio_sensori())
     task2 = asyncio.create_task(task_invio_batch())
     task3 = asyncio.create_task(task_elabora_batch_completi())
+
     try:
+        # Resta in attesa che tutti i task vengano completati (in realtà girano all'infinito)
         await asyncio.gather(task1, task2, task3)
     except Exception as e:
         logger.critical(f"Errore critico nella gestione dei task periodici: {e}")
-

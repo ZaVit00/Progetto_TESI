@@ -1,10 +1,7 @@
 import logging
-
 import requests
-
 from costanti_produttore import API_KEY_PRODUTTORE
 from istanze_globali import gestore_db
-
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 
@@ -21,11 +18,11 @@ def invia_payload(payload_dict: dict, endpoint_cloud: str) -> bool:
         }
         response = requests.post(endpoint_cloud, json=payload_dict, headers=headers, timeout=10)
         response.raise_for_status()
-
         risposta_json = response.json()
         logger.debug(f"[HTTP] Risposta dal cloud: {risposta_json}")
 
-        # Elabora la risposta ricevuta, aggiorna il DB e ritorna True/False
+        # Elabora la risposta ricevuta, aggiorna il DB e ritorna True/False in base all'esito
+        # dell'operazione
         return elabora_conferma_ricezione_cloud(risposta_json)
 
     except requests.exceptions.Timeout:
@@ -48,14 +45,12 @@ def elabora_conferma_ricezione_cloud(risposta: dict) -> bool:
         logger.warning(f"[CLOUD] Nessuna conferma ricevuta o struttura non valida: {risposta}")
         return False
 
-    if "id_sensori" in risposta:
-        for id_sensore in risposta["id_sensori"]:
-            gestore_db.aggiorna_conferma_ricezione_sensore(id_sensore)
-        return True
+    id_sensori = risposta.get("id_sensori", [])
+    if id_sensori:
+        return gestore_db.aggiorna_conferma_ricezione_sensori(id_sensori)
 
     elif "id_batch" in risposta:
-        gestore_db.aggiorna_conferma_ricezione_batch(risposta["id_batch"])
-        return True
+        return gestore_db.aggiorna_conferma_ricezione_batch(risposta["id_batch"])
 
     logger.warning(f"[CLOUD] Risposta ricevuta ma mancano ID riconoscibili: {risposta}")
     return False

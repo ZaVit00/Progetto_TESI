@@ -12,7 +12,7 @@ ENDPOINT_SENSORE = "http://localhost:8000/sensori"
 def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0, ripetizioni: int = 300, intervallo: float = 1.0):
     time.sleep(ritardo_iniziale)
     try:
-        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore.upper(), "descrizione": descrizione})
+        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore.upper(), "descrizione": descrizione, "frequenza_hz" : 60.0})
         response.raise_for_status()
         print(f"[OK] Sensore registrato: {id_sensore}")
     except requests.RequestException as e:

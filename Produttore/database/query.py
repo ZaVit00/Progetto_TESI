@@ -117,6 +117,10 @@ OTTIENI_PAYLOAD_BATCH = """
     WHERE id_batch = ? AND payload_json IS NOT NULL
 """
 
+OTTIENI_FREQUENZA_MEDIA_SENSORI = """
+   SELECT ROUND(AVG(frequenza), 2) AS freq_media
+   from sensore
+"""
 # ------------------------- QUERY DI UPDATE -------------------------
 
 # Aggiorna l'hash della transazione di un batch quando avviene il salvataggio su blockchain del merkle root e
@@ -186,10 +190,10 @@ Questa conferma garantisce che tutte le future misurazioni di questo sensore pos
 al cloud senza violare vincoli di integrità referenziale.
 È fondamentale che ogni sensore sia confermato prima dell'invio delle misurazioni.
 """
-AGGIORNA_CONFERMA_RICEZIONE_SENSORE = """
+AGGIORNA_CONFERMA_RICEZIONE_SENSORI = """
     UPDATE sensore
     SET conferma_ricezione = 1
-    WHERE id_sensore = ?
+    WHERE id_sensore IN ({placeholders})
 """
 
 # ------------------------- QUERY DI INSERIMENTO -------------------------
@@ -206,7 +210,7 @@ INSERISCI_MISURAZIONE = """
 """
 
 # Crea un nuovo batch inizializzato con 0 misurazioni
-CREA_BATCH = """
+INSERISCI_BATCH = """
     INSERT INTO batch (timestamp_creazione, numero_misurazioni, completo, conferma_ricezione)
     VALUES (?, 0, 0, 0)
 """

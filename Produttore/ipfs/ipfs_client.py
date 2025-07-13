@@ -4,10 +4,8 @@ import logging
 import boto3
 import botocore.exceptions
 
-from Classi_comuni.file_utils import genera_contenuto_gzip
-from Classi_comuni.utils import Hashing
+from Classi_comuni.file_utils import genera_contenuto_gzip, genera_nome_file
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
-
 logger = logging.getLogger(__name__)
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
 logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -69,18 +67,18 @@ class IpfsClient:
             logger.error(f"❌ Errore nella verifica/creazione del bucket: {e}")
             raise ErroreCaricamentoIPFS("Errore durante la creazione o verifica del bucket.")
 
-    def upload_json_string(self, nome_bucket: str, stringa_json: str, comprimi_dimensione: bool = False) -> str:
+    def carica_stringa_json(self, nome_bucket: str, stringa_json: str, comprimi_dimensione: bool = False) -> str:
         """
         Carica un file JSON su IPFS (tramite Filebase), usando come nome file
-        un hash deterministico del contenuto. Se l'upload fallisce, solleva ErroreCaricamento.
+        un hash deterministico del contenuto. Se il caricamento fallisce, solleva eccezione personalizzata ErroreCaricamento.
         """
         self.verifica_o_crea_bucket(nome_bucket)
-        nome_file = IpfsClient._genera_nome_file(stringa_json)
+        nome_file = genera_nome_file(stringa_json)
         if comprimi_dimensione:
             contenuto = genera_contenuto_gzip(stringa_json)
             nome_file += ".gz"
         else:
-            contenuto = stringa_json.encode("utf-8")  # CORRETTO
+            contenuto = stringa_json.encode("utf-8")
         try:
             logger.info(f"Caricamento '{nome_file}' nel bucket '{nome_bucket}'...")
             params = {
@@ -117,64 +115,11 @@ class IpfsClient:
             #recupera il file
             risposta = self.s3.head_object(Bucket=nome_bucket, Key=nome_file)
             metadata_file = risposta.get("Metadata", {})
-            cid = metadata_file.get("cid", {})  # ✅ questo è il campo corretto
+            cid = metadata_file.get("cid")
+            if not cid:
+                raise ErroreRecuperoCID(f"CID non trovato nei metadata per il file '{nome_file}'")
             logger.info(f"🔑 CID recuperato: {cid}")
             return cid
         except botocore.exceptions.ClientError as e:
             logger.error(f"❌ Errore nel recupero del CID: {e}")
             raise ErroreRecuperoCID(f"Impossibile ottenere CID per il file '{nome_file}'")
-
-
-    @staticmethod
-    def _genera_nome_file(json_string: str) -> str:
-        """
-        Genera un nome file compatto e univoco basato solo su hash:
-        - Esempio: merkle_path_3ac1b2d9.json
-        """
-        full_hash = Hashing.calcola_hash(json_string)
-        #esrae i primi 8 caratteri hash complessivo
-        short_hash = full_hash[:8]
-        #.json: indica il tipo di dati (Merkle Path strutturato in formato JSON).
-        #.gz: indica che è stato compresso con gzip.
-        return f"merkle_path_{short_hash}.json"
-
-
-"""
-# FUNZIONE DI AUSILIO/DEBUG (serve per testare il comportamento della classe in modo indipendente)
-def main():
-    # Carica chiavi da .env
-    load_dotenv()
-    access_key = os.getenv("AWS_ACCESS_KEY_ID")
-    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    uploader = ProduttoreIPFS(access_key, secret_key)
-
-    # Simulazione Merkle Path per 1024 misurazioni
-    data = {}
-    for i in range(1, 1025):
-        direzione = ''.join(random.choices("01", k=8))
-        siblings = [f"{random.getrandbits(256):064x}" for _ in range(8)]
-        data[i] = {
-            "directions": direzione,
-            "siblings": siblings
-        }
-
-    # Serializzazione JSON
-    data_JSON = json.dumps(
-        data,
-        sort_keys=True,
-        separators=(",", ":"),
-        indent=2
-    )
-
-    pprint(data_JSON)
-    
-    try:
-        nome_file_caricare = uploader.carica_json("merkle-path-batch", stringa_json=data_JSON)
-        cid_ottenuto = uploader.recupera_cid_file_bucket("merkle-path-batch", nome_file_caricare)
-        print(f"✅ Caricamento completato con CID: {cid_ottenuto}")
-    except (ErroreCaricamento, ErroreRecuperoCID) as e:
-        print(f"‼️ Operazione fallita: {e}")
-
-if __name__ == "__main__":
-    main()
-"""

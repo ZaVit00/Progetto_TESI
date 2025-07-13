@@ -3,6 +3,8 @@ import json
 import os
 from datetime import datetime
 from io import BytesIO
+from Classi_comuni.utils import Hashing
+
 
 def genera_contenuto_gzip(json_string: str) -> bytes:
     """
@@ -94,3 +96,17 @@ def carica_json(percorso_file: str) -> dict:
         raise Exception(f"Errore nel parsing JSON di '{percorso_file}': {e}")
     except Exception as e:
         raise Exception(f"Errore nella lettura del file JSON '{percorso_file}': {e}")
+
+
+
+def genera_nome_file(json_string: str) -> str:
+    """
+    Genera un nome file compatto e univoco basato solo su hash:
+    - Esempio: merkle_path_3ac1b2d9.json
+    """
+    full_hash = Hashing.calcola_hash(json_string)
+    #esrae i primi 8 caratteri hash complessivo
+    short_hash = full_hash[:8]
+    #.json: indica il tipo di dati (Merkle Path strutturato in formato JSON).
+    #.gz: indica che è stato compresso con gzip.
+    return f"merkle_path_{short_hash}.json"

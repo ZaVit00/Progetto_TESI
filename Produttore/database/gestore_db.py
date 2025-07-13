@@ -3,10 +3,14 @@ import sqlite3
 from datetime import datetime
 from costanti_produttore import DBPATH
 from database import query
+from database.query import AGGIORNA_CONFERMA_RICEZIONE_SENSORI
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
+from gestione_soglia_batch import ottieni_soglia_batch
 from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL)
+
 """
 Classe che gestisce tutte le operazioni sul database locale SQLite.
 Tutti i metodi catturano internamente le eccezioni e restituiscono
@@ -43,14 +47,14 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
     # ------------------------- METODI DI SUPPORTO INTERNI -------------------------
-    def _crea_batch(self) -> int:
+    def _inserisci_batch(self) -> int:
         """
-        Crea un nuovo batch e restituisce l'ID generato.
+        Crea un nuovo batch e restituisce l'ID associato (campo autoincrement)
         """
         try:
             cursor = self.conn.cursor()
             timestamp_locale = datetime.now().isoformat()
-            cursor.execute(query.CREA_BATCH, (timestamp_locale,))
+            cursor.execute(query.INSERISCI_BATCH, (timestamp_locale,))
             self.conn.commit()
             return cursor.lastrowid
         except sqlite3.Error as e:
@@ -58,7 +62,9 @@ class GestoreDatabase:
             return -1
 
     def chiudi_connessione(self) -> None:
-        """Chiude la connessione al database, se ancora aperta."""
+        """
+        Chiude la connessione al database, se ancora aperta.
+        """
         try:
             if self.conn:
                 self.conn.close()
@@ -87,63 +93,81 @@ class GestoreDatabase:
     def inserisci_misurazione(self, id_sensore: str, dati: str) -> bool:
         """
         Inserisce una nuova misurazione in ingresso associandola al batch attivo.
+
         - Se non esiste alcun batch attivo, ne viene creato uno nuovo.
         - Se il batch corrente ha raggiunto la soglia di completamento, viene chiuso e ne viene creato uno nuovo.
         - La misurazione viene registrata solo se il sensore corrispondente è presente nel sistema.
-        Restituisce `True` se l'inserimento va a buon fine, `False` in caso contrario.
+
+        Returns:
+            bool: True se l'inserimento va a buon fine, False in caso di errore o se il sensore non è registrato.
         """
         try:
             cursor = self.conn.cursor()
-            # Controllo preventivo: il sensore deve esistere nel database
+
+            # Verifica preliminare che il sensore associato alla misurazione esista nel database
             cursor.execute(query.VERIFICA_ESISTENZA_SENSORE, (id_sensore,))
-            #Se il sensore non è stato ancora registrato, nessuna riga viene restituita (None in Python).
             if cursor.fetchone() is None:
                 logger.warning(f"[MISURAZIONE RIFIUTATA] Sensore '{id_sensore}' non registrato.")
                 return False
 
-            # Recupera o crea un nuovo batch attivo
+            # Recupera il batch attivo (se presente)
             cursor.execute(query.OTTIENI_BATCH_ATTIVO)
             risultato = cursor.fetchone()
+
             if risultato:
-                # esiste un batch attivo
+                # Un batch attivo esiste già
                 id_batch = risultato["id_batch"]
                 num_misurazione_attuale = risultato["numero_misurazioni"]
 
-                # QUI DEVO CAPIRE SE HO RAGGIUNTO LA SOGLIA VITO
-                # TODO
+                # Recupera la soglia attuale per questo batch
+                if num_misurazione_attuale >= ottieni_soglia_batch():
+                    # Batch già oltre soglia → chiusura immediata
+                    cursor.execute(query.CHIUDI_BATCH, (id_batch,))
+                    logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
+                    # Creazione nuovo batch
+                    id_batch = self._inserisci_batch()
+                    num_misurazione_attuale = 0
 
             else:
-                # devo creare un batch nuovo
-                id_batch = self._crea_batch()
+                # Nessun batch attivo → creazione nuovo batch
+                id_batch = self._inserisci_batch()
                 num_misurazione_attuale = 0
+                logger.debug(f"[BATCH NUOVO] Creato batch ID: {id_batch}")
 
+            logger.debug(
+                f"[BATCH ATTIVO] ID: {id_batch} - {num_misurazione_attuale}/{ottieni_soglia_batch()} misurazioni")
+
+            # Inserisce la misurazione nel batch corrente
             timestamp_locale = datetime.now().isoformat()
             cursor.execute(
                 query.INSERISCI_MISURAZIONE,
                 (id_sensore, id_batch, dati, timestamp_locale)
             )
 
-            # Aggiorna numero misurazioni nel batch
+            # Aggiorna il contatore delle misurazioni nel batch
             nuovo_num = num_misurazione_attuale + 1
             cursor.execute(query.AGGIORNA_BATCH_NUM_MISURAZIONI, (nuovo_num, id_batch))
-            # Chiudi batch se soglia raggiunta
-            if nuovo_num >= self.soglia_batch:
-                cursor.execute(query.CHIUDI_BATCH, (id_batch,))
-                #quando il batch è stato chiuso questo viene marcato come completo
-                # il task di invio periodico elabora tutti i batch completo
-                # che possono essere elaborati sono stati ancora elaborati
-                logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
 
-            # Conferma tutte le modifiche
+            # Conferma tutte le modifiche nel database
             self.conn.commit()
             return True
+
         except sqlite3.Error as e:
             logger.error(f"[QUERY - INSERIMENTO MISURAZIONE] {e}")
             return False
 
-
     # ------------------------- METODI DI LETTURA -------------------------
     def ottieni_dati_sensore(self, id_sensore) -> DatiSensore | None:
+        """
+        Recupera i dati associati a un sensore registrato, dato il suo ID.
+
+        - Esegue una query per ottenere tutte le informazioni relative al sensore.
+        - Se il sensore non è presente nel database, restituisce `None`.
+        - Se trovato, restituisce un oggetto `DatiSensore` costruito dai risultati.
+
+        Returns:
+            DatiSensore | None: oggetto con i dati del sensore, oppure None se non trovato o in caso di errore.
+        """
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_DATI_SENSORI, (id_sensore,))
@@ -157,6 +181,16 @@ class GestoreDatabase:
             return None
 
     def ottieni_dati_batch(self, id_batch) -> DatiBatch | None:
+        """
+       Recupera dal database tutte le informazioni relative a un batch specifico.
+
+       - Esegue una query sulla tabella dei batch utilizzando l'ID fornito.
+       - Se il batch non esiste, restituisce `None`.
+       - In caso positivo, costruisce e restituisce un oggetto `DatiBatch` con i dati recuperati.
+
+       Returns:
+           DatiBatch | None: oggetto rappresentante il batch, oppure None se non trovato o in caso di errore.
+       """
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_DATI_BATCH, (id_batch,))
@@ -166,12 +200,42 @@ class GestoreDatabase:
                 return None
             return DatiBatch(**ris)
         except sqlite3.Error as e:
-            logger.error(f"QUERY - LETTURA DATI BATCH] {e}")
+            logger.error(f"QUERY - LETTURA FREQUENZA MEDIA BATCH] {e}")
             return None
+
+
+    def ottieni_frequenza_media_sensori(self) -> float:
+        """
+        Calcola e restituisce la frequenza media (in Hz) di tutti i sensori registrati nel sistema.
+        Utile per stimare il tasso medio di produzione dati nel fog node.
+
+        Returns:
+            float: valore medio della frequenza (Hz). Se non ci sono sensori, restituisce 0.0.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_FREQUENZA_MEDIA_SENSORI)
+            risultato = cursor.fetchone()
+            if risultato is None or risultato[0] is None:
+                # logger.warning("Nessuna frequenza trovata nella tabella 'sensore'.")
+                return 0.0
+            return float(risultato[0])
+        except sqlite3.Error as e:
+            logger.error(f"QUERY - LETTURA FREQUENZA MEDIA SENSORI] {e}")
+            return 0.0
 
     def ottieni_payload_batch(self, id_batch) -> str | None:
         """
-        Metodo utilizzato per ottenere il payload pronto di un determinato batch
+        Recupera il payload JSON completo associato a un determinato batch.
+
+        - Il payload contiene i dati aggregati del batch, già pronti per l'invio al cloud o per la verifica.
+        - Se il batch non esiste o non è stato ancora elaborato, restituisce `None`.
+
+        Args:
+            id_batch (int): ID del batch di cui si vuole ottenere il payload.
+
+        Returns:
+            str | None: Stringa JSON del payload, oppure None se il batch non è presente o si verifica un errore.
         """
         try:
             cursor = self.conn.cursor()
@@ -300,7 +364,7 @@ class GestoreDatabase:
             logger.error(f"QUERY - AGGIORNAMENTO STATO INVIO BATCH] {e}")
             return False
 
-    def aggiorna_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> None:
+    def aggiorna_batch_errore_elaborazione(self, id_batch: int, messaggio_errore: str, tipo_errore: str) -> bool:
         """
         Segna un batch come impossibile da elaborare in seguito a errore grave
         """
@@ -309,32 +373,52 @@ class GestoreDatabase:
             cursor.execute(query.AGGIORNA_ERRORE_ELABORAZIONE_BATCH, (
                 messaggio_errore, tipo_errore, id_batch))
             self.conn.commit()
+            return True
         except sqlite3.Error as e:
             logger.error(f"QUERY - SEGNA BATCH NON ELABORABILE ERRORE] {e}")
+            return False
 
-    def aggiorna_conferma_ricezione_batch(self, id_batch: int):
+    def aggiorna_conferma_ricezione_batch(self, id_batch: int) -> bool:
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.AGGIORNA_CONFERMA_RICEZIONE_BATCH, (id_batch,))
             self.conn.commit()
+            return True
         except sqlite3.Error as e:
             logger.error(f"QUERY - AGGIORNA CONFERMA RICEZIONE BATCH] {e}")
+            return False
 
-    def aggiorna_transazione_hash_batch(self, id_batch: int, tx_hash : str):
+    def aggiorna_transazione_hash_batch(self, id_batch: int, tx_hash : str) -> bool:
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.AGGIORNA_TRANSAZIONE_HASH_BATCH, (tx_hash, id_batch,))
             self.conn.commit()
+            return True
         except sqlite3.Error as e:
             logger.error(f"QUERY - AGGIORNA HASH TRANSAZIONE BATCH] {e}")
+            return False
 
-    def aggiorna_conferma_ricezione_sensore(self, id_sensore: str):
+    def aggiorna_conferma_ricezione_sensori(self, id_sensori: list[str]) -> bool:
+        """
+        Aggiorna il campo 'conferma_ricezione' per una lista di sensori.
+        Costruisce dinamicamente la query con i placeholder necessari.
+        """
+        if not id_sensori:
+            return False
+
         try:
             cursor = self.conn.cursor()
-            cursor.execute(query.AGGIORNA_CONFERMA_RICEZIONE_SENSORE, (id_sensore,))
+            # Genera i placeholder SQL (?, ?, ?, ...) per il numero di sensori
+            placeholders = ", ".join("?" for _ in id_sensori)
+            # Inserisce i placeholder nella query predefinita
+            query_sql = AGGIORNA_CONFERMA_RICEZIONE_SENSORI.format(placeholders=placeholders)
+            # Esegue la query con tutti gli ID
+            cursor.execute(query_sql, id_sensori)
             self.conn.commit()
+            return True
         except sqlite3.Error as e:
-            logger.error(f"QUERY - AGGIORNA CONFERMA RICEZIONE SENSORE] {e}")
+            logger.error(f"[QUERY - AGGIORNA CONFERMA RICEZIONE SENSORI MULTIPLI] {e}")
+            return False
 
     # ------------------------- METODI DI ELIMINAZIONE -------------------------
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:

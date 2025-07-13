@@ -13,7 +13,7 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
                                 ripetizioni: int = 300, intervallo: float = 1.0):
     time.sleep(ritardo_iniziale)
     try:
-        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione})
+        response = requests.post(ENDPOINT_SENSORE, json={"id_sensore": id_sensore, "descrizione": descrizione, "frequenza_hz" : 40.0})
         response.raise_for_status()
         print(f"[OK] Sensore registrato: {id_sensore}")
     except requests.RequestException as e:

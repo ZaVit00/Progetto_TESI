@@ -1,6 +1,5 @@
 import logging
 from typing import Tuple
-
 from api_cloud import logger
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
@@ -14,17 +13,13 @@ from modelli_dati import PacchettoBatchMisurazioni
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def costruisci_merkle_tree(payload: CostruttorePayload) -> Tuple[str, str]:
+def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
     """
-    Costruisce il Merkle Tree a partire da un CostruttorePayload.
-    Utilizza la mappa ID → hash (con ID 0 per il batch) già ordinata,
+    Costruisce il Merkle Tree a partire dalla mappa ID → hash (con ID 0 per il batch) già ordinata,
     e restituisce:
       - la Merkle Root
       - i Merkle Path in formato JSON (stringa)
     """
-    # Estrazione della mappa id → hash (ordinata all'interno del metodo stesso)
-    mappa_id_hash = payload.ottieni_mappa_id_foglie()
-
     # Estrazione ordinata delle chiavi (ID foglie) e degli hash
     lista_id = list(mappa_id_hash.keys())
     lista_hash = list(mappa_id_hash.values())
@@ -43,7 +38,7 @@ def carica_merkle_path_ipfs(merkle_path: str):
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file: str = client.upload_json_string(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
+    nome_file: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
     cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
     return cid
@@ -52,13 +47,14 @@ def carica_merkle_path_ipfs(merkle_path: str):
 def gestisci_batch_completo(id_batch: int) -> bool:
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
-    1. Estrae i dati del batch dal DB.
+    1. Estrae i dati del batch dal DB (tupla batch + tuple misurazione inner join sensore)
     2. Costruisce il payload (modelli Pydantic).
     3. Serializza il payload in JSON.
     4. Costruisce Merkle Tree e Merkle Path.
     5. Salva Merkle Path su IPFS.
-    6. Aggiorna DB con metadata del batch.
-    7. (Prossimamente) Salva su blockchain.
+    6. Aggiorna DB con metadata (merkle root, cid ipfs).
+    7. Salva su blockchain la tripla merkle root, cid ipfs, id batch.
+    8. Salva hash della transazione blockchain nel DB come log futuro/debug
     """
     dati_query = gestore_db.ottieni_dati_batch_misurazioni_sensori(id_batch)
     if not dati_query:
@@ -71,7 +67,8 @@ def gestisci_batch_completo(id_batch: int) -> bool:
     payload_da_inviare: PacchettoBatchMisurazioni = payload.costruisci_payload()
     payload_json = payload_da_inviare.to_json()
     # === Costruzione Merkle Tree e Path ===
-    merkle_root, merkle_path = costruisci_merkle_tree(payload)
+    # Estrazione della mappa id → hash (ordinata all'interno del metodo stesso)
+    merkle_root, merkle_path = costruisci_merkle_tree(payload.ottieni_mappa_id_foglie())
     # === Upload su IPFS ===
     try:
         cid = carica_merkle_path_ipfs(merkle_path)

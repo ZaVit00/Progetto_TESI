@@ -3,27 +3,23 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Union, Annotated
-
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
-
-from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from istanze_globali import gestore_db
-# Import dei modelli di misurazione_in_ingresso specifici
-# i modelli di misurazione in ingresso servono solo al fog node e non al cloud provider
-from misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, \
+from gestione_soglia_batch import aggiorna_soglia_batch
+
+"""
+Import dei modelli di misurazione_in_ingresso specifici
+i modelli di misurazione in ingresso e dati sensore in ingresso servono solo al fog node e
+non al cloud provider
+"""
+from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, \
     DatiMisurazioneInIngressoUmidita
+from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from task_manager import avvia_task_periodici
 
-# Configurazione globale del logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
-)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-
+logger.setLevel(logging.CRITICAL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,6 +33,7 @@ async def lifespan(app: FastAPI):
 
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
+
 @app.post("/sensori", summary="Registra un sensore", response_model=dict)
 async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
     """
@@ -47,10 +44,13 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
         raise HTTPException(status_code=500, detail="Errore nella registrazione del sensore.")
 
     logger.info(f"Sensore registrato correttamente: {dati_sensore.id_sensore}")
+    # processo di aggiornamento della soglia del batch
+    freq_media : float = gestore_db.ottieni_frequenza_media_sensori()
+    aggiorna_soglia_batch(freq_media)
+
     return {
         "status": "sensore registrato",
-        "id": dati_sensore.id_sensore,
-        "descrizione": dati_sensore.descrizione
+        "id": dati_sensore.id_sensore
     }
 
 """
