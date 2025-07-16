@@ -1,28 +1,31 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 from pydantic import BaseModel, Field
-from Classi_comuni.utils import serializza_dict
-from config.costanti_produttore import TIPO_SENSORE_JOYSTICK, TIPO_SENSORE_UMIDITA, TipoSensore
-from config.costanti_produttore import TIPO_SENSORE_TEMPERATURA
+from Classi_comuni.utils.dict_utils import serializza_dict
+from config.costanti_produttore import  TipoSensore
 
 
 class DatiMisurazioneInIngresso(BaseModel, ABC):
     """
-    Classe base astratta per tutte le misurazioni inviate dai sensori (es. tramite Arduino).
-    Contiene esclusivamente gli attributi comuni a ogni tipo di misurazione.
+    Classe base astratta per tutte le misurazioni ricevute in ingresso dai sensori (es. Arduino).
 
-    Questa classe viene utilizzata da FastAPI per:
-    - determinare dinamicamente quale sottoclasse di misurazione istanziare;
-    - validare i campi presenti nel JSON ricevuto tramite richiesta HTTP.
+    Contiene esclusivamente gli attributi comuni a ogni tipo di misurazione e viene utilizzata
+    da FastAPI per effettuare:
 
-    ⚠️ Il campo 'tipo' deve essere esplicitamente presente nel JSON in ingresso.
-    Anche se ridondante, è necessario per permettere a FastAPI di discriminare correttamente
-    tra i diversi tipi di misurazioni durante il parsing e la validazione.
+    - la validazione dei dati contenuti nel JSON ricevuto via HTTP;
+    - l’instanziazione automatica della sottoclasse corretta, in base al tipo di sensore.
+
+    ⚠️ Nota importante:
+    Il campo 'tipo' deve essere presente nel JSON in ingresso.
+    Anche se apparentemente ridondante, è fondamentale per consentire a FastAPI di discriminare
+    tra i diversi tipi di misurazioni (parsing discriminato).
     """
     id_sensore: str = Field(..., description="Identificativo univoco del sensore")
 
-    tipo: TipoSensore = Field(..., description="Tipo di misurazioni. Necessario per identificare"
-                                       "l'istanza corretta di misurazione")
+    tipo: TipoSensore = Field(..., description=(
+        "Tipo della misurazione (es. 'joystick', 'temperatura', ecc.). "
+        "Serve a discriminare la sottoclasse corretta da istanziare."
+    ))
 
     @abstractmethod
     def dati_misurazione_to_dict(self) -> dict:

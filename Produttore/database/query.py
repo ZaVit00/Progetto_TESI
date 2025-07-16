@@ -118,7 +118,7 @@ OTTIENI_PAYLOAD_BATCH = """
 """
 
 OTTIENI_FREQUENZA_MEDIA_SENSORI = """
-   SELECT ROUND(AVG(frequenza), 2) AS freq_media
+   SELECT ROUND(AVG(frequenza_hz), 2) AS freq_media
    from sensore
 """
 # ------------------------- QUERY DI UPDATE -------------------------

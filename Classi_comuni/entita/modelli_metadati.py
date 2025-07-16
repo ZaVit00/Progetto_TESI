@@ -1,8 +1,18 @@
-#==== SEMPLICI CLASSI BASEMODEL DI PYDANTIC PER RESTITUIRE METADATI === #
-# utilizzati nel processo di verifica dell'integrità da parte del verificatore
+# === CLASSI Pydantic DI SUPPORTO PER IL PROCESSO DI VERIFICA DELL'INTEGRITÀ ===
+#
+# Queste classi rappresentano metadati minimali relativi a sensori, misurazioni e batch.
+# NON fanno parte del flusso regolare di invio dei dati (dal fog node al cloud).
+#
+# Vengono richieste ed elaborate ESCLUSIVAMENTE dal verificatore nel momento in cui
+# una misurazione o un batch viene segnalato come "manomesso", al fine di:
+# - analizzare manualmente o automaticamente le anomalie rilevate;
+# - fornire un contesto comprensibile per il dato alterato;
+# - confrontare in modo leggibile lo stato attuale con quello originario.
+#
+# ⚠️ Attenzione: anche i metadati restituiti dal cloud potrebbero essere stati manomessi.
+# Il verificatore li utilizza solo come riferimento informativo per confronti strutturati.
 
 from pydantic import Field
-
 from modelli import ModelliSerializzabili
 
 

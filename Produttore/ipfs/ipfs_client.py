@@ -1,12 +1,12 @@
 # Import delle librerie per l'interazione con Filebase (via S3), gestione eccezioni,
 import logging
-
 import boto3
 import botocore.exceptions
-
-from Classi_comuni.file_utils import genera_contenuto_gzip, genera_nome_file
+from Classi_comuni.utils.file_utils import genera_contenuto_gzip, genera_nome_file
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
 logger = logging.getLogger(__name__)
+
+#disabilito i logger delle librerie esterne
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
 logging.getLogger("boto3").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)

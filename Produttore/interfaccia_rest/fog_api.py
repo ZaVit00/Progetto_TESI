@@ -46,6 +46,7 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
     logger.info(f"Sensore registrato correttamente: {dati_sensore.id_sensore}")
     # processo di aggiornamento della soglia del batch
     freq_media : float = gestore_db.ottieni_frequenza_media_sensori()
+    #logger.debug("Frequenza media sensori dentro FOG API: {freq_media}")
     aggiorna_soglia_batch(freq_media)
 
     return {

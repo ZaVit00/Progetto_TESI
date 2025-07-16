@@ -1,15 +1,13 @@
 import logging
-
 from web3 import Web3
 from web3.exceptions import ContractLogicError
-
 from costanti_comuni import PERCORSO_ABI, PERCORSO_INDIRIZZO_CONTRATTO
-from file_utils import verifica_esistenza_file, carica_json, carica_file_testuale
+from Classi_comuni.utils.file_utils import verifica_esistenza_file, carica_json, carica_file_testuale
 
 # Logger configurato per questo modulo
 logger = logging.getLogger(__name__)
-# ========== FUNZIONI DI SUPPORTO NELLO STESSO FILE PER COMODITA ==========
 
+# ========== FUNZIONI DI SUPPORTO NELLO STESSO FILE PER COMODITA ==========
 def _carica_abi() -> dict:
     """
     Carica l'ABI del contratto da file JSON.
@@ -91,7 +89,7 @@ class ScrittoreBlockchain(LettoreBlockchain):
         """
         Scrive un nuovo batch nella blockchain.
         """
-        logger.info(f"📝 Scrittura batch ID {id_batch} nella blockchain...")
+        logger.info(f"Scrittura batch ID {id_batch} nella blockchain...")
 
         try:
             nonce = self.web3.eth.get_transaction_count(self.account)
@@ -104,7 +102,7 @@ class ScrittoreBlockchain(LettoreBlockchain):
 
             signed_tx = self.web3.eth.account.sign_transaction(tx, self.private_key)
             tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            logger.info(f"✅ Batch scritto correttamente. TX Hash: {tx_hash.hex()}")
+            logger.info(f"Batch scritto correttamente. TX Hash: {tx_hash.hex()}")
             return tx_hash.hex()
 
         except ContractLogicError as e:

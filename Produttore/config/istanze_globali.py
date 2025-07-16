@@ -1,12 +1,12 @@
 import logging
 from Produttore.database.gestore_db import GestoreDatabase
-from costanti_comuni import PROVIDER_URL
+from costanti_comuni import PROVIDER_BLOCKCHAIN_URL
 from costanti_produttore import PRIVATE_KEY_BLOCKCHAIN, ACCOUNT_ADDRESS_BLOCKCHAIN
 from gestore_blockchain import inizializza_configurazione_blockchain, ScrittoreBlockchain
 
 #istanza singleton globale al progetto Produttore dello scrittore blockchain
 abi, indirizzo = inizializza_configurazione_blockchain()
-scrittore_blockchain = ScrittoreBlockchain(PROVIDER_URL, abi, indirizzo, ACCOUNT_ADDRESS_BLOCKCHAIN,
+scrittore_blockchain = ScrittoreBlockchain(PROVIDER_BLOCKCHAIN_URL, abi, indirizzo, ACCOUNT_ADDRESS_BLOCKCHAIN,
                                            PRIVATE_KEY_BLOCKCHAIN)
 
 # Istanza globale del database del produttore (sqlite)
@@ -21,9 +21,5 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-# Soglia (numero massimo di misurazioni) per determinare la chiusura automatica di un batch.
-# Deve essere una potenza di due meno uno (es. 2^12 - 1 = 4095) per garantire compatibilità
-# con la struttura binaria del Merkle Tree impostata nel progetto
 
-# Costante moltiplicativa per scalare la dimensione del batch
 

@@ -12,4 +12,4 @@ PERCORSO_ABI = ROOT_DIR / "Classi_comuni" / "blockchain" / "build" / "abi.json"
 PERCORSO_INDIRIZZO_CONTRATTO = ROOT_DIR / "Classi_comuni" / "blockchain" / "build" / "indirizzo.txt"
 
 #indirizzo IP + porta default di GANACHE locale
-PROVIDER_URL = "http://127.0.0.1:7545"
+PROVIDER_BLOCKCHAIN_URL = "http://127.0.0.1:7545"

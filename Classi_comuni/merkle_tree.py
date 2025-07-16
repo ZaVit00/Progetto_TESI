@@ -2,10 +2,11 @@ import logging
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
-from Classi_comuni.utils import Hashing, serializza_dict
+from Classi_comuni.utils.dict_utils import serializza_dict
+from hashing_utils import Hashing
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL + 1)
+logger.setLevel(logging.CRITICAL)
 
 @dataclass
 class PathCompatto:

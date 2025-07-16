@@ -1,31 +1,39 @@
 import json
 from typing import List, Dict
-
 from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
 from Classi_comuni.entita.modelli_dati import DatiBatch, PacchettoBatchMisurazioni, DatiMisurazione
-from Classi_comuni.utils import Hashing
+from Classi_comuni.utils.hashing_utils import Hashing
+from estrattore_dati_query import EstrattoreDatiQuery
 from modelli_dati import DatiSensore
 from modelli_metadati import MetaDatiSensore, MetaDatiMisurazione
 
-
 class CostruttorePayload:
-    """
-    Classe che prepara i dati per la costruzione del Merkle Tree e del payload.
-    Primo momento (intermedio): estrae gli oggetti da una query INNER JOIN e calcola:
-      - hash di ogni singola misurazione
-      - hash del batch (separatamente)
 
-    Secondo momento: costruisce il DatiPayload da inviare al cloud, includendo la Merkle Root.
-    """
+
+
+
     def __init__(self) -> None:
         self.misurazioni: List[DatiMisurazione] = []
         self.sensori: List[DatiSensore] = []
         self.batch: DatiBatch | None = None
+
         # === strutture dati contenenti gli hash === #
         self.hash_misurazioni_sensori: Dict[int, str] = {}  # id_misurazione → hash concatenato
         self.hash_batch: str | None = None
 
     def estrai_dati_da_query(self, risultati_query: List[Dict]) -> None:
+        """
+            Estrae dati da query SQL e popola le strutture interne.
+            La logica è delegata a EstrattoreDatiQuery.
+            """
+        if not risultati_query:
+            raise ValueError("La query non ha restituito risultati. Verifica gli ID passati.")
+        (self.batch,
+         self.misurazioni,
+         self.sensori,
+         self.hash_misurazioni_sensori,
+         self.hash_batch) = EstrattoreDatiQuery.estrai_dati_da_query(risultati_query)
+
         """
         Estrae gli oggetti Pydantic da una lista di righe SQL (INNER JOIN tra batch, misurazioni e sensori).
         Assume che tutte le righe appartengano allo stesso batch.
@@ -33,22 +41,24 @@ class CostruttorePayload:
         - hash per ogni misurazione e sensore (concatenati)
         - hash del batch (una sola volta)
         """
-        if not risultati_query:
-            raise ValueError("La query non ha restituito risultati. Verifica gli ID passati.")
+
+
+
 
         # Pulizia delle strutture dati interne prima della nuova estrazione
         self.misurazioni.clear()
         self.hash_misurazioni_sensori.clear()
         self.sensori.clear()
 
-        # Ordina esplicitamente i risultati per ID misurazione (necessario per garantire ordine deterministico negli hash)
+        # Ordina esplicitamente i risultati per ID misurazione
+        # (necessario per garantire ordine deterministico negli hash)
         risultati_ordinati = sorted(risultati_query, key=lambda r: r["id_misurazione"])
 
         # Estrazione del batch dalla prima riga (tutte le righe condividono gli stessi metadati di batch)
         prima_riga = risultati_ordinati[0]
         self.batch = CostruttorePayload.costruisci_dati_batch_da_query(prima_riga)
 
-        # Calcolo dell'hash del batch una sola volta (sarà la prima foglia del Merkle Tree)
+        # Calcolo hash del batch una sola volta (sarà la prima foglia del Merkle Tree)
         self.hash_batch = self.batch.to_hash()
 
         # Estrazione oggetti misurazione + sensore da ogni riga della query e calcolo degli hash
@@ -103,6 +113,7 @@ class CostruttorePayload:
 
         mappa_id_hash = {ID_BATCH_LOGICO: self.hash_batch}
         mappa_id_hash.update(self.hash_misurazioni_sensori)
+
         # Ordinamento finale del dizionario per chiave (ID)
         return dict(sorted(mappa_id_hash.items()))
 
@@ -118,6 +129,8 @@ class CostruttorePayload:
             except json.JSONDecodeError as e:
                 raise ValueError(f"[ERRORE JSON] Errore nel parsing del campo 'dati': {e}")
 
+        CostruttorePayload._verifica_campi(riga, ["id_misurazione", "id_batch", "id_sensore", "timestamp" , "dati"])
+
         return DatiMisurazione(
             id_misurazione=riga["id_misurazione"],
             id_batch=riga["id_batch"],
@@ -131,6 +144,7 @@ class CostruttorePayload:
         """
         Costruisce un oggetto DatiSensore da una riga SQL.
         """
+        CostruttorePayload._verifica_campi(riga, ["id_sensore", "tipo", "descrizione"])
         return DatiSensore(
             id_sensore=riga["id_sensore"],
             tipo=riga["tipo"],
@@ -142,6 +156,7 @@ class CostruttorePayload:
         """
         Costruisce un oggetto DatiBatch dalla prima riga della query.
         """
+        CostruttorePayload._verifica_campi(riga, ["id_batch", "timestamp_creazione", "numero_misurazioni"])
         return DatiBatch(
             id_batch=riga["id_batch"],
             timestamp_creazione=riga["timestamp_creazione"],
@@ -153,6 +168,7 @@ class CostruttorePayload:
         """
         Costruisce un oggetto MetaDatiMisurazione da una riga SQL.
         """
+        CostruttorePayload._verifica_campi(riga, ["id_misurazione", "id_batch", "timestamp"])
         return MetaDatiMisurazione(
             id_misurazione=riga["id_misurazione"],
             id_batch=riga["id_batch"],
@@ -164,7 +180,14 @@ class CostruttorePayload:
         """
         Costruisce un oggetto MetaDatiSensore da una riga SQL.
         """
+        CostruttorePayload._verifica_campi(riga, ["id_sensore", "tipo"])
         return MetaDatiSensore(
             id_sensore=riga["id_sensore"],
             tipo=riga["tipo"]
         )
+
+    @staticmethod
+    def _verifica_campi(riga: dict, campi_attesi: List[str]):
+        for campo in campi_attesi:
+            if campo not in riga:
+                raise KeyError(f"Campo mancante nella riga SQL: '{campo}'")

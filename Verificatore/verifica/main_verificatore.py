@@ -4,7 +4,7 @@ from IO.input import acquisisci_input_id_batch
 from IO.output import stampa_tabella_batch, stampa_risultato_verifica, stampa_anomalie
 from Verificatore.api_client.api_cloud import richiedi_tutti_metadata_batch
 from Verificatore.verifica.verificatore import Verificatore
-from file_utils import salva_risultato_verifica_su_file
+from utils.file_utils import salva_risultato_verifica_su_file
 from modelli_metadati import MetaDatiBatch
 
 # Configura il logger

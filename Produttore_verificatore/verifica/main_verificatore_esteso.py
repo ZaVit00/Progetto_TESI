@@ -2,7 +2,7 @@ import logging
 
 from IO.output import stampa_anomalie
 from Verificatore.verifica.main_verificatore import verifica
-from file_utils import salva_risultato_verifica_su_file
+from utils.file_utils import salva_risultato_verifica_su_file
 from verificatore_esteso import VerificatoreEsteso
 
 # Configurazione globale del logging
