@@ -1,13 +1,12 @@
 import logging
 from typing import TypedDict, List, cast
-
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
-from Classi_comuni.utils import serializza_dict
+from Classi_comuni.utils.dict_utils import serializza_dict
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
     richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.config.istanze_globali import lettore_blockchain
-from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_json_string
+from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_stringa_json
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
@@ -35,6 +34,7 @@ class RisultatoVerifica(TypedDict):
 
 class Verificatore:
     def __init__(self, id_batch: int) -> None:
+
         self.id_batch : int = id_batch
         self.mappa_id_hash: dict[int, str] = {}
         self.merkle_root_immutabile: str | None = None
@@ -52,26 +52,16 @@ class Verificatore:
         logger.info(f"Recupero dei dati per il batch ID {self.id_batch}")
         self.mappa_id_hash = richiedi_mappa_id_hash_batch(self.id_batch)
 
+
     def _recupera_root_e_cid_blockchain(self) -> None:
-        self.merkle_root_immutabile,self.cid_merkle_path =  lettore_blockchain.leggi_valore(self.id_batch)
+        self.merkle_root_immutabile, self.cid_merkle_path = lettore_blockchain.leggi_valore(self.id_batch)
         logger.info(f"Merkle Root attesa: {self.merkle_root_immutabile}")
         logger.info(f"CID IPFS del Merkle Path: {self.cid_merkle_path}")
-        #self.merkle_root_immutabile = "d59c771b545a37fbba468a0d621e88b8105f2e0d904cab45c8b61cf4fe8860de"
-        #self.cid_merkle_path = "QmWAQzeJHN9GABwd49MFCAU9v4zHfdGuX5C2RFBdzy5rtH"
-        # Verifica integrità dei dati letti dalla blockchain
-        if not self.merkle_root_immutabile or not self.cid_merkle_path:
-            raise ValueError(
-                f"❌ Batch ID {self.id_batch}: struttura compromessa. "
-                f"Merkle root o CID assenti — possibile manomissione o ID errato."
-            )
-
 
     def _scarica_merkle_path_ipfs(self) -> None:
-        if not self.cid_merkle_path:
-            raise ValueError("CID IPFS non inizializzato")
         logger.info(f"Scarico Merkle Path da IPFS tramite CID {self.cid_merkle_path}")
-        json_string = ottieni_file_da_ipfs(self.cid_merkle_path)
-        self.merkle_paths = carica_merkle_paths_da_json_string(json_string)
+        stringa_json = ottieni_file_da_ipfs(self.cid_merkle_path)
+        self.merkle_paths = carica_merkle_paths_da_stringa_json(stringa_json)
 
     def _verifica_struttura(self) -> tuple[list[int], list[int]]:
         """
@@ -130,19 +120,29 @@ class Verificatore:
 
     def esegui_verifica_integrita(self) -> str:
 
-        # 1. Recupero dati hashati dal cloud
+        # 1. Recupero mappa id - foglie (hash) dal cloud
+        # Tutto ciò che è necessario per determinare l'anomalia è il confronto tra
+        # l'hash ottenuto dal cloud e la merkle root immutabile salvata su Blockchain
         try:
             self._recupera_dati_batch_cloud()
         except Exception as e:
             logger.exception("[ERRORE] Errore nella richiesta HTTP al cloud provider")
             raise RuntimeError(f"Errore nel recupero dei dati dal cloud: {e}")
 
-        # 2. Recupero root e CID da blockchain (placeholder)
+        # 2. Recupero root e CID da blockchain
         try:
             self._recupera_root_e_cid_blockchain()
+
         except Exception as e:
             logger.exception("[ERRORE] Errore nel recupero della root e del CID da blockchain")
             raise RuntimeError(f"Errore nel recupero dei metadati blockchain: {e}")
+
+        # 2.b Verifica integrità dei metadati ottenuti
+        if not self.merkle_root_immutabile or not self.cid_merkle_path:
+            raise ValueError(
+                f"❌ Batch ID {self.id_batch}: struttura compromessa. "
+                f"Merkle root o CID assenti per il batch indicato — possibile manomissione o batch non registrato."
+            )
 
         # 3. Scaricamento Merkle Path da IPFS
         try:
@@ -151,25 +151,29 @@ class Verificatore:
             logger.exception("[ERRORE] Errore nello scaricamento dei Merkle Path da IPFS")
             raise RuntimeError(f"Errore nel download da IPFS: {e}") from e
 
-        # Fase 4: verifica di struttura
+        # Fase 4: verifica della struttura
         id_mancanti, id_aggiunti = self._verifica_struttura()
         self.risultato["anomalie_strutturali"] = StrutturaVerifica(
             id_mancanti=id_mancanti,
             id_aggiunti=id_aggiunti
         )
 
-        # Fase 5: verifica delle foglie
+        # Fase 5: verifica dell'integrità delle foglie e salvataggio dei risultati
         foglie_anomale = self._verifica_foglie_con_path()
         self.risultato["anomalie_integrita"] = foglie_anomale
 
-        # Conteggio anomalie
-        #gli id aggiunti compaiono già dentro anomalie in quanto manca il merkle path per quel specifico ID
-        anomalie_strutturali = len(id_mancanti) + len(id_aggiunti)
-        anomalie_integrita = len(self.risultato["anomalie_integrita"])
-        self.risultato["numero_anomalie_integrita"] = anomalie_integrita
-        self.risultato["numero_anomalie_strutturali"] = anomalie_strutturali
+        # Conteggio delle anomalie strutturali:
+        # Gli ID delle misurazioni aggiunti manualmente sul cloud (non presenti nel Merkle Path)
+        # vengono considerati anomalie strutturali. Questo perché non è possibile procedere alla
+        # verifica dell'integrità: manca infatti il Merkle Path associato a quegli ID.
 
-        #conversione esplicita in dict
+        # Rientrano in questa categoria anche le tuple di misurazioni che sono state assegnate
+        # a un batch in modo manuale o scorretto (alterando il valore del campo id_batch):
+        # anche in questo caso non esiste un Merkle Path associato all’ID, e la verifica fallisce.
+
+        self.risultato["numero_anomalie_integrita"] = len(self.risultato["anomalie_integrita"])
+        self.risultato["numero_anomalie_strutturali"] = len(id_mancanti) + len(id_aggiunti)
+
         return serializza_dict(cast(dict, self.risultato))
 
     def ottieni_numero_anomalie_integrita(self) -> int:
@@ -207,7 +211,8 @@ class Verificatore:
         # Estrai tutte le anomalie di integrità
         anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
 
-        # Filtra solo quelle relative alle misurazioni
+        # Filtra solo quelle relative alle misurazioni che sono effettivamente alterate e che non sono
+        # anomalie strutturali (mancanza di merkle path)
         anomalie_misurazioni = [
             record for record in anomalie
             if record["tipo"] == "misurazione" and not record["modifica_strutturale"]]
@@ -217,29 +222,31 @@ class Verificatore:
 
 
     # METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI
-    def _recupera_metadata_batch(self) -> MetaDatiBatch:
-        try:
-            metadati_batch = richiedi_metadata_batch(self.id_batch)
-            return metadati_batch
-        except Exception as e:
-            raise ValueError(f"❌ Errore nel recupero dei metadati batch ID {self.id_batch}: {e}")
+    def _recupera_metadati_batch(self) -> MetaDatiBatch:
+        return richiedi_metadata_batch(self.id_batch)
 
-    def _recupera_metadata_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensore]:
-        try:
-            id_list = self.ottieni_id_misurazioni_alterate()
-            return richiedi_metadata_misurazione_sensore(id_list)
-        except Exception as e:
-            raise ValueError(f"Errore nel recupero dei metadati misurazioni: {e}")
+    def _recupera_metadati_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensore]:
+        id_list = self.ottieni_id_misurazioni_alterate()
+        return richiedi_metadata_misurazione_sensore(id_list)
 
     def recupera_metadata_anomalie(self) -> str:
+        # TODO DA CAMBIARE VISUALIZZAZIONE OUTPUT
         risultati = {}
 
         if self.batch_alterato():
-            metadati_batch = self._recupera_metadata_batch()
+            try:
+                metadati_batch = self._recupera_metadati_batch()
+            except Exception as e:
+                raise ValueError(f"❌ Errore nel recupero dei metadati batch ID {self.id_batch}: {e}")
+
             risultati['metadata_batch'] = metadati_batch.to_json()
 
         if self.misurazioni_alterate():
-            metadati_mis_sens : List[MetaDatiMisurazioneSensore] = self._recupera_metadata_misurazione_sensore()
+            try:
+                metadati_mis_sens: List[MetaDatiMisurazioneSensore] = self._recupera_metadati_misurazione_sensore()
+            except Exception as e:
+                raise ValueError(f"Errore nel recupero dei metadati misurazioni: {e}")
+
             lista_serializzata = []
             for elem in metadati_mis_sens:
                 dict_elem = {
@@ -247,7 +254,6 @@ class Verificatore:
                     "metadati_misurazioni": elem.metadati_misurazione.model_dump()
                 }
                 lista_serializzata.append(dict_elem)
-
             risultati['metadata_misurazioni_sensori'] = lista_serializzata
 
         return serializza_dict(risultati)

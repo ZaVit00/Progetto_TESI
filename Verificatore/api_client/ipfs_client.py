@@ -1,8 +1,6 @@
 import gzip
 from io import BytesIO
-
 import requests
-
 from costanti_verificatore import URL_FILEBASE_IPFS
 
 

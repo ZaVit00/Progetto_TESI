@@ -21,11 +21,12 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_DATA_BATCH,
     OTTIENI_TUTTI_METADATA_BATCH
 )
+from dict_utils import serializza_dict
 from modelli_dati import DatiBatch
 from modelli_metadati import MetaDatiBatch
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.CRITICAL)
 
 class GestoreDatabase:
     """
@@ -92,14 +93,14 @@ class GestoreDatabase:
             logger.error(f"Errore inserimento batch {batch.id_batch}: {e}")
             return False
 
-    def inserisci_dati_misurazione(self, lista_misurazioni: List[DatiMisurazione]) -> bool:
+    def inserisci_dati_misurazioni(self, lista_misurazioni: List[DatiMisurazione]) -> bool:
         """
         Inserisce una lista di misurazioni nel database in un'unica operazione.
-        Le misurazioni vengono serializzate in JSON prima di essere salvate.
+        I dati effettivi (campo dati) viene serializzato in JSON prima di essere salvate.
         """
         # Serializzazione dei dati in formato JSON
         valori = [
-            (m.id_misurazione, m.id_batch, m.id_sensore, m.timestamp, json.dumps(m.dati))
+            (m.id_misurazione, m.id_batch, m.id_sensore, m.timestamp, serializza_dict(m.dati))
             for m in lista_misurazioni
         ]
         try:

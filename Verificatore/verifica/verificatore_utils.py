@@ -4,7 +4,7 @@ from typing import Dict
 from Classi_comuni.merkle_tree import PathCompatto
 
 
-def carica_merkle_paths_da_json_string(json_string: str) -> Dict[int, PathCompatto]:
+def carica_merkle_paths_da_stringa_json(stringa_jsonson_string: str) -> Dict[int, PathCompatto]:
     """
     Converte una stringa JSON proveniente da IPFS in un dizionario di PathCompatto.
     Ogni PathCompatto rappresenta il Merkle Path compatto per una foglia,
@@ -21,7 +21,7 @@ def carica_merkle_paths_da_json_string(json_string: str) -> Dict[int, PathCompat
     """
     try:
         # Caricamento della stringa JSON in un dict Python
-        diz = json.loads(json_string)
+        diz = json.loads(stringa_jsonson_string)
         #dizionario vuoto
         paths: Dict[int, PathCompatto] = {}
 

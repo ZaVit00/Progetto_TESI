@@ -21,7 +21,6 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 # -------------------------
 # Configurazione blockchain
 # -------------------------
-
 # Chiave privata usata per firmare le transazioni sulla blockchain locale (es. Ganache).
 PRIVATE_KEY_BLOCKCHAIN = os.getenv("PRIVATE_KEY_BLOCKCHAIN")
 
@@ -49,6 +48,7 @@ ERRORE_HTTP = "ERRORE_HTTP"             # Errore di comunicazione con endpoint H
 TIPO_SENSORE_JOYSTICK: str = "JOYSTICK"
 TIPO_SENSORE_TEMPERATURA: str = "TEMPERATURA"
 TIPO_SENSORE_UMIDITA: str = "UMIDITA"
+
 class TipoSensore(str, Enum):
     JOYSTICK = TIPO_SENSORE_JOYSTICK
     TEMPERATURA = TIPO_SENSORE_TEMPERATURA
@@ -65,11 +65,12 @@ ENDPOINT_CLOUD_SENSORI = "http://localhost:8080/sensori"
 ENDPOINT_CLOUD_BATCH = "http://localhost:8080/batch"
 
 # =========================
-# BUCKET IPFS (FILEBASE)
+# IPFS (FILEBASE)
 # =========================
 
 # Nome del bucket (su Filebase o compatibile S3) dove vengono salvati i Merkle Path JSON.
 BUCKET_MERKLE_PATH = "merkle-path-batch"
+ENDPOINT_S3_FILEBASE = "https://s3.filebase.com"
 
 # =========================
 # CONFIGURAZIONE DB SQLITE

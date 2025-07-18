@@ -3,7 +3,8 @@ import logging
 import boto3
 import botocore.exceptions
 from Classi_comuni.utils.file_utils import genera_contenuto_gzip, genera_nome_file
-from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
+from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID, ENDPOINT_S3_FILEBASE
+
 logger = logging.getLogger(__name__)
 
 #disabilito i logger delle librerie esterne
@@ -39,21 +40,19 @@ class IpfsClient:
     Classe per caricare file JSON su Filebase (IPFS) e recuperare il CID associato.
     """
     def __init__(self):
-        #load_dotenv()
-        #access_key = os.getenv("AWS_ACCESS_KEY_ID")
-        #secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
         access_key = AWS_ACCESS_KEY_ID
         secret_key = AWS_SECRET_ACCESS_KEY
         self.s3 = boto3.client(
             's3',
-            endpoint_url='https://s3.filebase.com',
+            endpoint_url= ENDPOINT_S3_FILEBASE,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key
         )
 
-    def verifica_o_crea_bucket(self, nome_bucket: str):
+    def _verifica_o_crea_bucket(self, nome_bucket: str):
         """
         Controlla se il bucket esiste, altrimenti lo crea.
+        Ogni file caricato su filebase deve essere inserito in un bucket univoco
         """
         try:
             risposta = self.s3.list_buckets()
@@ -70,10 +69,11 @@ class IpfsClient:
     def carica_stringa_json(self, nome_bucket: str, stringa_json: str, comprimi_dimensione: bool = False) -> str:
         """
         Carica un file JSON su IPFS (tramite Filebase), usando come nome file
-        un hash deterministico del contenuto. Se il caricamento fallisce, solleva eccezione personalizzata ErroreCaricamento.
+        un hash deterministico del contenuto. Se il caricamento fallisce,
+        solleva eccezione personalizzata ErroreCaricamento.
         """
-        self.verifica_o_crea_bucket(nome_bucket)
-        nome_file = genera_nome_file(stringa_json)
+        self._verifica_o_crea_bucket(nome_bucket)
+        nome_file = genera_nome_file(stringa_json, nome_file="merkle_path", ext="json")
         if comprimi_dimensione:
             contenuto = genera_contenuto_gzip(stringa_json)
             nome_file += ".gz"
@@ -104,6 +104,10 @@ class IpfsClient:
     def recupera_cid_file_bucket(self, nome_bucket: str, nome_file: str) -> str:
         """
         Recupera il CID IPFS associato a un file precedentemente caricato nel proprio bucket Filebase.
+        Una volta caricato un file, filebase non restituisce direttamente il cid univoco associato al file
+        caricato. È Necessario quindi interrogare tramite API filebase per ottenere i metadati di un certo file
+        (individuato univocamente dal suo nome). Tra i metadati restituiti troviamo il campo ipfs-hash che corrisponde
+        al cid del file. Il cid è tutto ciò che è sufficiente per recuperare un file nella rete IPFS
         ⚠️ Attenzione:
         Questo metodo funziona solo per file:
         - che sono stati caricati nel tuo bucket Filebase (via API compatibile S3),

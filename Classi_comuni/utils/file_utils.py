@@ -41,7 +41,7 @@ def salva_risultato_verifica_su_file(
     percorso_file_esito = os.path.join(cartella_destinazione, nome_file_esito)
     salva_file_generico(percorso_file_esito, contenuto_json)
 
-    # Salvataggio differenze, se fornite
+    # Salvataggio differenze riscontrate, se fornite
     if differenze is not None:
         nome_file_diff = f"differenze_{timestamp_file}.json"
         percorso_file_diff = os.path.join(cartella_destinazione, nome_file_diff)
@@ -96,14 +96,19 @@ def carica_json(percorso_file: str) -> dict:
         raise Exception(f"Errore nella lettura del file JSON '{percorso_file}': {e}")
 
 
-def genera_nome_file(json_string: str) -> str:
+def genera_nome_file(stringa_json: str, nome_file: str, ext: str) -> str:
     """
-    Genera un nome file compatto e univoco basato solo su hash:
-    - Esempio: merkle_path_3ac1b2d9.json
+    Genera un nome file compatto e univoco basato su hash:
+    - Esempio: {nome_file}_{short_hash}.{ext}
+    - Dove short_hash sono i primi 8 caratteri dell'hash calcolato sul contenuto.
+    Args:
+        stringa_jsonson_string (str): Contenuto da hashare (es. stringa JSON).
+        nome_file (str): Prefisso del nome file (es. "merkle_path").
+        ext (str): Estensione del file senza il punto (es. "json").
+
+    Returns:
+        str: Nome del file generato.
     """
-    full_hash = Hashing.calcola_hash(json_string)
-    #esrae i primi 8 caratteri hash complessivo
+    full_hash = Hashing.calcola_hash(stringa_json)
     short_hash = full_hash[:8]
-    #.json: indica il tipo di dati (Merkle Path strutturato in formato JSON).
-    #.gz: indica che è stato compresso con gzip.
-    return f"merkle_path_{short_hash}.json"
+    return f"{nome_file}_{short_hash}.{ext}"

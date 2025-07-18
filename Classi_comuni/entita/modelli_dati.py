@@ -8,12 +8,12 @@ class DatiSensore(ModelliHashabili):
     """
     Modello che rappresenta i dati di un sensore memorizzati nel sistema.
     Attenzione: questa classe è distinta dalla classe `DatiSensoreInIngresso`, che viene usata
-    solo durante la fase di registrazione iniziale presso il fog node.
+    solo durante la fase di registrazione iniziale del sensore presso il fog node.
 
     In particolare:
     - `DatiSensoreInIngresso` contiene anche la frequenza di invio dei dati (frequenza_hz),
-      necessaria per il calcolo dinamico della soglia di batch, ma che non deve essere trasmessa al cloud e non
-      viene coinvolta nel processo di calcolo del merkle tree (necessaria solo in locale per la soglia)
+      necessaria per il calcolo dinamico della soglia di batch, ma non trasmessa al cloud e non
+      coinvolta nel processo di calcolo del merkle tree;
 
     - `DatiSensore` rappresenta il modello persistente e condivisibile dei dati del sensore,
       privo di informazioni locali interne (come la frequenza) e che viene utilizzato per serializzare,
@@ -33,25 +33,26 @@ class DatiMisurazione(ModelliHashabili):
     Rappresenta una singola misurazione arricchita con metadati interni, generata da un sensore.
 
     Questa classe differisce da `DatiMisurazioneInIngresso`, che rappresenta il dato grezzo ricevuto
-    direttamente dal sensore (es. tramite una richiesta HTTP su FastAPI).
+    direttamente dal sensore tramite una richiesta HTTP e contenuto JSON.
 
     Il processo di elaborazione interno al fog node arricchisce la misurazione con informazioni aggiuntive,
     necessarie per la tracciabilità, la gestione in batch e la verifica dell’integrità.
     In particolare, vengono aggiunti:
-    - `id_misurazione`: identificativo univoco della misurazione, assegnato dal fog node;
+    - `id_misurazione`: identificativo univoco della misurazione, assegnato dal fog node internamento con un campo
+                        autoincrement
     - `id_batch`: identificativo del batch di appartenenza, per raggruppare le misurazioni;
     - `timestamp`: data e ora di ricezione/elaborazione.
 
-    Questi metadati non sono presenti nella misurazione in ingresso (`DatiMisurazioneInIngresso`),
-    ma sono essenziali per il funzionamento del sistema anti-manomissione e per la successiva trasmissione
+    Questi dati, o volendo metadati, non sono presenti nella misurazione in ingresso che
+    non deve essere a conoscenza
+    dello schema del database (`DatiMisurazioneInIngresso`).
+    Questi dati aggiunti dal fog node sono essenziali per il funzionamento del sistema anti-manomissione e per la successiva trasmissione
     verso il cloud provider.
     """
-
     id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")
     id_sensore: str = Field(..., description="Identificativo del sensore che ha generato la misurazione")
     timestamp: str = Field(..., description="Data e ora della misurazione")
     id_batch: int = Field(..., description="Identificativo del batch a cui appartiene la misurazione")
-
     dati: Dict = Field(
         ...,
         title="Dati rilevati",
@@ -108,7 +109,6 @@ class DatiListaSensori(ModelliHashabili):
     Tutti i sensori sono rappresentati tramite oggetti `DatiSensore`,
     che includono gli attributi identificativi e strutturali di ciascun nodo sensore.
     """
-
     sensori: List[DatiSensore] = Field(
         ...,
         title="Lista di Sensori",
@@ -124,22 +124,23 @@ class DatiMisurazioneSensore(ModelliHashabili):
     Non viene usata durante l'invio dei dati dal fog node al cloud provider, dove i flussi di registrazione
     sono separati:
     - i sensori vengono registrati in modo indipendente;
-    - le misurazioni (con i relativi batch) seguono un canale distinto.
+    - tutte le misurazioni (con la relativa tupla del batch) seguono un canale distinto.
 
     Tuttavia, in fase di verifica, è fondamentale controllare non solo la correttezza della misurazione,
     ma anche che il sensore associato non sia stato manomesso. Ad esempio, una misurazione potrebbe
     sembrare valida, ma essere stata associata a un sensore con tipo alterato (es. da "umidità" a "joystick").
+    Questo tipo di alterazione la possiamo considerare dal punto di vista semantico. La misurazione cambia la sua semantica
+    essendo quest'ultima riferita al sensore che ha prodotto la misurazione.
 
     Per questo motivo, durante la verifica, viene effettuata una `INNER JOIN` tra le tabelle
     delle misurazioni e dei sensori sul campo `id_sensore` (chiave esterna). Il risultato di questa
     associazione viene incapsulato in questa classe, che consente di confrontare la tupla estesa
-    (misurazione + sensore) con la versione originale hashata e salvata in precedenza.
+    (misurazione + sensore) con la versione originale posseduta dal produttore dei dati.
 
     Questa struttura è necessaria per:
     - generare e confrontare l’hash della tupla completa (incluso il sensore);
     - evidenziare eventuali modifiche occulte nei metadati del sensore;
     - garantire la coerenza tra ciò che è stato originariamente registrato e ciò che si sta verificando.
     """
-
     dati_sensore : DatiSensore = Field(..., description="dati del sensore")
     dati_misurazione : DatiMisurazione = Field(..., description="dati della misurazioni")

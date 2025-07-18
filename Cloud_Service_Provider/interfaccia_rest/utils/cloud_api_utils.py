@@ -3,6 +3,7 @@ import logging
 from Classi_comuni.costruttore_payload import CostruttorePayload
 from Classi_comuni.entita.modelli_dati import PacchettoBatchMisurazioni
 from Cloud_Service_Provider.config.istanze_globali import gestore_db
+from estrattore_dati_query import EstrattoreDatiQuery
 from modelli_dati import DatiMisurazioneSensore
 from modelli_metadati import MetaDatiMisurazioneSensore
 
@@ -11,8 +12,8 @@ logger = logging.getLogger(__name__)
 def elabora_pacchetto_batch_misurazioni(payload: PacchettoBatchMisurazioni) -> bool:
     """
     Riceve un oggetto `PacchettoBatchMisurazioni` contenente:
-    - Un oggetto `DatiBatch` con i metadati del batch.
-    - Una lista di `DatiMisurazione` con le misurazioni associate.
+    - Un oggetto `DatiBatch` con i dati del batch.
+    - Una lista di `DatiMisurazione` con i dati delle N misurazioni associate.
 
     Esegue:
     1. Inserimento del batch nel database.
@@ -28,7 +29,7 @@ def elabora_pacchetto_batch_misurazioni(payload: PacchettoBatchMisurazioni) -> b
         logger.error(f"[ERRORE] Inserimento del batch {batch.id_batch} fallito.")
         return False
 
-    if not gestore_db.inserisci_dati_misurazione(misurazioni):
+    if not gestore_db.inserisci_dati_misurazioni(misurazioni):
         logger.error(f"[ERRORE] Inserimento delle misurazioni per il batch {batch.id_batch} fallito.")
         return False
 
@@ -43,7 +44,7 @@ def costruisci_mappa_id_hash_foglie(id_batch: int) -> dict[int, str]:
         id_batch: ID del batch da elaborare.
 
     Returns:
-        Un dizionario che mappa l'ID della misurazione al relativo hash foglia.
+        Un dizionario che mappa l'ID della misurazione (e della tupla del batch) al relativo hash foglia.
 
     Raises:
         ValueError: se il batch non esiste o non contiene misurazioni.
@@ -70,6 +71,7 @@ def recupera_dati_misurazione_sensore(lista_id: list[int]) -> list[DatiMisurazio
     Raises:
         ValueError: se non viene trovata alcuna riga corrispondente.
     """
+
     righe: list[dict] = gestore_db.ottieni_dati_misurazione_sensore(lista_id)
     risultato: list[DatiMisurazioneSensore] = []
 
@@ -77,9 +79,8 @@ def recupera_dati_misurazione_sensore(lista_id: list[int]) -> list[DatiMisurazio
         raise ValueError(f"Nessuna misurazione trovata per gli ID richiesti: {lista_id}")
 
     for riga in righe:
-        # Parsing dei dati singoli
-        dati_misurazione = CostruttorePayload.costruisci_dati_misurazione_da_query(riga)
-        dati_sensore = CostruttorePayload.costruisci_dati_sensore_da_query(riga)
+        dati_misurazione = EstrattoreDatiQuery.costruisci_dati_misurazione_da_query(riga)
+        dati_sensore = EstrattoreDatiQuery.costruisci_dati_sensore_da_query(riga)
 
         # Combinazione finale
         risultato.append(DatiMisurazioneSensore(
@@ -92,17 +93,27 @@ def recupera_dati_misurazione_sensore(lista_id: list[int]) -> list[DatiMisurazio
 
 def recupera_metadati_misurazione_sensore(lista_id_mis: list[int]) -> list[MetaDatiMisurazioneSensore]:
     """
-    Recupera i metadati completi (sensore + misurazione) per una lista di ID.
+    Recupera i soli metadati (non sensibili) relativi a misurazioni e sensori compromessi.
+
+    Questo metodo è pensato per fornire un set di informazioni non sensibili
+    relative a una lista di ID di misurazioni che risultano potenzialmente manomesse.
+    A differenza del metodo `recupera_dati_misurazione_sensore`, qui non vengono recuperati
+    i dati completi, ma solo i metadati associati per permettere al verificatore di identificare
+    le misurazioni alterate senza accedere al contenuto originale.
+    È utile in fase di audit o visualizzazione dei dati compromessi, quando non si vuole (o non si può)
+    mostrare l'intero contenuto originale della misurazione. Attenzione: anche questi dati potrebbero essere stati
+    potenzialmente manomessi.
 
     Args:
-        lista_id_mis: Lista di ID misurazione.
+        lista_id_mis: Lista di ID misurazione richieste
 
     Returns:
-        Lista di oggetti `MetaDatiMisurazioneSensore` per la verifica strutturale.
+        Lista di oggetti `MetaDatiMisurazioneSensore`
 
     Raises:
         ValueError: se nessuna delle misurazioni è presente nel database.
     """
+
     righe: list[dict] = gestore_db.ottieni_metadata_misurazione_sensore(lista_id_mis)
     metadati: list[MetaDatiMisurazioneSensore] = []
 
@@ -111,8 +122,8 @@ def recupera_metadati_misurazione_sensore(lista_id_mis: list[int]) -> list[MetaD
 
     for riga in righe:
         # Parsing dei metadati singoli
-        metadati_misurazione = CostruttorePayload.costruisci_metadati_misurazione_da_query(riga)
-        metadati_sensore = CostruttorePayload.costruisci_metadati_sensore_da_query(riga)
+        metadati_misurazione = EstrattoreDatiQuery.costruisci_metadati_misurazione_da_query(riga)
+        metadati_sensore = EstrattoreDatiQuery.costruisci_metadati_sensore_da_query(riga)
 
         # Combinazione finale
         metadati.append(MetaDatiMisurazioneSensore(

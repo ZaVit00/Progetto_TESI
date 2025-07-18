@@ -29,8 +29,10 @@ def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
     merkle_root = merkle_tree.costruisci_albero()
 
     logger.debug(f"Merkle Root calcolata: {merkle_root}")
+
     # Esportazione dei Merkle Path in formato JSON
     merkle_path_json = merkle_tree.ottieni_merkle_paths_JSON()
+
     return merkle_root, merkle_path_json
 
 

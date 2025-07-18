@@ -46,6 +46,7 @@ def elabora_conferma_ricezione_cloud(risposta: dict) -> bool:
         return False
 
     id_sensori = risposta.get("id_sensori", [])
+
     if id_sensori:
         return gestore_db.aggiorna_conferma_ricezione_sensori(id_sensori)
 

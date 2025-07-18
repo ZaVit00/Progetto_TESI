@@ -227,10 +227,10 @@ ELIMINA_MISURAZIONI = """
 # QUERY ESEGUITE DA TASK DI RETRY
 #--------------------------------#
 """
-Seleziona i batch completi (hanno raggiunto la soglia di misurazioni massime previste)
-che necessitano di elaborazioni:
-(elaborabile=1) e merkle_root e/o payload_json nulli
-(significa che il batch deve ancora attraversare la pipeline di elaborazione)
+Seleziona il primo batch completo e marcato come elaborabile (elaborabile = 1),
+che non è ancora stato elaborato (merkle_root e payload_json nulli o vuoti),
+e non è stato ancora inviato al cloud (conferma_ricezione = 0).
+Questo batch deve ancora passare attraverso la pipeline di elaborazione.
 """
 OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE = """
     SELECT DISTINCT b.id_batch
@@ -247,7 +247,7 @@ OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE = """
 
 """
 Restituisce i batch pronti per l’invio al cloud. Un batch è considerato pronto se:
-- `payload_json` è presente (quindi il batch è stato aggregato correttamente)
+- `payload_json` è presente (quindi il batch è stato elaborato correttamente)
 - `conferma_ricezione = 0` (il batch non è ancora stato confermato dal cloud)
 - `elaborabile = 1` (non sono avvenuti errori gravi durante la pipeline)
 
@@ -259,9 +259,13 @@ Se si verifica un errore in uno di questi passaggi, il batch viene marcato come 
 (`elaborabile = 0`). In questo caso, l'invio del payload viene automaticamente bloccato da questa query,
 evitando che vengano propagati dati inconsistenti.
 
-Inoltre, per rispettare i vincoli di integrità referenziale nel database del cloud provider, la query
-seleziona solo i batch i cui sensori associati sono già stati confermati (`conferma_ricezione = 1`).
-Questo impedisce errori a cascata legati alla presenza di riferimenti a sensori inesistenti lato cloud.
+Inoltre, per garantire l'integrità referenziale nel database del cloud provider,
+la query seleziona solo i batch i cui sensori associati sono già stati confermati 
+(conferma_ricezione = 1). Questo previene errori a cascata legati a riferimenti 
+verso sensori non ancora presenti nel database remoto.
+Nota: eventuali errori di integrità (es. chiave esterna non trovata) non sono 
+da considerarsi errori applicativi, ma possono derivare da ritardi fisiologici 
+nella sincronizzazione tra il nodo produttore e il cloud, non completamente controllabili.
 """
 OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
     SELECT b.id_batch, b.payload_json   

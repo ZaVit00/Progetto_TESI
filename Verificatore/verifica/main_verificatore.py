@@ -1,46 +1,57 @@
 import logging
-
 from IO.input import acquisisci_input_id_batch
 from IO.output import stampa_tabella_batch, stampa_risultato_verifica, stampa_anomalie
 from Verificatore.api_client.api_cloud import richiedi_tutti_metadata_batch
 from Verificatore.verifica.verificatore import Verificatore
-from utils.file_utils import salva_risultato_verifica_su_file
+from Classi_comuni.utils.file_utils import salva_risultato_verifica_su_file
 from modelli_metadati import MetaDatiBatch
 
-# Configura il logger
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
-
 logger = logging.getLogger(__name__)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.DEBUG)
 
-def verifica():
+
+def verifica_batch() -> tuple[bool, int, str, Verificatore]:
+    """
+    Esegue la procedura di verifica di un batch selezionato.
+    Restituisce:
+        - esito globale della verifica (True/False)
+        - ID del batch analizzato
+        - JSON con anomalie rilevate
+        - istanza del Verificatore
+    """
     lista_dati_batch: list[MetaDatiBatch] = richiedi_tutti_metadata_batch()
-    stampa_tabella_batch(lista_dati_batch) #visualizza su console i dati del batch batch
-    id_batch : int = acquisisci_input_id_batch([b.id_batch for b in lista_dati_batch])
+    stampa_tabella_batch(lista_dati_batch)
+
+    id_batch: int = acquisisci_input_id_batch([b.id_batch for b in lista_dati_batch])
     verificatore = Verificatore(id_batch)
-    anomalie_integrita: str = verificatore.esegui_verifica_integrita()
-
-    # Stampa esito
-    esito = verificatore.ottieni_esito_globale()
-    stampa_risultato_verifica(esito)
-    if not esito:
-        stampa_anomalie(anomalie_integrita)
-
-    return esito, id_batch, anomalie_integrita, verificatore
-
-if __name__ == "__main__":
-    esito, id_batch, anomalie , verificatore = verifica()
-
-    #raccoglie i metadata delle anomalie e le visualizza
-    metadata_anomalie = verificatore.recupera_metadata_anomalie()
-    stampa_anomalie(metadata_anomalie)
-
 
     try:
-        salva_risultato_verifica_su_file(id_batch, anomalie, esito, "verifiche_leggere")
-        logger.info("File salvato correttamente")
+        anomalie_json: str = verificatore.esegui_verifica_integrita()
     except Exception as e:
-        logger.error(f"Errore nel salvataggio del file {e}")
+        logger.error(f"❌ Errore durante la verifica del batch ID {id_batch}: {e}")
+        raise
+
+    esito = verificatore.ottieni_esito_globale()
+    stampa_risultato_verifica(esito)
+
+    if not esito:
+        stampa_anomalie(anomalie_json)
+
+    return esito, id_batch, anomalie_json, verificatore
+
+if __name__ == "__main__":
+    esito, id_batch, anomalie_json, verificatore = verifica_batch()
+    # Recupera e stampa i metadati delle anomalie (se presenti)
+    try:
+        # TODO POSSIBILE FIX QUI
+        metadata_json = verificatore.recupera_metadata_anomalie()
+        stampa_anomalie(metadata_json)
+    except Exception as e:
+        logger.warning(f"⚠ Impossibile recuperare i metadati delle anomalie: {e}")
+
+    # Salva su file il risultato della verifica effettuata.
+    try:
+        salva_risultato_verifica_su_file(id_batch, anomalie_json, esito, "verifiche_leggere")
+        logger.info("✅ Risultato verifica salvato correttamente su file.")
+    except Exception as e:
+        logger.error(f"❌ Errore durante il salvataggio del file di verifica: {e}")

@@ -9,7 +9,7 @@
 # - fornire un contesto comprensibile per il dato alterato;
 # - confrontare in modo leggibile lo stato attuale con quello originario.
 #
-# ⚠️ Attenzione: anche i metadati restituiti dal cloud potrebbero essere stati manomessi.
+# ⚠ Attenzione: anche i metadati restituiti dal cloud potrebbero essere stati manomessi.
 # Il verificatore li utilizza solo come riferimento informativo per confronti strutturati.
 
 from pydantic import Field
