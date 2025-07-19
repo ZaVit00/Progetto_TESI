@@ -1,8 +1,4 @@
 import re
-from pydantic import Field, field_validator, BaseModel
-from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE
-
-import re
 from pydantic import BaseModel, Field, field_validator
 from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE
 

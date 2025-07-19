@@ -1,34 +1,35 @@
 import logging
 
-from IO.output import stampa_anomalie
-from Verificatore.verifica.main_verificatore import verifica
-from utils.file_utils import salva_risultato_verifica_su_file
+from IO.output import stampa_anomalie, stampa_risultato_verifica
+from Verificatore.verifica.main_verificatore import verifica_batch, ottieni_scelta_id_batch_da_utente
+from Classi_comuni.utils.file_utils import salva_risultato_verifica_su_file
 from verificatore_esteso import VerificatoreEsteso
-
-# Configurazione globale del logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
-)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def verifica_estesa():
-    try:
-        #richiama il processo di verifica standard riutilizzando il metodo
-        esito, id_batch, anomalie_integrita, verificatore  = verifica()
+def main():
+    id_batch : int = ottieni_scelta_id_batch_da_utente()
+    verificatore_esteso = VerificatoreEsteso(id_batch)
+    id_batch, esito, anomalie_json, metadata_json, differenze_json = verifica_batch(id_batch, verificatore_esteso)
+    #visualizza il risultato dell'analisi del processo di integrità
+    stampa_risultato_verifica(esito)
 
-        if not esito:
-            verificatore_esteso = VerificatoreEsteso.from_verificatore(verificatore) #sfrutta l'oggetto verificatore già creato
-            differenze = verificatore_esteso.esegui_verifica_estesa() # ottieni le differenze
-            stampa_anomalie(differenze) #visualizza le differenze su console
+    if not esito:
+        stampa_anomalie(anomalie_json)
+        stampa_anomalie(differenze_json)
+        # Salva su file il risultato della verifica effettuata + differenze trovate
+        try:
+            salva_risultato_verifica_su_file(id_batch,
+                                             contenuto_json=anomalie_json,
+                                             esito=esito,
+                                             base_dir="verifiche_estese",
+                                             differenze = differenze_json)
+            logger.info("✅ Risultato verifica salvato correttamente su file.")
 
-            #salva l'esito su file
-            salva_risultato_verifica_su_file(id_batch, anomalie_integrita, esito,
-                                             base_dir="verifiche_estese", differenze=differenze)
-    except Exception as e:
-        print(f"❌ Errore durante la verifica estesa: {e}")
+        except Exception as e:
+            logger.error(f"❌ Errore durante il salvataggio del file di verifica: {e}")
+            raise
 
 if __name__ == "__main__":
-    verifica_estesa()
+    main()

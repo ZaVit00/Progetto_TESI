@@ -47,19 +47,38 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
     # ------------------------- METODI DI SUPPORTO INTERNI -------------------------
-    def _inserisci_batch(self) -> int:
+    def aggiorna_soglia(self, nuova_soglia: int) -> bool:
         """
-        Crea un nuovo batch e restituisce l'ID associato (campo autoincrement)
+        Aggiorna la soglia del batch attivo e chiude il batch se ha raggiunto o superato la soglia.
+        Transazione atomica con istruzioni separate per maggiore controllo.
         """
+        if not isinstance(nuova_soglia, int) or nuova_soglia <= 0:
+            raise ValueError("La soglia deve essere un intero positivo.")
+
         try:
             cursor = self.conn.cursor()
-            timestamp_locale = datetime.now().isoformat()
-            cursor.execute(query.INSERISCI_BATCH, (timestamp_locale,))
+            cursor.execute("BEGIN IMMEDIATE")
+
+            # 1. Aggiorna la soglia
+            cursor.execute("""
+                           UPDATE batch
+                           SET soglia_misurazioni = ?
+                           WHERE completo = 0
+                           """, (nuova_soglia,))
+
+            # 2. Chiude eventuali batch che hanno già raggiunto la nuova soglia
+            cursor.execute("""
+                           UPDATE batch
+                           SET completo = 1
+                           WHERE completo = 0 AND numero_misurazioni >= soglia_misurazioni
+                           """)
             self.conn.commit()
-            return cursor.lastrowid
+            logger.info(f"Soglia aggiornata a {nuova_soglia} e batch eventualmente chiusi.")
+            return True
         except sqlite3.Error as e:
-            logger.error(f"QUERY - CREAZIONE BATCH] {e}")
-            return -1
+            self.conn.rollback()
+            logger.error(f"Errore durante l'aggiornamento della soglia: {e}")
+            return False
 
     def chiudi_connessione(self) -> None:
         """
@@ -74,6 +93,98 @@ class GestoreDatabase:
 
 
     # ------------------------- METODI DI INSERIMENTO -------------------------
+    def inserisci_batch_se_necessario(self, soglia_misurazioni: int) -> int:
+        """
+        Crea un nuovo batch solo se non ne esiste già uno attivo.
+        Restituisce l'id del batch attivo o del nuovo batch creato.
+        """
+        try:
+            cursor = self.conn.cursor()
+            # Blocco dell'intero database per garantire coerenza
+            cursor.execute("BEGIN IMMEDIATE")
+            # Verifica se esiste già un batch attivo
+            cursor.execute(query.OTTIENI_BATCH_ATTIVO)
+            risultato = cursor.fetchone()
+
+            if risultato:
+                # Batch attivo già presente → restituisci ID
+                id_batch = risultato["id_batch"]
+                logger.debug(f"[BATCH ATTIVO] ID già esistente: {id_batch}")
+            else:
+                # Nessun batch attivo → ne creo uno nuovo
+                timestamp_locale = datetime.now().isoformat()
+                cursor.execute(query.INSERISCI_BATCH, (timestamp_locale, soglia_misurazioni))
+                id_batch = cursor.lastrowid
+                logger.info(f"[BATCH NUOVO] Creato batch ID: {id_batch} con soglia: {soglia_misurazioni}")
+
+            self.conn.commit()
+            return id_batch
+
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            logger.error(f"[Errore nella creazione batch] {e}")
+            return -1
+
+    def inserisci_misurazione(self, id_sensore: str, dati: str) -> bool:
+        """
+        Inserisce una nuova misurazione associandola al batch attivo.
+        Se la soglia del batch è raggiunta, il batch viene chiuso e ne viene creato uno nuovo con la stessa soglia.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")  # Blocco il DB durante tutta l'operazione
+
+            # Verifica esistenza sensore
+            try:
+                self.verifica_esistenza_sensore(id_sensore)
+            except ValueError as ve:
+                logger.warning(f"[MISURAZIONE RIFIUTATA] {ve}")
+                self.conn.rollback()
+                return False
+
+            # Recupera il batch attivo
+            cursor.execute(query.OTTIENI_BATCH_ATTIVO)
+            batch_attivo = cursor.fetchone()
+            if not batch_attivo:
+                # controllo di debug
+                logger.error("Nessun batch attivo presente.")
+                self.conn.rollback()
+                return False
+
+            id_batch = batch_attivo["id_batch"]
+            num_mis_attuali = batch_attivo["numero_misurazioni"]
+            soglia = batch_attivo["soglia_misurazioni"]
+
+            if num_mis_attuali >= soglia:
+                # Chiudi il batch attuale
+                cursor.execute(query.CHIUDI_BATCH, (id_batch,))
+                logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
+                self.conn.commit()
+
+                # Crea nuovo batch con stessa soglia
+                id_batch = self.inserisci_batch_se_necessario(soglia)
+                if id_batch == -1:
+                    logger.error("Errore nella creazione di un nuovo batch.")
+                    return False
+                num_attuali = 0  # Reset contatore
+
+            # Inserisce la nuova misurazione
+            timestamp_locale = datetime.now().isoformat()
+            cursor.execute(
+                query.INSERISCI_MISURAZIONE,
+                (id_sensore.upper(), id_batch, dati, timestamp_locale)
+            )
+            # Aggiorna contatore
+            cursor.execute(query.AGGIORNA_BATCH_NUM_MISURAZIONI, (num_mis_attuali + 1, id_batch))
+            self.conn.commit()
+            logger.info(f"[MISURAZIONE INSERITA] Batch {id_batch} ({num_mis_attuali + 1}/{soglia})")
+            return True
+
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            logger.error(f"[ERRORE INSERIMENTO MISURAZIONE] {e}")
+            return False
+
     def inserisci_dati_sensore(self, sensore : DatiSensoreInIngresso) -> bool:
         """
         Inserisce un nuovo sensore solo se non già presente.
@@ -90,73 +201,25 @@ class GestoreDatabase:
             logger.error(f"QUERY - INSERIMENTO SENSORE] {e}")
             return False
 
-    def inserisci_misurazione(self, id_sensore: str, dati: str) -> bool:
+    # ------------------------- METODI DI LETTURA -------------------------
+    def verifica_esistenza_sensore(self, id_sensore: str) -> bool:
         """
-        Inserisce una nuova misurazione in ingresso associandola al batch attivo.
-
-        - Se non esiste alcun batch attivo, ne viene creato uno nuovo.
-        - Se il batch corrente ha raggiunto la soglia di completamento, viene chiuso e ne viene creato uno nuovo.
-        - La misurazione viene registrata solo se il sensore corrispondente è presente nel sistema.
-
-        Returns:
-            bool: True se l'inserimento va a buon fine, False in caso di errore o se il sensore non è registrato.
+        Verifica se il sensore con l'ID specificato è registrato nel database.
+        Restituisce True se esiste, False altrimenti.
         """
         try:
             cursor = self.conn.cursor()
-
-            # Verifica preliminare che il sensore associato alla misurazione esista nel database
-            cursor.execute(query.VERIFICA_ESISTENZA_SENSORE, (id_sensore,))
+            cursor.execute(query.VERIFICA_ESISTENZA_SENSORE, (id_sensore.upper(),))
             if cursor.fetchone() is None:
                 logger.warning(f"[MISURAZIONE RIFIUTATA] Sensore '{id_sensore}' non registrato.")
                 return False
-
-            # Recupera il batch attivo (se presente)
-            cursor.execute(query.OTTIENI_BATCH_ATTIVO)
-            risultato = cursor.fetchone()
-
-            if risultato:
-                # Un batch attivo esiste già
-                id_batch = risultato["id_batch"]
-                num_misurazione_attuale = risultato["numero_misurazioni"]
-
-                # Recupera la soglia attuale per questo batch
-                if num_misurazione_attuale >= ottieni_soglia_batch():
-                    # Batch già oltre soglia → chiusura immediata
-                    cursor.execute(query.CHIUDI_BATCH, (id_batch,))
-                    logger.info(f"[BATCH CHIUSO] ID batch: {id_batch}")
-                    # Creazione nuovo batch
-                    id_batch = self._inserisci_batch()
-                    num_misurazione_attuale = 0
-
             else:
-                # Nessun batch attivo → creazione nuovo batch
-                id_batch = self._inserisci_batch()
-                num_misurazione_attuale = 0
-                logger.debug(f"[BATCH NUOVO] Creato batch ID: {id_batch}")
-
-            logger.debug(
-                f"[BATCH ATTIVO] ID: {id_batch} - {num_misurazione_attuale}/{ottieni_soglia_batch()} misurazioni")
-
-            # Inserisce la misurazione nel batch corrente
-            timestamp_locale = datetime.now().isoformat()
-            cursor.execute(
-                query.INSERISCI_MISURAZIONE,
-                (id_sensore, id_batch, dati, timestamp_locale)
-            )
-
-            # Aggiorna il contatore delle misurazioni nel batch
-            nuovo_num = num_misurazione_attuale + 1
-            cursor.execute(query.AGGIORNA_BATCH_NUM_MISURAZIONI, (nuovo_num, id_batch))
-
-            # Conferma tutte le modifiche nel database
-            self.conn.commit()
-            return True
+                return True
 
         except sqlite3.Error as e:
-            logger.error(f"[QUERY - INSERIMENTO MISURAZIONE] {e}")
+            logger.error(f"[ERRORE DB] Verifica esistenza sensore '{id_sensore}': {e}")
             return False
 
-    # ------------------------- METODI DI LETTURA -------------------------
     def ottieni_dati_sensore(self, id_sensore) -> DatiSensore | None:
         """
         Recupera i dati associati a un sensore registrato, dato il suo ID.

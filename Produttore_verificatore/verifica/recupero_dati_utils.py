@@ -43,6 +43,7 @@ def estrai_dati_sensori_locali(lista_id_sensori: List[str]) -> List[DatiSensore]
     """
     risultato = []
     for id_sensore in lista_id_sensori:
+        # in futuro si può migliorare questo pezzo
         record: DatiSensore = gestore_db.ottieni_dati_sensore(id_sensore)
         if not record:
             raise ValueError(f"Sensore con ID '{id_sensore}' non trovato nel database locale.")
@@ -84,7 +85,7 @@ def ricostruisci_misurazioni_sensore(
             raise ValueError(f"Sensore con ID '{id_sensore}' non trovato tra quelli disponibili (BUG)")
 
         sensore = mappa_sensori[id_sensore]
-        lista_risultato.append(DatiMisurazioneSensore(dati_misurazione=mis, dati_sensore=sensore))
+        lista_risultato.append(DatiMisurazioneSensore(dati_misurazione=mis.model_dump(), dati_sensore=sensore.model_dump()))
         logger.debug(f"Lista di misurazioni-sensori ottenuti dal cloud {lista_risultato}")
 
     return lista_risultato

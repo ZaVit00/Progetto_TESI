@@ -30,9 +30,10 @@ CREA_TABELLA_BATCH = """
         id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp_creazione TEXT NOT NULL,
         numero_misurazioni INTEGER NOT NULL DEFAULT 0,
+        soglia_misurazioni INTEGER NOT NULL DEFAULT 0,
         completo INTEGER NOT NULL DEFAULT 0,
         conferma_ricezione INTEGER NOT NULL DEFAULT 0,
-        elaborabile INTEGER DEFAULT 1,
+        elaborabile INTEGER NOT NULL DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
         cid_merkle_path TEXT DEFAULT NULL,
         transazione_hash TEXT DEFAULT NULL,
@@ -66,7 +67,7 @@ WHERE id_sensore = ?
 
 # Restituisce l’ultimo batch attivo (non ancora completo), da usare per associare nuove misurazioni
 OTTIENI_BATCH_ATTIVO = """
-    SELECT id_batch, numero_misurazioni
+    SELECT id_batch, numero_misurazioni, soglia_misurazioni
     FROM batch
     WHERE completo = 0
     ORDER BY id_batch DESC
@@ -211,8 +212,8 @@ INSERISCI_MISURAZIONE = """
 
 # Crea un nuovo batch inizializzato con 0 misurazioni
 INSERISCI_BATCH = """
-    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completo, conferma_ricezione)
-    VALUES (?, 0, 0, 0)
+    INSERT INTO batch (timestamp_creazione, numero_misurazioni, completo, conferma_ricezione, soglia_misurazioni)
+    VALUES (?, 0, 0, 0, ?)
 """
 
 # ------------------------- QUERY DI ELIMINAZIONE -------------------------

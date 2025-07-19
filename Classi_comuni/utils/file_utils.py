@@ -3,7 +3,11 @@ import json
 import os
 from datetime import datetime
 from io import BytesIO
+from typing import Optional
+
 from Classi_comuni.utils.hashing_utils import Hashing
+from costanti_verificatore import DIFFERENZE_RISCONTRATE, METADATI_ANOMALIE, ESITO_ANALISI_INTEGRITA
+
 
 def genera_contenuto_gzip(json_string: str) -> bytes:
     """
@@ -20,7 +24,8 @@ def salva_risultato_verifica_su_file(
     contenuto_json: str,
     esito: bool,
     base_dir: str,
-    differenze: str | None = None,  # nuovo parametro opzionale
+    metadati_anomalie_json : Optional[str] = None,
+    differenze: Optional[str] = None
 ):
     """
     Salva la verifica nella struttura:
@@ -31,20 +36,23 @@ def salva_risultato_verifica_su_file(
 
     now = datetime.now()
     cartella_data = now.strftime("%d-%m-%Y_%H-%M")
-    timestamp_file = now.strftime("%H-%M-%S") # per evitare conflitti tra salvataggi
 
     cartella_destinazione = os.path.join(base_dir, f"id_batch{id_batch}", cartella_data)
     os.makedirs(cartella_destinazione, exist_ok=True)
 
     # Salvataggio del file principale
-    nome_file_esito = f"esito_{esito_str}_{timestamp_file}.json"
+    nome_file_esito = f"{ESITO_ANALISI_INTEGRITA}_{esito_str}.json"
     percorso_file_esito = os.path.join(cartella_destinazione, nome_file_esito)
     salva_file_generico(percorso_file_esito, contenuto_json)
 
+    # Salvataggio dei metadati delle anomalie, se fornite
+    if metadati_anomalie_json is not None:
+        percorso_file_diff = os.path.join(cartella_destinazione, METADATI_ANOMALIE)
+        salva_file_generico(percorso_file_diff, differenze)
+
     # Salvataggio differenze riscontrate, se fornite
     if differenze is not None:
-        nome_file_diff = f"differenze_{timestamp_file}.json"
-        percorso_file_diff = os.path.join(cartella_destinazione, nome_file_diff)
+        percorso_file_diff = os.path.join(cartella_destinazione, DIFFERENZE_RISCONTRATE)
         salva_file_generico(percorso_file_diff, differenze)
 
 
@@ -102,7 +110,7 @@ def genera_nome_file(stringa_json: str, nome_file: str, ext: str) -> str:
     - Esempio: {nome_file}_{short_hash}.{ext}
     - Dove short_hash sono i primi 8 caratteri dell'hash calcolato sul contenuto.
     Args:
-        stringa_jsonson_string (str): Contenuto da hashare (es. stringa JSON).
+        stringa_json (str): Contenuto da hashare (es. stringa JSON).
         nome_file (str): Prefisso del nome file (es. "merkle_path").
         ext (str): Estensione del file senza il punto (es. "json").
 

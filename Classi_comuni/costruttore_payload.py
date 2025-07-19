@@ -1,11 +1,7 @@
-import json
 from typing import List, Dict
 from Classi_comuni.config.costanti_comuni import ID_BATCH_LOGICO
 from Classi_comuni.entita.modelli_dati import DatiBatch, PacchettoBatchMisurazioni, DatiMisurazione
-from Classi_comuni.utils.hashing_utils import Hashing
 from estrattore_dati_query import EstrattoreDatiQuery
-from modelli_dati import DatiSensore
-from modelli_metadati import MetaDatiSensore, MetaDatiMisurazione
 
 class CostruttorePayload:
 

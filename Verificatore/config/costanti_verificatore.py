@@ -17,3 +17,8 @@ ENDPOINT_METADATA_BATCH ="http://localhost:8080/metadata/batch"
 ENDPOINT_METADATA_MISURAZIONE_SENSORE ="http://localhost:8080/metadata/misurazione-sensore"
 
 URL_FILEBASE_IPFS = "https://ipfs.filebase.io/ipfs/"
+
+# Costanti per indicare i nomi dei file
+DIFFERENZE_RISCONTRATE = "differenze_riscontrate.json"
+METADATI_ANOMALIE = "metadata_anomalie.json"
+ESITO_ANALISI_INTEGRITA = "esito_analisi_integrita"

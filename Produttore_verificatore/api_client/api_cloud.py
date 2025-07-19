@@ -1,23 +1,20 @@
 import logging
 from typing import List
-
 import requests
-
 from Produttore_verificatore.config.costanti import ENDPOINT_DATI_BATCH, API_KEY_VERIFICATORE_ESTESO
 from costanti import ENDPOINT_DATI_MISURAZIONE_SENSORE
 from modelli_dati import DatiBatch, DatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
+headers = {"X-API-Key": API_KEY_VERIFICATORE_ESTESO}
 
-def richiedi_dato_cloud_batch(id_batch: int) -> DatiBatch:
+def richiedi_dati_cloud_batch(id_batch: int) -> DatiBatch:
     """
-    Richiede i dati del batch con ID specificato al cloud provider,
+    Richiede i dati di uno specifico batch con ID specificato al cloud provider,
     utilizzando una chiamata HTTP GET autenticata con API key.
     """
     url = f"{ENDPOINT_DATI_BATCH}/{id_batch}"
-    headers = {"X-API-Key": API_KEY_VERIFICATORE_ESTESO}
-
     try:
         # Effettua la richiesta GET al cloud
         response = requests.get(url, headers=headers)
@@ -40,8 +37,6 @@ def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMi
     corrispondenti alla lista di ID fornita, tramite POST.
     """
     endpoint = ENDPOINT_DATI_MISURAZIONE_SENSORE
-    headers = {"x-api-key": API_KEY_VERIFICATORE_ESTESO}
-
     logger.info(f"Invio richiesta POST al cloud per {len(lista_id)} ID misurazione")
     logger.debug(f"Endpoint: {endpoint}, Payload: {lista_id}")
 
@@ -55,11 +50,10 @@ def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMi
 
     try:
         # Converte la risposta in lista di dizionari
-        lista_dict = response.json()
-        logger.debug(f"Risposta ricevuta: {lista_dict}")
-
+        lista_dati_dict = response.json()
+        logger.debug(f"Risposta ricevuta: {lista_dati_dict}")
         # Converte ogni elemento della lista in un oggetto DatiMisurazioneSensore
-        return [DatiMisurazioneSensore(**elem) for elem in lista_dict]
+        return [DatiMisurazioneSensore(**elem) for elem in lista_dati_dict]
     except (ValueError, TypeError) as e:
         logger.error(f"Errore nel parsing della risposta JSON: {e}")
         raise

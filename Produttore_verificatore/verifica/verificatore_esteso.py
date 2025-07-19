@@ -1,14 +1,14 @@
 # Import dei moduli necessari
 import logging
 from copy import deepcopy
-from typing import List
+from typing import List, Dict, Any
 
 # Funzione per serializzare un dizionario in stringa JSON
-from Classi_comuni.utils import serializza_dict
+from Classi_comuni.utils.dict_utils import serializza_dict
 # Gestore locale del database in sola lettura
 # Import di funzioni API per richiedere dati dal cloud
 from Produttore_verificatore.api_client.api_cloud import (
-    richiedi_dato_cloud_batch,
+    richiedi_dati_cloud_batch,
     richiedi_dati_cloud_completi_misurazioni
 )
 from Produttore_verificatore.config.istanze_globali import gestore_db
@@ -40,7 +40,6 @@ class VerificatoreEsteso(Verificatore):
     Classe che estende il verificatore base per permettere il confronto dettagliato
     tra i dati locali e quelli del cloud, utile quando viene rilevata un'alterazione.
     """
-
     def __init__(self, id_batch: int):
         """
         Inizializza il verificatore esteso con ID batch specificato
@@ -54,6 +53,7 @@ class VerificatoreEsteso(Verificatore):
         """
         Crea un VerificatoreEsteso partendo da un oggetto Verificatore,
         copiando tutti gli attributi rilevanti.
+        Utile in futuro
         """
         esteso = cls(verificatore.id_batch)
 
@@ -72,8 +72,9 @@ class VerificatoreEsteso(Verificatore):
         """
         if not self.batch_alterato():
             raise ValueError("Il batch non risulta alterato. Nessun dato da recuperare.")
+
         logger.info("Recupero dati batch alterato dal cloud")
-        batch: DatiBatch = richiedi_dato_cloud_batch(self.id_batch)
+        batch: DatiBatch = richiedi_dati_cloud_batch(self.id_batch)
         logger.debug(f"Dati batch cloud ricevuti: {batch}")
         return batch
 
@@ -112,10 +113,13 @@ class VerificatoreEsteso(Verificatore):
         if not self.misurazioni_alterate():
             raise ValueError("Nessuna misurazione alterata. Nessun dato da recuperare.")
 
+        #ottieni gli id delle misurazioni che risultano alterare
         id_alterati = set(self.ottieni_id_misurazioni_alterate())
         logger.info("Caricamento payload locale e ricostruzione misurazioni alterate")
 
         # Carica il payload JSON dal database
+        # il payload del batch è il pacchetto Batch + Misurazioni inviato al cloud per la memorizzazione
+        # contiene i dati del batch e i dati della misurazione.
         payload_dict : dict = carica_payload_json(self.id_batch)
 
         # Estrae solo le misurazioni alterate dal payload
@@ -129,48 +133,61 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"ID sensori estratti: {lista_id_sensori}")
 
         # Ricostruisce le misurazioni complete (dati + sensore)
-        ricostruite : list[DatiMisurazioneSensore] = ricostruisci_misurazioni_sensore(lista_dati_misurazioni, lista_dati_sensori)
-        logger.debug(f"Misurazioni ricostruite localmente: {ricostruite}")
-        return ricostruite
+        misurazioni_ricostruite : list[DatiMisurazioneSensore] = ricostruisci_misurazioni_sensore(lista_dati_misurazioni, lista_dati_sensori)
+        logger.debug(f"Misurazioni ricostruite localmente: {misurazioni_ricostruite}")
+        return misurazioni_ricostruite
 
     def esegui_verifica_estesa(self) -> str:
         """
-        Esegue un confronto completo tra dati locali e cloud per batch e misurazioni alterate.
-        Restituisce un JSON con tutte le differenze trovate.
+        Esegue una verifica approfondita sui dati del batch, confrontando i contenuti
+        locali con quelli ottenuti dal cloud, **solo in caso di alterazione rilevata**.
+
+        Il confronto copre due livelli:
+        1. Dati del batch (metadati generali)
+        2. Misurazioni associate (incluse informazioni sui sensori)
+
+        Ritorna:
+            Una stringa JSON contenente le differenze riscontrate tra i dati locali e cloud.
+            Se non ci sono alterazioni, restituisce un JSON vuoto "{}".
         """
-        differenze_totali : dict = {}
+        differenze_totali: Dict[str, Any] = {}
         logger.info("Avvio confronto dati locali e cloud")
 
-        # Verifica se il batch è stato alterato e lo confronta
+        # ➤ Verifica e confronto dei dati del batch
         if self.batch_alterato():
-            logger.info("Batch alterato rilevato, confronto in corso")
-            batch_locale : DatiBatch = self._recupera_dati_locali_batch()
-            batch_cloud : DatiBatch = self._recupera_dati_cloud_batch()
+            logger.info("Batch alterato rilevato: avvio confronto tra batch locale e cloud")
+            batch_locale: DatiBatch = self._recupera_dati_locali_batch()
+            batch_cloud: DatiBatch = self._recupera_dati_cloud_batch()
             diff_batch = confronta_dati_batch(batch_locale, batch_cloud)
 
             if diff_batch:
-                logger.debug(f"Differenze batch: {diff_batch}")
+                logger.debug(f"Differenze rilevate nel batch: {diff_batch}")
                 differenze_totali["dati_batch"] = diff_batch
 
-        # Verifica se ci sono misurazioni alterate e le confronta
+        # ➤ Verifica e confronto delle misurazioni alterate (e relativi sensori)
         if self.misurazioni_alterate():
-            logger.info("Misurazioni alterate rilevate, confronto in corso")
-            id_mis_alterati : list[int] = self.ottieni_id_misurazioni_alterate()
+            logger.info("Misurazioni alterate rilevate: avvio confronto tra dati locali e cloud")
+            id_mis_alterati: list[int] = self.ottieni_id_misurazioni_alterate()
 
-            # Recupera le misurazioni locali e cloud
-            mis_locale : list[DatiMisurazioneSensore] = self._recupera_dati_locali_misurazione_sensore()
-            mis_cloud : list[DatiMisurazioneSensore] = self._recupera_dati_cloud_misurazione_sensore(id_mis_alterati)
-            diff_misurazioni_sensori : dict = confronta_dati_misurazioni_sensori(id_mis_alterati, mis_locale, mis_cloud)
+            # Recupera le versioni locali e cloud delle sole misurazioni alterate
+            mis_locale: list[DatiMisurazioneSensore] = self._recupera_dati_locali_misurazione_sensore()
+            mis_cloud: list[DatiMisurazioneSensore] = self._recupera_dati_cloud_misurazione_sensore(id_mis_alterati)
+
+            # Confronta ogni misurazione + sensore associato
+            diff_misurazioni_sensori: dict = confronta_dati_misurazioni_sensori(
+                id_mis_alterati, mis_locale, mis_cloud
+            )
 
             if diff_misurazioni_sensori:
-                logger.debug(f"Differenze misurazioni: {diff_misurazioni_sensori}")
+                logger.debug(f"Differenze rilevate nelle misurazioni: {diff_misurazioni_sensori}")
                 differenze_totali["dati_misurazioni_alterate"] = diff_misurazioni_sensori
 
-        # Log finale con o senza differenze
+        # ➤ Log finale: nessuna differenza o riepilogo delle anomalie
         if not differenze_totali:
-            logger.info("Nessuna differenza riscontrata tra i dati locali e cloud")
+            logger.info("✅ Nessuna differenza rilevata: i dati locali e cloud sono coerenti")
         else:
-            logger.debug(f"Differenze trovate: {differenze_totali}")
+            logger.debug(f"❌ Differenze complessive rilevate: {differenze_totali}")
 
-        # Serializza il risultato in JSON (stringa)
+        # ➤ Serializza il risultato del confronto in formato JSON
         return serializza_dict(differenze_totali)
+

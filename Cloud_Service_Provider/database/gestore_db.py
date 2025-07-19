@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import List
 
@@ -65,17 +64,29 @@ class GestoreDatabase:
     def inserisci_lista_sensori(self, lista_sensori: List[DatiSensore]) -> List[str]:
         """
         Inserisce una lista di sensori nel database in un'unica operazione batch.
+        Durante l'inserimento, blocca anche le tabelle batch e misurazione.
+        In questo modo si aspetta che tutti gli inserimenti di tuple vadano
+        a buon fine. Evita problemi di integrità referenziale
         Restituisce gli ID dei sensori elaborati (nuovi o già presenti).
         """
-        # Preparazione dei valori da inserire
         valori = [(s.id_sensore.upper(), s.descrizione, s.tipo) for s in lista_sensori]
+
         try:
+            # Inizio transazione esplicita con blocco
+            self.conn.autocommit = False
+            self.cursor.execute("LOCK TABLE sensore, batch, misurazione IN EXCLUSIVE MODE")
             self.cursor.executemany(INSERISCI_SENSORE, valori)
+            self.conn.commit()  # Commit esplicito
             logger.info(f"{len(valori)} sensori elaborati.")
             return [s.id_sensore for s in lista_sensori]
+
         except Psycopg2Error as e:
+            self.conn.rollback()  # Rollback se errore
             logger.error(f"Errore nell'inserimento batch dei sensori: {e}")
             return []
+
+        finally:
+            self.conn.autocommit = True  # Riattiva autocommit
 
     def inserisci_dati_batch(self, batch: DatiBatch) -> bool:
         """

@@ -11,30 +11,43 @@ from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
 
-# --- Tipi ausiliari per la verifica ---#
+# --- Tipi ausiliari per la verifica --- #
+
+# Dettagli relativi a una singola anomalia di integrità rilevata durante la verifica.
+# Ogni anomalia si riferisce a un ID (es. misurazione o batch), con specifica del tipo di elemento,
+# esito della verifica (True = integro, False = alterato), presenza di una modifica strutturale,
+# ed eventuali note esplicative.
 class DettagliVerifica(TypedDict):
-    id : int
-    tipo : str
-    esito : bool
-    modifica_strutturale : bool
-    note : str
+    id : int                           # ID univoco dell'elemento verificato (misurazione/batch)
+    tipo : str                         # Tipo di elemento ("batch", "misurazione", ecc.)
+    esito : bool                       # Esito della verifica: True se integro, False se alterato
+    modifica_strutturale : bool        # True se la struttura risulta compromessa (es. hash alterato, path errato)
+    note : str                         # Nota esplicativa
 
+# Risultato del confronto tra la struttura attesa da IPFS e quella ricevuta dal cloud
+# basandoci unicamente sugli id. Nota bene: la tupla del batch è sempre mappata con ID logico 0
+# in questo modo precede sempre le misurazioni quando effettuiamo l'ordinamento.
+# Elenca gli ID mancanti (presenti nell'albero originale ma assenti nei dati ricevuti)
+# e quelli aggiunti (presenti nei dati ricevuti ma non nell'albero originale).
 class StrutturaVerifica(TypedDict):
-    id_mancanti: list[int]
-    id_aggiunti: list[int]
+    id_mancanti: list[int]             # Lista degli ID previsti ma non presenti nei dati ricevuti
+    id_aggiunti: list[int]             # Lista degli ID presenti ma non previsti (anomalia strutturale)
 
+# Risultato complessivo della verifica di un batch.
+# Riassume il numero di anomalie rilevate, distinguendo tra anomalie di integrità e strutturali,
+# e fornisce il dettaglio delle anomalie e delle differenze strutturali.
 class RisultatoVerifica(TypedDict):
-    id_batch : int
-    numero_anomalie_integrita: int
-    numero_anomalie_strutturali : int
-    anomalie_integrita: list[DettagliVerifica]
-    anomalie_strutturali: StrutturaVerifica
+    id_batch : int                                     # ID del batch verificato
+    numero_anomalie_integrita: int                     # Numero di elementi alterati nei contenuti (hash errati)
+    numero_anomalie_strutturali : int                  # Numero totale di elementi mancanti o aggiunti
+    anomalie_integrita: list[DettagliVerifica]         # Dettagli sulle anomalie rilevate nei contenuti
+    anomalie_strutturali: StrutturaVerifica            # Dettagli sulle differenze strutturali del batch
+
 
 # --- Classe Verificatore ---
 
 class Verificatore:
     def __init__(self, id_batch: int) -> None:
-
         self.id_batch : int = id_batch
         self.mappa_id_hash: dict[int, str] = {}
         self.merkle_root_immutabile: str | None = None
@@ -119,61 +132,73 @@ class Verificatore:
         return anomalie
 
     def esegui_verifica_integrita(self) -> str:
-
-        # 1. Recupero mappa id - foglie (hash) dal cloud
-        # Tutto ciò che è necessario per determinare l'anomalia è il confronto tra
-        # l'hash ottenuto dal cloud e la merkle root immutabile salvata su Blockchain
+        # STEP 1: Richiesta al cloud dei dati da verificare
+        # Si recupera la mappa {id → hash} contenente tutti gli hash delle foglie del Merkle Tree
+        # (cioè batch e misurazioni) registrati dal cloud. Questi hash rappresentano lo stato corrente
+        # dei dati e saranno confrontati con la Merkle Root immutabile.
         try:
             self._recupera_dati_batch_cloud()
         except Exception as e:
             logger.exception("[ERRORE] Errore nella richiesta HTTP al cloud provider")
             raise RuntimeError(f"Errore nel recupero dei dati dal cloud: {e}")
 
-        # 2. Recupero root e CID da blockchain
+        # STEP 2: Lettura dalla blockchain della Merkle Root salvata e del CID IPFS
+        # Viene interrogata la blockchain per ottenere:
+        # - la Merkle Root originale salvata on-chain
+        # - il CID che punta al file JSON contenente i Merkle Path su IPFS
         try:
             self._recupera_root_e_cid_blockchain()
-
         except Exception as e:
             logger.exception("[ERRORE] Errore nel recupero della root e del CID da blockchain")
             raise RuntimeError(f"Errore nel recupero dei metadati blockchain: {e}")
 
-        # 2.b Verifica integrità dei metadati ottenuti
+        # STEP 2b: Controllo di integrità sui metadati ottenuti
+        # Se non sono stati recuperati né Merkle Root né CID, si tratta di un errore critico.
+        # Il batch potrebbe non essere mai stato registrato, oppure i metadati sono stati corrotti.
         if not self.merkle_root_immutabile or not self.cid_merkle_path:
             raise ValueError(
                 f"❌ Batch ID {self.id_batch}: struttura compromessa. "
                 f"Merkle root o CID assenti per il batch indicato — possibile manomissione o batch non registrato."
             )
 
-        # 3. Scaricamento Merkle Path da IPFS
+        # STEP 3: Download del file Merkle Path da IPFS tramite CID
+        # Viene scaricato il file JSON da IPFS contenente i Merkle Path relativi alle foglie,
+        # ovvero le informazioni necessarie per calcolare la root a partire da ciascun hash.
         try:
             self._scarica_merkle_path_ipfs()
         except Exception as e:
             logger.exception("[ERRORE] Errore nello scaricamento dei Merkle Path da IPFS")
             raise RuntimeError(f"Errore nel download da IPFS: {e}") from e
 
-        # Fase 4: verifica della struttura
+        # STEP 4: Verifica della struttura
+        # Confronta gli ID delle foglie ricevuti dal cloud con quelli presenti nei Merkle Path da IPFS.
+        # L'obiettivo è rilevare eventuali manomissioni nella struttura del batch:
+        # - ID mancanti (previsti da IPFS ma assenti nel cloud)
+        # - ID aggiunti (presenti nel cloud ma non previsti)
         id_mancanti, id_aggiunti = self._verifica_struttura()
         self.risultato["anomalie_strutturali"] = StrutturaVerifica(
             id_mancanti=id_mancanti,
             id_aggiunti=id_aggiunti
         )
 
-        # Fase 5: verifica dell'integrità delle foglie e salvataggio dei risultati
+        # STEP 5: Verifica dell'integrità delle singole foglie
+        # Per ogni foglia (batch o misurazione), verifica se l'hash e il Merkle Path conducono
+        # correttamente alla Merkle Root. Se l'esito è negativo, viene registrata un'anomalia.
         foglie_anomale = self._verifica_foglie_con_path()
         self.risultato["anomalie_integrita"] = foglie_anomale
 
-        # Conteggio delle anomalie strutturali:
-        # Gli ID delle misurazioni aggiunti manualmente sul cloud (non presenti nel Merkle Path)
-        # vengono considerati anomalie strutturali. Questo perché non è possibile procedere alla
-        # verifica dell'integrità: manca infatti il Merkle Path associato a quegli ID.
+        # CONSIDERAZIONI IMPORTANTI:
+        # Gli ID aggiunti dal cloud, per i quali non esiste un Merkle Path in IPFS,
+        # non possono essere verificati → sono considerati anomalie strutturali.
+        # Questo include anche i casi in cui delle misurazioni sono state assegnate manualmente
+        # a un batch esistente (manomissione di id_batch), poiché il loro id non compare in IPFS
 
-        # Rientrano in questa categoria anche le tuple di misurazioni che sono state assegnate
-        # a un batch in modo manuale o scorretto (alterando il valore del campo id_batch):
-        # anche in questo caso non esiste un Merkle Path associato all’ID, e la verifica fallisce.
-
+        # STEP 6: Aggiornamento finale del report
+        # Si calcola il numero totale di anomalie rilevate (di integrità e strutturali).
         self.risultato["numero_anomalie_integrita"] = len(self.risultato["anomalie_integrita"])
         self.risultato["numero_anomalie_strutturali"] = len(id_mancanti) + len(id_aggiunti)
 
+        # STEP 7: Serializzazione del risultato finale in formato JSON
         return serializza_dict(cast(dict, self.risultato))
 
     def ottieni_numero_anomalie_integrita(self) -> int:
@@ -212,7 +237,10 @@ class Verificatore:
         anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
 
         # Filtra solo quelle relative alle misurazioni che sono effettivamente alterate e che non sono
-        # anomalie strutturali (mancanza di merkle path)
+        # anomalie strutturali (mancanza di merkle path da ipfs).
+        # Quando l'id della misurazione è stata alterato
+        # siamo impossibilitati nel proseguo di stabilire cosa è cambiato perché non sappiamo effettivamente a
+        # quale misurazione ora corrisponde.Di conseguenza possiamo solo constatare la modifica strutturale.
         anomalie_misurazioni = [
             record for record in anomalie
             if record["tipo"] == "misurazione" and not record["modifica_strutturale"]]
@@ -220,19 +248,35 @@ class Verificatore:
         id_alterati = [record["id"] for record in anomalie_misurazioni]
         return id_alterati
 
+    # --- METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI --- #
 
-    # METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI
     def _recupera_metadati_batch(self) -> MetaDatiBatch:
+        """
+        Recupera i metadati completi del batch identificato da `self.id_batch`.
+        Questo metodo viene invocato solo se il batch risulta alterato (foglia ID 0 non integra),
+        al fine di ispezionarne il contenuto originario e confrontarlo con quello ricevuto.
+        """
         return richiedi_metadata_batch(self.id_batch)
 
     def _recupera_metadati_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensore]:
+        """
+        Recupera i metadati completi delle sole misurazioni alterate.
+        Utilizza il metodo `ottieni_id_misurazioni_alterate()` per filtrare gli ID delle
+        misurazioni che risultano effettivamente compromesse **senza** errori strutturali.
+
+        Restituisce una lista di oggetti `MetaDatiMisurazioneSensore`, ciascuno dei quali
+        contiene sia i metadati della misurazione che quelli del sensore che l'ha generata.
+        """
         id_list = self.ottieni_id_misurazioni_alterate()
         return richiedi_metadata_misurazione_sensore(id_list)
 
     def recupera_metadata_anomalie(self) -> str:
         # TODO DA CAMBIARE VISUALIZZAZIONE OUTPUT
+        """
+        Recupera i metadati del batch e delle misurazioni alterate, se presenti.
+        Restituisce una stringa JSON serializzata con i risultati.
+        """
         risultati = {}
-
         if self.batch_alterato():
             try:
                 metadati_batch = self._recupera_metadati_batch()

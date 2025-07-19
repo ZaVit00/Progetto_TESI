@@ -1,6 +1,5 @@
 import logging
 from typing import Tuple
-from api_cloud import logger
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
