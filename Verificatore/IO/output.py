@@ -25,7 +25,7 @@ def stampa_risultato_verifica(integro: bool) -> None:
     else:
         print("\n❌ Il batch presenta alterazioni.")
 
-def stampa_anomalie(output: str) -> None:
+def visualizza_output(output: str) -> None:
     """
     Stampa delle anomalie/differenze
     """

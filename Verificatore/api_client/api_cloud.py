@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 import requests
 from Verificatore.config.costanti_verificatore import API_KEY_VERIFICATORE, \
@@ -6,6 +7,9 @@ from costanti_verificatore import ENDPOINT_METADATA_BATCH
 from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch
 
 headers = {"X-API-Key": API_KEY_VERIFICATORE}
+#disattivo il logger della libreria usata da request
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 def richiedi_mappa_id_hash_batch(id_batch: int) -> dict[int, str]:
     """

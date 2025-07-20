@@ -122,6 +122,15 @@ OTTIENI_FREQUENZA_MEDIA_SENSORI = """
    SELECT ROUND(AVG(frequenza_hz), 2) AS freq_media
    from sensore
 """
+
+
+OTTIENI_SOGLIA_ULTIMO_BATCH = """
+-- Restituisce la soglia dell'ultimo batch inserito (anche se completato)
+SELECT soglia_misurazioni
+FROM batch
+ORDER BY id_batch DESC
+LIMIT 1;
+"""
 # ------------------------- QUERY DI UPDATE -------------------------
 
 # Aggiorna l'hash della transazione di un batch quando avviene il salvataggio su blockchain del merkle root e
@@ -291,4 +300,3 @@ OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     WHERE conferma_ricezione = 0
     ORDER BY id_sensore ASC
 """
-

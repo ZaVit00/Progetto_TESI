@@ -33,6 +33,12 @@ class MetaDatiMisurazioneSensore(ModelliSerializzabili):
     metadati_sensore: MetaDatiSensore = Field(..., description="Metadati del sensore")
     metadati_misurazione: MetaDatiMisurazione = Field(..., description="Metadati della misurazione" )
 
+    def to_dict(self) -> dict:
+        return {
+            "metadati_sensore": self.metadati_sensore.model_dump(),
+            "metadati_misurazione": self.metadati_misurazione.model_dump(),
+        }
+
 class MetaDatiBatch(ModelliSerializzabili):
     id_batch: int = Field(..., title="ID Batch", description="Identificativo univoco del batch")
     timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")

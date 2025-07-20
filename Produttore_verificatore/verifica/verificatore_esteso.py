@@ -29,6 +29,7 @@ from recupero_dati_utils import (
 )
 # Classe base del verificatore
 from verificatore import Verificatore
+from verificatore_utils import ottieni_report_differenze
 
 # Configurazione del logger per registrare informazioni ed errori
 logger = logging.getLogger(__name__)
@@ -137,7 +138,7 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"Misurazioni ricostruite localmente: {misurazioni_ricostruite}")
         return misurazioni_ricostruite
 
-    def esegui_verifica_estesa(self) -> str:
+    def _esegui_verifica_estesa(self) -> dict:
         """
         Esegue una verifica approfondita sui dati del batch, confrontando i contenuti
         locali con quelli ottenuti dal cloud, **solo in caso di alterazione rilevata**.
@@ -189,5 +190,11 @@ class VerificatoreEsteso(Verificatore):
             logger.debug(f"❌ Differenze complessive rilevate: {differenze_totali}")
 
         # ➤ Serializza il risultato del confronto in formato JSON
-        return serializza_dict(differenze_totali)
+        return differenze_totali
 
+    def ottieni_output_differenze(self) -> tuple[str, str]:
+        differenze = self._esegui_verifica_estesa()
+        return (
+            ottieni_report_differenze(differenze),
+            serializza_dict(differenze),
+        )

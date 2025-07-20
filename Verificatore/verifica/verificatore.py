@@ -1,50 +1,18 @@
 import logging
-from typing import TypedDict, List, cast
+from typing import List, Any
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
 from Classi_comuni.utils.dict_utils import serializza_dict
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
     richiedi_metadata_misurazione_sensore
 from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.config.istanze_globali import lettore_blockchain
-from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_stringa_json
+from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_stringa_json, \
+    ottieni_report_metadati_anomalie
+from Verificatore.entita.modelli_verificatore import DettagliVerifica, StrutturaVerifica, RisultatoVerifica, \
+    RisultatoMetadatiAnomalie
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
-
-# --- Tipi ausiliari per la verifica --- #
-
-# Dettagli relativi a una singola anomalia di integrità rilevata durante la verifica.
-# Ogni anomalia si riferisce a un ID (es. misurazione o batch), con specifica del tipo di elemento,
-# esito della verifica (True = integro, False = alterato), presenza di una modifica strutturale,
-# ed eventuali note esplicative.
-class DettagliVerifica(TypedDict):
-    id : int                           # ID univoco dell'elemento verificato (misurazione/batch)
-    tipo : str                         # Tipo di elemento ("batch", "misurazione", ecc.)
-    esito : bool                       # Esito della verifica: True se integro, False se alterato
-    modifica_strutturale : bool        # True se la struttura risulta compromessa (es. hash alterato, path errato)
-    note : str                         # Nota esplicativa
-
-# Risultato del confronto tra la struttura attesa da IPFS e quella ricevuta dal cloud
-# basandoci unicamente sugli id. Nota bene: la tupla del batch è sempre mappata con ID logico 0
-# in questo modo precede sempre le misurazioni quando effettuiamo l'ordinamento.
-# Elenca gli ID mancanti (presenti nell'albero originale ma assenti nei dati ricevuti)
-# e quelli aggiunti (presenti nei dati ricevuti ma non nell'albero originale).
-class StrutturaVerifica(TypedDict):
-    id_mancanti: list[int]             # Lista degli ID previsti ma non presenti nei dati ricevuti
-    id_aggiunti: list[int]             # Lista degli ID presenti ma non previsti (anomalia strutturale)
-
-# Risultato complessivo della verifica di un batch.
-# Riassume il numero di anomalie rilevate, distinguendo tra anomalie di integrità e strutturali,
-# e fornisce il dettaglio delle anomalie e delle differenze strutturali.
-class RisultatoVerifica(TypedDict):
-    id_batch : int                                     # ID del batch verificato
-    numero_anomalie_integrita: int                     # Numero di elementi alterati nei contenuti (hash errati)
-    numero_anomalie_strutturali : int                  # Numero totale di elementi mancanti o aggiunti
-    anomalie_integrita: list[DettagliVerifica]         # Dettagli sulle anomalie rilevate nei contenuti
-    anomalie_strutturali: StrutturaVerifica            # Dettagli sulle differenze strutturali del batch
-
-
-# --- Classe Verificatore ---
 
 class Verificatore:
     def __init__(self, id_batch: int) -> None:
@@ -100,38 +68,54 @@ class Verificatore:
 
         return id_mancanti, id_aggiunti
 
-    def _verifica_foglie_con_path(self) -> list[DettagliVerifica]:
+    def _verifica_foglie_con_path(self) -> dict[int, DettagliVerifica]:
         """
-        Verifica ciascuna foglia (batch o misurazione) utilizzando i Merkle Path.
-        Ritorna due liste: 'integre' e 'anomalie'.
+        Verifica ogni foglia confrontando il suo hash con la Merkle Root attraverso il Merkle Path.
+        Restituisce un dizionario con le anomalie riscontrate, mappate sugli ID corretti:
+        - `id_batch` per il batch (foglia 0)
+        - `id_misurazione` per le misurazioni
         """
-        integre, anomalie = [], []
+        anomalie = {}
+
         for foglia_id, foglia_hash in self.mappa_id_hash.items():
             tipo = "batch" if foglia_id == 0 else "misurazione"
-            id = self.id_batch if foglia_id == 0 else foglia_id
-
+            # Per accedere ai path usiamo l'ID originale (0 per il batch)
             if foglia_id not in self.merkle_paths:
-                anomalie.append(DettagliVerifica(
-                    id = id,tipo = tipo, esito = False, modifica_strutturale= True, note = "[IPFS] Merkle Path mancante"))
-                logger.error(f"[{tipo.upper()}] ID {foglia_id}: Merkle Path mancante")
-                continue #salta alla prossima foglia, struttura manomessa
+                # mappattura vero id del batch con id 0
+                # solo il batch è mappato con 0
+                chiave_anomalia = self.id_batch if foglia_id == 0 else foglia_id
+                anomalie[chiave_anomalia] = DettagliVerifica(
+                    tipo=tipo,
+                    esito=False,
+                    modifica_strutturale=True,
+                    note="[IPFS] Merkle Path mancante"
+                )
+                logger.error(f"[{tipo.upper()}] ID {chiave_anomalia}: Merkle Path mancante")
+                continue
 
+            # Verifica
             path_foglia = self.merkle_paths[foglia_id]
-            esito_verifica = MerkleTree.verifica_singola_foglia(foglia_hash, path_foglia, self.merkle_root_immutabile)
-            entry = DettagliVerifica(id = id, tipo = tipo, esito = esito_verifica, modifica_strutturale= False,
-                                     note = "nessuna compromissione" if esito_verifica else "ANOMALIA RILEVATA")
+            esito_verifica = MerkleTree.verifica_singola_foglia(
+                foglia_hash, path_foglia, self.merkle_root_immutabile
+            )
+
+            chiave_anomalia = self.id_batch if foglia_id == 0 else foglia_id
+            record = DettagliVerifica(
+                tipo=tipo,
+                esito=esito_verifica,
+                modifica_strutturale=False,
+                note="nessuna compromissione" if esito_verifica else "ANOMALIA RILEVATA"
+            )
+
             if esito_verifica:
-                # verifica okay
-                integre.append(entry)
-                logger.info(f"[{tipo.upper()}] ID {foglia_id} → ✔ INTEGRO")
+                logger.info(f"[{tipo.upper()}] ID {chiave_anomalia} → ✔ INTEGRO")
             else:
-                #anomalie rilevata
-                anomalie.append(entry)
-                logger.warning(f"[{tipo.upper()}] ID {foglia_id} → ✘ ALTERATO")
+                anomalie[chiave_anomalia] = record
+                logger.warning(f"[{tipo.upper()}] ID {chiave_anomalia} → ✘ ALTERATO")
 
         return anomalie
 
-    def esegui_verifica_integrita(self) -> str:
+    def esegui_verifica_integrita(self) -> RisultatoVerifica:
         # STEP 1: Richiesta al cloud dei dati da verificare
         # Si recupera la mappa {id → hash} contenente tutti gli hash delle foglie del Merkle Tree
         # (cioè batch e misurazioni) registrati dal cloud. Questi hash rappresentano lo stato corrente
@@ -186,7 +170,6 @@ class Verificatore:
         # correttamente alla Merkle Root. Se l'esito è negativo, viene registrata un'anomalia.
         foglie_anomale = self._verifica_foglie_con_path()
         self.risultato["anomalie_integrita"] = foglie_anomale
-
         # CONSIDERAZIONI IMPORTANTI:
         # Gli ID aggiunti dal cloud, per i quali non esiste un Merkle Path in IPFS,
         # non possono essere verificati → sono considerati anomalie strutturali.
@@ -195,11 +178,11 @@ class Verificatore:
 
         # STEP 6: Aggiornamento finale del report
         # Si calcola il numero totale di anomalie rilevate (di integrità e strutturali).
-        self.risultato["numero_anomalie_integrita"] = len(self.risultato["anomalie_integrita"])
+        self.risultato["numero_anomalie_integrita"] = len(foglie_anomale)
         self.risultato["numero_anomalie_strutturali"] = len(id_mancanti) + len(id_aggiunti)
 
         # STEP 7: Serializzazione del risultato finale in formato JSON
-        return serializza_dict(cast(dict, self.risultato))
+        return self.risultato
 
     def ottieni_numero_anomalie_integrita(self) -> int:
         return self.risultato["numero_anomalie_integrita"]
@@ -215,37 +198,38 @@ class Verificatore:
         """
         Ritorna True se la prima foglia anomala è il batch (foglia ID 0), False altrimenti.
         """
-        anomalie = self.risultato["anomalie_integrita"]
-        return bool(anomalie) and anomalie[0]["tipo"] == "batch"
+        anomalie: dict[int, DettagliVerifica] = self.risultato["anomalie_integrita"]
+        record = anomalie.get(self.id_batch)
+
+        return bool(record) and record["tipo"] == "batch" and not record["esito"]
 
     def misurazioni_alterate(self) -> bool:
         """
         Restituisce True se ALMENO (any) una foglia di tipo 'misurazione' risulta alterata.
         """
-        anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
-        return any(record["tipo"] == "misurazione" for record in anomalie)
+        anomalie: dict[int, DettagliVerifica] = self.risultato["anomalie_integrita"]
+        return any(record["tipo"] == "misurazione" for record in anomalie.values())
 
     def ottieni_id_misurazioni_alterate(self) -> list[int]:
         """
-        Restituisce una lista di ID delle misurazioni alterate.
+        Restituisce una lista di ID delle misurazioni alterate (non strutturalmente).
         Lancia un'eccezione se nessuna misurazione risulta alterata.
+
+        Le misurazioni alterate sono quelle:
+        - con tipo 'misurazione'
+        - che NON presentano una modifica strutturale (cioè il Merkle Path è valido ma il contenuto è stato modificato)
         """
         if not self.misurazioni_alterate():
             raise ValueError("Nessuna misurazione risulta alterata.")
 
-        # Estrai tutte le anomalie di integrità
-        anomalie: List[DettagliVerifica] = self.risultato["anomalie_integrita"]
+        anomalie: dict[int, DettagliVerifica] = self.risultato["anomalie_integrita"]
 
-        # Filtra solo quelle relative alle misurazioni che sono effettivamente alterate e che non sono
-        # anomalie strutturali (mancanza di merkle path da ipfs).
-        # Quando l'id della misurazione è stata alterato
-        # siamo impossibilitati nel proseguo di stabilire cosa è cambiato perché non sappiamo effettivamente a
-        # quale misurazione ora corrisponde.Di conseguenza possiamo solo constatare la modifica strutturale.
-        anomalie_misurazioni = [
-            record for record in anomalie
-            if record["tipo"] == "misurazione" and not record["modifica_strutturale"]]
-        # Estrai gli ID delle misurazioni alterate
-        id_alterati = [record["id"] for record in anomalie_misurazioni]
+        # Filtra e restituisce solo gli ID con tipo 'misurazione' e modifica NON strutturale
+        id_alterati = [
+            id_misurazione for id_misurazione, record in anomalie.items()
+            if record["tipo"] == "misurazione" and not record["modifica_strutturale"]
+        ]
+
         return id_alterati
 
     # --- METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI --- #
@@ -270,34 +254,44 @@ class Verificatore:
         id_list = self.ottieni_id_misurazioni_alterate()
         return richiedi_metadata_misurazione_sensore(id_list)
 
-    def recupera_metadata_anomalie(self) -> str:
-        # TODO DA CAMBIARE VISUALIZZAZIONE OUTPUT
+    def _recupera_metadati_anomalie(self) -> dict:
         """
         Recupera i metadati del batch e delle misurazioni alterate, se presenti.
-        Restituisce una stringa JSON serializzata con i risultati.
+        Restituisce un oggetto RisultatoMetadatiAnomalie
         """
-        risultati = {}
+        metadati_anomalie: dict = {}
+
+        # Recupera i metadati del batch, se alterato
         if self.batch_alterato():
             try:
-                metadati_batch = self._recupera_metadati_batch()
+                metadati_batch = self._recupera_metadati_batch().model_dump()
+                metadati_anomalie["metadata_batch"] = metadati_batch
             except Exception as e:
-                raise ValueError(f"❌ Errore nel recupero dei metadati batch ID {self.id_batch}: {e}")
+                raise ValueError(f"Errore nel recupero dei metadati batch ID {self.id_batch}: {e}")
 
-            risultati['metadata_batch'] = metadati_batch.to_json()
-
+        # Recupera i metadati delle misurazioni, se alterate
         if self.misurazioni_alterate():
             try:
                 metadati_mis_sens: List[MetaDatiMisurazioneSensore] = self._recupera_metadati_misurazione_sensore()
+                # Costruisci il dizionario con chiave = id_misurazione, valore = oggetto MetaDatiMisurazioneSensore
+                metadata_dict = {
+                    m.metadati_misurazione.id_misurazione: m.to_dict()
+                    for m in metadati_mis_sens
+                }
+                metadati_anomalie["metadata_misurazioni"] = metadata_dict
             except Exception as e:
                 raise ValueError(f"Errore nel recupero dei metadati misurazioni: {e}")
 
-            lista_serializzata = []
-            for elem in metadati_mis_sens:
-                dict_elem = {
-                    "metadati_sensore": elem.metadati_sensore.model_dump(),
-                    "metadati_misurazioni": elem.metadati_misurazione.model_dump()
-                }
-                lista_serializzata.append(dict_elem)
-            risultati['metadata_misurazioni_sensori'] = lista_serializzata
+        return metadati_anomalie
 
-        return serializza_dict(risultati)
+    def ottieni_output_metadati(self) -> tuple[str, str]:
+        """Restituisce: (report_utente, json_serializzato)"""
+        metadati_anomalie: dict = self._recupera_metadati_anomalie()
+        return (
+            ottieni_report_metadati_anomalie(metadati_anomalie),
+            serializza_dict(metadati_anomalie),
+        )
+
+    def ottieni_output_differenze(self) -> tuple[str, str]:
+        """Versione base: non restituisce differenze"""
+        return "", ""

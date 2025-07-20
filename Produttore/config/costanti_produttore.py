@@ -105,3 +105,12 @@ PREFIX_VALIDI_SENSORE = ("JOY", "TEMP", "HUM", "PRESS")
 # - essere seguita da esattamente tre cifre numeriche (0–9)
 # Esempi validi: JOY001, TEMP123, HUM045, PRESS999
 REGEX_ID_SENSORE = r"(" + "|".join(PREFIX_VALIDI_SENSORE) + r")\d{3}"
+
+# COSTANTI BATCH
+# K_BATCH_SCALING Costante moltiplicativa per scalare la dimensione del batch
+# serve per aumentare la dimensione del batch in modo artificiale
+
+K_BATCH_SCALING = 32
+FATTORE_SCALAMENTO_FREQUENZA = 16    # aumenta l'esponente prima di calcolare il batch
+SOGLIA_BATCH_MINIMA = 127            # fallback (es. 2^7 - 1)
+

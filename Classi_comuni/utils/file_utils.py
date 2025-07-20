@@ -21,10 +21,10 @@ def genera_contenuto_gzip(json_string: str) -> bytes:
 
 def salva_risultato_verifica_su_file(
     id_batch: int,
-    contenuto_json: str,
+    anomalie_trovate: str,
     esito: bool,
     base_dir: str,
-    metadati_anomalie_json : Optional[str] = None,
+    metadati_anomalie : Optional[str] = None,
     differenze: Optional[str] = None
 ):
     """
@@ -43,12 +43,12 @@ def salva_risultato_verifica_su_file(
     # Salvataggio del file principale
     nome_file_esito = f"{ESITO_ANALISI_INTEGRITA}_{esito_str}.json"
     percorso_file_esito = os.path.join(cartella_destinazione, nome_file_esito)
-    salva_file_generico(percorso_file_esito, contenuto_json)
+    salva_file_generico(percorso_file_esito, anomalie_trovate)
 
     # Salvataggio dei metadati delle anomalie, se fornite
-    if metadati_anomalie_json is not None:
+    if metadati_anomalie is not None:
         percorso_file_diff = os.path.join(cartella_destinazione, METADATI_ANOMALIE)
-        salva_file_generico(percorso_file_diff, differenze)
+        salva_file_generico(percorso_file_diff, metadati_anomalie)
 
     # Salvataggio differenze riscontrate, se fornite
     if differenze is not None:
