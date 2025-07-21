@@ -2,8 +2,8 @@
 # COSTANTI DI CONFIGURAZIONE
 # =========================
 import os
-from dotenv import load_dotenv
 from enum import Enum
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -44,15 +44,27 @@ ERRORE_HTTP = "ERRORE_HTTP"             # Errore di comunicazione con endpoint H
 # TIPI DI SENSORE
 # =========================
 
-# Costanti che rappresentano i principali tipi di sensori supportati dal sistema.
-TIPO_SENSORE_JOYSTICK: str = "JOYSTICK"
-TIPO_SENSORE_TEMPERATURA: str = "TEMPERATURA"
-TIPO_SENSORE_UMIDITA: str = "UMIDITA"
 
+# Prefissi validi che identificano le principali categorie di sensori.
+# Ogni ID sensore deve iniziare con uno di questi prefissi (in lettere maiuscole).
+# Esempi: JOY001 → joystick, TEMP042 → temperatura, HUM123 → umidità, PRESS999 → pressione
 class TipoSensore(str, Enum):
-    JOYSTICK = TIPO_SENSORE_JOYSTICK
-    TEMPERATURA = TIPO_SENSORE_TEMPERATURA
-    UMIDITA = TIPO_SENSORE_UMIDITA
+    JOYSTICK = "joystick"
+    TEMPERATURA = "temperatura"
+    UMIDITA = "umidita"
+    GIROSCOPIO = "giroscopio"
+    ACCELEROMETRO = "accelerometro"
+    GENERICO = "generico"
+
+MAPPING_PREFISSO_TIPO_SENSORE = {
+    "JOY": TipoSensore.JOYSTICK,
+    "TEMP": TipoSensore.TEMPERATURA,
+    "HUM": TipoSensore.UMIDITA,
+    "GYR": TipoSensore.GIROSCOPIO,
+    "ACC": TipoSensore.ACCELEROMETRO,
+}
+
+PREFIX_VALIDI_SENSORE = tuple(MAPPING_PREFISSO_TIPO_SENSORE.keys())
 
 # =========================
 # ENDPOINT CLOUD PROVIDER
@@ -85,19 +97,7 @@ DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
 # VALIDAZIONE ID SENSORE
 # =========================
 
-# Mappatura prefisso → tipo sensore, utilizzata per dedurre automaticamente
-# il tipo sensore dall'ID durante la registrazione.
-MAPPING_PREFISSO_TIPO_SENSORE = {
-    "JOY": "joystick",
-    "TEMP": "temperatura",
-    "HUM": "umidità",
-    "PRESS": "pressione"
-}
 
-# Prefissi validi che identificano le principali categorie di sensori.
-# Ogni ID sensore deve iniziare con uno di questi prefissi (in lettere maiuscole).
-# Esempi: JOY001 → joystick, TEMP042 → temperatura, HUM123 → umidità, PRESS999 → pressione
-PREFIX_VALIDI_SENSORE = ("JOY", "TEMP", "HUM", "PRESS")
 
 # Espressione regolare per validare l'ID del sensore.
 # La stringa deve:

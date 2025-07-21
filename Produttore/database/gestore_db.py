@@ -8,7 +8,7 @@ from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.CRITICAL)
 
 """
 Classe che gestisce tutte le operazioni sul database locale SQLite.
@@ -64,9 +64,13 @@ class GestoreDatabase:
             # Verifica se esiste un batch attivo (non completo)
             cursor.execute(query.OTTIENI_BATCH_ATTIVO)
             risultato = cursor.fetchone()
-
+            # verifica se esiste un batch attivo
             if risultato:
-                # Batch attivo trovato → aggiorna la soglia
+                if risultato["soglia_misurazioni"] == nuova_soglia:
+                    logger.debug(f"La soglia è già impostata a {nuova_soglia}, nessuna modifica necessaria.")
+                    return True  # niente da aggiornare
+
+                # Batch attivo con differenze sul campo soglia_misurazioni vs nuova_soglia trovato → aggiorna la soglia
                 cursor.execute("""
                                UPDATE batch
                                SET soglia_misurazioni = ?

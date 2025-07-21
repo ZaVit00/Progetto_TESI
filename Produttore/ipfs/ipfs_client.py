@@ -76,6 +76,7 @@ class IpfsClient:
         nome_file = genera_nome_file(stringa_json, nome_file="merkle_path", ext="json")
         if comprimi_dimensione:
             contenuto = genera_contenuto_gzip(stringa_json)
+            #aggiunge l'estensione
             nome_file += ".gz"
         else:
             contenuto = stringa_json.encode("utf-8")

@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from Classi_comuni.utils.dict_utils import serializza_dict
 from config.costanti_produttore import  TipoSensore
 
 
 class DatiMisurazioneInIngresso(BaseModel, ABC):
+    model_config = ConfigDict(strict=True)  # <--- rende il controllo rigido
     """
     Classe base astratta per tutte le misurazioni ricevute in ingresso dai sensori (es. Arduino).
 
@@ -21,11 +22,6 @@ class DatiMisurazioneInIngresso(BaseModel, ABC):
     tra i diversi tipi di misurazioni (parsing discriminato).
     """
     id_sensore: str = Field(..., description="Identificativo univoco del sensore")
-
-    tipo: TipoSensore = Field(..., description=(
-        "Tipo della misurazione (es. 'joystick', 'temperatura', ecc.). "
-        "Serve a discriminare la sottoclasse corretta da istanziare."
-    ))
 
     @abstractmethod
     def dati_misurazione_to_dict(self) -> dict:
@@ -83,13 +79,14 @@ class DatiMisurazioneInIngressoJoystick(DatiMisurazioneInIngresso):
         return dati
 
 class DatiMisurazioneInIngressoTemperatura(DatiMisurazioneInIngresso):
+
     """
     Rappresenta una misurazione_in_ingresso effettuata da un sensore di temperatura.
     Estende la classe astratta Misurazione.
     """
     valore: float = Field(..., description="Valore della temperatura rilevata (in gradi Celsius)")
     tipo: Literal[TipoSensore.TEMPERATURA] = Field(
-        default=TipoSensore.JOYSTICK,
+        default=TipoSensore.TEMPERATURA,
         description="Tipo di misurazioni. Necessario per identificare l'istanza corretta."
     )
 
@@ -122,3 +119,52 @@ class DatiMisurazioneInIngressoUmidita(DatiMisurazioneInIngresso):
             "valore": self.valore
         }
         return dati
+
+class DatiMisurazioneInIngressoGiroscopio(DatiMisurazioneInIngresso):
+    """
+    Rappresenta una misurazione effettuata da un sensore giroscopico.
+    Registra le rotazioni sui tre assi X, Y, Z.
+    """
+    x: float = Field(..., description="Valore di rotazione sull'asse X (°/s)")
+    y: float = Field(..., description="Valore di rotazione sull'asse Y (°/s)")
+    z: float = Field(..., description="Valore di rotazione sull'asse Z (°/s)")
+    tipo: Literal[TipoSensore.GIROSCOPIO] = Field(
+        default=TipoSensore.GIROSCOPIO,
+        description="Tipo di misurazioni. Necessario per identificare l'istanza corretta."
+    )
+
+    def dati_misurazione_to_dict(self) -> dict:
+        """
+        Restituisce un dizionario con i dati specifici del giroscopio.
+        """
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z
+        }
+
+    from pydantic import Field
+    from typing import Literal
+
+class DatiMisurazioneInIngressoAccelerometro(DatiMisurazioneInIngresso):
+    """
+    Rappresenta una misurazione effettuata da un accelerometro.
+    Registra le accelerazioni sui tre assi X, Y, Z.
+    """
+    x: float = Field(..., description="Accelerazione sull'asse X (m/s²)")
+    y: float = Field(..., description="Accelerazione sull'asse Y (m/s²)")
+    z: float = Field(..., description="Accelerazione sull'asse Z (m/s²)")
+    tipo: Literal[TipoSensore.ACCELEROMETRO] = Field(
+        default=TipoSensore.ACCELEROMETRO,
+        description="Tipo di misurazioni. Necessario per identificare l'istanza corretta."
+    )
+
+    def dati_misurazione_to_dict(self) -> dict:
+        """
+        Restituisce un dizionario con i dati specifici dell'accelerometro.
+        """
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z
+        }

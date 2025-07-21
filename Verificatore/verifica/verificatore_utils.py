@@ -1,7 +1,8 @@
 import json
 from typing import Dict
 from Classi_comuni.merkle_tree import PathCompatto
-from Verificatore.entita.modelli_verificatore import RisultatoVerifica, RisultatoMetadatiAnomalie
+from Verificatore.entita.modelli_verificatore import RisultatoVerifica
+from costanti import MAPPING_CHIAVI_DIFFERENZE
 
 
 def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathCompatto]:
@@ -43,8 +44,16 @@ def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathComp
         # Genera errore dettagliato in caso di formato inaspettato
         raise ValueError(f"Errore nella deserializzazione dei Merkle Path da JSON: {e}")
 
+
+# === Metodi di report ===#
+# Questi metodi lavorano su dizionari distinti prodotti da tre operazioni distinte.
+# - Processo di ottenimento delle anomalie
+# - Processo di ottenimento dei metadati delle anomalie dal cloud
+# - Processo di ottenimento delle differenze (confronto dati cloud vs dati locale)
+# Poiché la struttura dei dizionari risultati dalle operazioni sono differenti
+# si è reso necessario utilizzare tre funzione distinte.
 def ottieni_report_anomalie(risultato: RisultatoVerifica) -> str:
-    righe = [f"ID Batch: {risultato['id_batch']}",
+    righe = [f"\nID Batch: {risultato['id_batch']}",
              f"Anomalie di integrità rilevate: {risultato['numero_anomalie_integrita']}",
              f"Anomalie strutturali (mancanti o aggiunti): {risultato['numero_anomalie_strutturali']}"]
 
@@ -69,7 +78,7 @@ def ottieni_report_metadati_anomalie(anomalie: dict) -> str:
     Genera una rappresentazione testuale leggibile del contenuto di un dizionario
     contenente metadati batch e misurazioni alterate.
     """
-    righe = [" REPORT ANOMALIE METADATI\n"]
+    righe = ["\nREPORT ANOMALIE METADATI\n"]
 
     # Batch
     if "metadata_batch" in anomalie:
@@ -95,32 +104,47 @@ def ottieni_report_metadati_anomalie(anomalie: dict) -> str:
 
 def ottieni_report_differenze(differenze: dict) -> str:
     """
-    Genera una rappresentazione testuale leggibile delle differenze tra dati locali e cloud.
+    Genera un report testuale leggibile a partire da un dizionario di differenze DeepDiff puro.
+    Evita di ripetere la stampa di path duplicati per la stessa sezione.
     """
-    righe = ["REPORT DIFFERENZE (locale vs cloud)\n"]
+    def formatta_valori_cambiati(valori: dict, indent: int = 2) -> list[str]:
+        spazi = " " * indent
+        sotto_spazi = " " * (indent + 2)
+        righe_locali = []
+        path_stampati = set()
+        for path, dettagli in valori.items():
+            if path in path_stampati:
+                continue
+            path_stampati.add(path)
+            righe_locali.append(f"{spazi}- {path}:")
+            righe_locali.append(f"{sotto_spazi}• Locale: {dettagli.get('old_value', 'N/A')}")
+            righe_locali.append(f"{sotto_spazi}• Cloud:  {dettagli.get('new_value', 'N/A')}")
+        return righe_locali
+
+    righe = ["\nREPORT DIFFERENZE (locale vs cloud)\n"]
 
     # ➤ Differenze nel batch
     if "dati_batch" in differenze:
         righe.append("Differenze nel batch:")
-        for campo, val in differenze["dati_batch"].items():
-            locale = val.get("locale", "N/A")
-            cloud = val.get("cloud", "N/A")
-            righe.append(f"  - {campo}:")
-            righe.append(f"    • Locale: {locale}")
-            righe.append(f"    • Cloud:  {cloud}")
+        valori_cambiati = differenze["dati_batch"].get("values_changed", {})
+        righe += formatta_valori_cambiati(valori_cambiati)
         righe.append("")
 
-    # ➤ Differenze nelle misurazioni
+    # ➤ Differenze nelle misurazioni alterate
     if "dati_misurazioni_alterate" in differenze:
         righe.append("Differenze nelle misurazioni alterate:")
-        for id_misurazione, differenze_campi in differenze["dati_misurazioni_alterate"].items():
+        for id_misurazione, sezioni in differenze["dati_misurazioni_alterate"].items():
             righe.append(f"  • ID Misurazione: {id_misurazione}")
-            for campo, val in differenze_campi.items():
-                locale = val.get("locale", "N/A")
-                cloud = val.get("cloud", "N/A")
-                righe.append(f"      - {campo}:")
-                righe.append(f"        • Locale: {locale}")
-                righe.append(f"        • Cloud:  {cloud}")
+            path_stampati = set()
+            for _, sotto_diff in sezioni.items():
+                valori_cambiati = sotto_diff.get("values_changed", {})
+                righe += formatta_valori_cambiati(
+                    {k: v for k, v in valori_cambiati.items() if k not in path_stampati},
+                    indent=6
+                )
+                path_stampati.update(valori_cambiati.keys())
             righe.append("")
 
     return "\n".join(righe)
+
+

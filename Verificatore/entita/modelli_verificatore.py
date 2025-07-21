@@ -36,7 +36,3 @@ class RisultatoVerifica(TypedDict):
     numero_anomalie_strutturali : int                  # Numero totale di elementi mancanti o aggiunti
     anomalie_integrita: dict[int, DettagliVerifica]  # era list -> diventa dict mappato per ID
     anomalie_strutturali: StrutturaVerifica            # Dettagli sulle differenze strutturali del batch
-
-class RisultatoMetadatiAnomalie(TypedDict, total=False):
-    metadata_batch: MetaDatiBatch
-    metadata_misurazioni: Dict[str, MetaDatiMisurazioneSensore]

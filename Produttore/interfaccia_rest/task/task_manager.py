@@ -22,6 +22,7 @@ async def task_invio_sensori(intervallo: int = 60):
 
         if not lista_sensori.sensori:
             logger.info("[SENSORI] Nessun sensore da inviare.")
+
         else:
             try:
                 logger.debug(f"[SENSORI] Tentativo invio gruppo sensori ({len(lista_sensori.sensori)} sensori)...")
@@ -52,7 +53,13 @@ async def task_invio_batch(intervallo: int = 60):
         # Recupera i batch chiusi e con JSON già pronto (id + payload_json)
         lista_id_payload = gestore_db.ottieni_payload_batch_pronti_per_invio()
 
+        # Set per evitare invii duplicati nello stesso ciclo
+        batch_inviati = set()
+
         for id_batch, payload_json in lista_id_payload:
+            if id_batch in batch_inviati:
+                continue  # Skip se già processato in questo giro
+
             try:
                 # Parsing JSON se necessario
                 if isinstance(payload_json, str):
@@ -65,13 +72,15 @@ async def task_invio_batch(intervallo: int = 60):
                 # Invia il batch al cloud
                 if invia_payload(payload, ENDPOINT_CLOUD_BATCH):
                     logger.info(f"[BATCH-JSON] Inviato correttamente id_batch={id_batch}")
+                    batch_inviati.add(id_batch)  # Marca come inviato con successo
                 else:
                     logger.warning(f"[BATCH-JSON] Invio fallito per id_batch={id_batch}")
-                    break  # se un invio fallisce, esce dal ciclo per evitare retry continui
+                    break  # Esce dal ciclo se un invio fallisce
             except Exception as e:
                 logger.error(f"[BATCH-JSON] Errore invio id_batch={id_batch}: {e}")
 
         await asyncio.sleep(intervallo)
+
 
 # === TASK PERIODICO: ELABORAZIONE DEI BATCH COMPLETI ===
 async def task_elabora_batch_completi(intervallo: int = 60):

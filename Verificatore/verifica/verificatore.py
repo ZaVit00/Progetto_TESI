@@ -1,5 +1,5 @@
 import logging
-from typing import List, Any
+from typing import List
 from Classi_comuni.merkle_tree import PathCompatto, MerkleTree
 from Classi_comuni.utils.dict_utils import serializza_dict
 from Verificatore.api_client.api_cloud import richiedi_mappa_id_hash_batch, richiedi_metadata_batch, \
@@ -8,8 +8,7 @@ from Verificatore.api_client.ipfs_client import ottieni_file_da_ipfs
 from Verificatore.config.istanze_globali import lettore_blockchain
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_stringa_json, \
     ottieni_report_metadati_anomalie
-from Verificatore.entita.modelli_verificatore import DettagliVerifica, StrutturaVerifica, RisultatoVerifica, \
-    RisultatoMetadatiAnomalie
+from Verificatore.entita.modelli_verificatore import DettagliVerifica, StrutturaVerifica, RisultatoVerifica
 from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class Verificatore:
             "id_batch": self.id_batch,
             "numero_anomalie_integrita": 0,
             "numero_anomalie_strutturali" : 0,
-            "anomalie_integrita": [],
+            "anomalie_integrita": {},
             "anomalie_strutturali": {"id_mancanti": [], "id_aggiunti": []},
         }
 
@@ -293,5 +292,5 @@ class Verificatore:
         )
 
     def ottieni_output_differenze(self) -> tuple[str, str]:
-        """Versione base: non restituisce differenze"""
+        """Versione base: non restituisce differenze per classe Verificatore"""
         return "", ""

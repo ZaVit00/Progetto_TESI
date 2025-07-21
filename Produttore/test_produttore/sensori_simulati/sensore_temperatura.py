@@ -27,7 +27,8 @@ def simula_sensore_temperatura(id_sensore: str, descrizione: str, ritardo_inizia
     for i in range(ripetizioni):
         dati = {
             "id_sensore": id_sensore.upper(),
-            "tipo": costanti_produttore.TIPO_SENSORE_TEMPERATURA,
+            "tipo": "vagangul a mamt",
+            #"tipo": costanti_produttore.TIPO_SENSORE_TEMPERATURA,
             "valore": round(random.uniform(20.0, 30.0), 2),
         }
 

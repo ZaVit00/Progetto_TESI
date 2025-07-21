@@ -173,10 +173,7 @@ def ricostruisci_dati_misurazione_sensore(lista_id: List[int], utente: UtenteAPI
     ris_query : list[DatiMisurazioneSensore] = recupera_dati_misurazione_sensore(lista_id)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Nessuna Misurazione trovata associata al batch")
-    try:
-        return
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return ris_query
 
 @app.get("/dati/batch/{id_batch}", response_model=DatiBatch)
 def ricostruisci_dati_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica_estesa)):

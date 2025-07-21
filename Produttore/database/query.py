@@ -278,7 +278,7 @@ da considerarsi errori applicativi, ma possono derivare da ritardi fisiologici
 nella sincronizzazione tra il nodo produttore e il cloud, non completamente controllabili.
 """
 OTTIENI_PAYLOAD_BATCH_PRONTI_PER_INVIO = """
-    SELECT b.id_batch, b.payload_json   
+    SELECT DISTINCT b.id_batch, b.payload_json   
     FROM batch as b
     INNER JOIN misurazione as m ON b.id_batch = m.id_batch
     INNER JOIN sensore as s ON m.id_sensore = s.id_sensore

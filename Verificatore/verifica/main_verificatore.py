@@ -6,7 +6,7 @@ from IO.output import stampa_tabella_batch, stampa_risultato_verifica, visualizz
 from Verificatore.api_client.api_cloud import richiedi_tutti_metadata_batch
 from Verificatore.verifica.verificatore import Verificatore
 from Classi_comuni.utils.file_utils import salva_risultato_verifica_su_file
-from Verificatore.entita.modelli_verificatore import RisultatoMetadatiAnomalie, RisultatoVerifica
+from Verificatore.entita.modelli_verificatore import RisultatoVerifica
 from modelli_metadati import MetaDatiBatch
 from verificatore_esteso import VerificatoreEsteso
 from verificatore_utils import ottieni_report_anomalie, ottieni_report_metadati_anomalie, ottieni_report_differenze
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
-def verifica_batch(id_batch: int, verificatore: Verificatore) -> None:
+def verifica_batch(id_batch: int, verificatore: Verificatore, base_dir : str) -> None:
     report_anomalie = ""
     report_metadati = ""
     report_differenze = ""
@@ -30,13 +30,19 @@ def verifica_batch(id_batch: int, verificatore: Verificatore) -> None:
 
             # Estrae info metadati o differenze secondo la classe concreta
             report_differenze, differenze_serializzate = verificatore.ottieni_output_differenze()
-            report_metadati, metadati_serializzati = verificatore.ottieni_output_metadati()
+            if not isinstance(verificatore, VerificatoreEsteso):
+                # Ottieni i metadati SOLO se della classe Verificatore
+                report_metadati, metadati_serializzati = verificatore.ottieni_output_metadati()
+            else:
+                # Istanza della classe VerificatoreEsteso --> non necessito di metadati.
+                # Possiede le differenze
+                report_metadati, metadati_serializzati = "", ""
 
             kwargs_salvataggio = {
                 "id_batch": id_batch,
                 "anomalie_trovate": anomalie_serializzate,
                 "esito": esito,
-                "base_dir": "verifiche_leggere",
+                "base_dir": base_dir,
             }
 
             if metadati_serializzati:
@@ -55,8 +61,7 @@ def verifica_batch(id_batch: int, verificatore: Verificatore) -> None:
         esito=esito,
         report_anomalie=report_anomalie,
         report_metadati=report_metadati,
-        report_differenze=report_differenze,
-        verifica_estesa=isinstance(verificatore, VerificatoreEsteso)
+        report_differenze=report_differenze
     )
 
 def ottieni_scelta_id_batch_da_utente() -> int:
@@ -65,21 +70,23 @@ def ottieni_scelta_id_batch_da_utente() -> int:
     id_batch: int = acquisisci_input_id_batch([b.id_batch for b in lista_dati_batch])
     return id_batch
 
-def visualizza_esiti(esito, report_anomalie, report_metadati, report_differenze, verifica_estesa : bool = False ):
+def visualizza_esiti(esito, report_anomalie, report_metadati, report_differenze):
     stampa_risultato_verifica(esito)
 
     if not esito:
         visualizza_output(report_anomalie)
-        if verifica_estesa:
+        # Se report_differenze è valorizzato, stampalo; altrimenti stampa i metadati
+        if report_differenze:
             visualizza_output(report_differenze)
         else:
             visualizza_output(report_metadati)
+
 
 def main():
     id_batch: int = ottieni_scelta_id_batch_da_utente()
     logger.info(f"🔍 Avvio verifica integrità leggera integrità per il batch ID {id_batch}")
     verificatore = Verificatore(id_batch)
-    verifica_batch(id_batch, verificatore)
+    verifica_batch(id_batch, verificatore, "verifiche_leggere")
 
 if __name__ == "__main__":
     main()

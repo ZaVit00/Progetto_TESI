@@ -1,6 +1,6 @@
 import re
-from pydantic import BaseModel, Field, field_validator
-from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE, TipoSensore
 
 
 class DatiSensoreInIngresso(BaseModel):
@@ -13,8 +13,11 @@ class DatiSensoreInIngresso(BaseModel):
                                              "Deve seguire il formato JOY001, TEMP042, HUM123, ecc.")
     descrizione: str = Field(..., description="Descrizione testuale del sensore.")
 
-    # il tipo viene calcolato automaticamente se vuoto
-    tipo: str = Field(default="", description="Tipo del sensore (es. joystick, temperatura, umidità, pressione).")
+    # il tipo viene infierito automaticamente a partire dalla sintassi del campo id_sensore
+    tipo: TipoSensore = Field(
+        default=TipoSensore.GENERICO,
+        description="Tipo del sensore (es. joystick, temperatura, umidità, pressione)."
+    )
 
     frequenza_hz: float = Field(..., gt=0, description="Frequenza di invio delle misurazioni (in Hz).")
 
@@ -48,4 +51,4 @@ class DatiSensoreInIngresso(BaseModel):
         prefisso = match.group(1) if match else ""
 
         # Mappa il prefisso al tipo di sensore, se possibile
-        self.tipo = MAPPING_PREFISSO_TIPO_SENSORE.get(prefisso, "generico")
+        self.tipo = MAPPING_PREFISSO_TIPO_SENSORE.get(prefisso, TipoSensore.GENERICO)

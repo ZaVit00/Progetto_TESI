@@ -140,7 +140,7 @@ class MerkleTree:
 
         # Costruzione dell'albero: ogni iterazione rappresenta un livello
         while len(livello_corrente) > 1:
-            logger.debug(f"\n🧱 Livello {livello} (len={len(livello_corrente)})")
+            logger.debug(f"\n Livello {livello} (len={len(livello_corrente)})")
             logger.debug(f"  Indici correnti: {indici_correnti}")
 
             nuovo_livello = []  # Lista degli hash dei nodi genitori
@@ -170,7 +170,7 @@ class MerkleTree:
                 # Aggiorna i Merkle Path per ogni foglia di sinistra e destra
                 self._aggiorna_paths(gruppo_sx, gruppo_dx, elem_sx, elem_dx)
 
-                # Il gruppo padre sarà la somma degli ID dei figli
+                # Il gruppo padre sarà la CONCATENAZIONE degli ID dei figli
                 nuovi_indici.append(gruppo_sx + gruppo_dx)
 
             # Avanzamento al livello superiore
