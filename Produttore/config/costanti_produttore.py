@@ -96,9 +96,6 @@ DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
 # =========================
 # VALIDAZIONE ID SENSORE
 # =========================
-
-
-
 # Espressione regolare per validare l'ID del sensore.
 # La stringa deve:
 # - iniziare con uno dei prefissi elencati in PREFIX_VALIDI_SENSORE
@@ -110,7 +107,7 @@ REGEX_ID_SENSORE = r"(" + "|".join(PREFIX_VALIDI_SENSORE) + r")\d{3}"
 # K_BATCH_SCALING Costante moltiplicativa per scalare la dimensione del batch
 # serve per aumentare la dimensione del batch in modo artificiale
 
-K_BATCH_SCALING = 32
-FATTORE_SCALAMENTO_FREQUENZA = 16    # aumenta l'esponente prima di calcolare il batch
+K_BATCH_SCALING = 16
+FATTORE_SCALAMENTO_FREQUENZA = 8    # aumenta l'esponente prima di calcolare il batch
 SOGLIA_BATCH_MINIMA = 127            # fallback (es. 2^7 - 1)
 

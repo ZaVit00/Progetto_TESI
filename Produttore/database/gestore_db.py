@@ -8,7 +8,7 @@ from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.DEBUG)
 
 """
 Classe che gestisce tutte le operazioni sul database locale SQLite.
@@ -22,7 +22,7 @@ class GestoreDatabase:
     def __init__(self, sola_lettura: bool = False):
         if sola_lettura:
             # Connessione in sola lettura (URI necessaria)
-            self.conn = sqlite3.connect(f"file:{DBPATH}?mode=ro", uri=True)
+            self.conn = sqlite3.connect(f"file:{DBPATH}?mode=ro", uri=True, timeout=10)
         else:
             self.conn = sqlite3.connect(DBPATH)
             self.crea_tabelle()
@@ -218,9 +218,12 @@ class GestoreDatabase:
             logger.info(f"[MISURAZIONE INSERITA] Batch {id_batch} ({num_mis_attuali + 1}/{soglia_attuale})")
             return True
 
-        except sqlite3.Error as e:
+        except sqlite3.OperationalError as e:
+            if "cannot start a transaction within a transaction" in str(e):
+                logger.error("[LOCK] Transazione già aperta. Potenziale sequenza di chiamate errata.")
+            else:
+                logger.error(f"[ERRORE INSERIMENTO MISURAZIONE] {e}")
             self.conn.rollback()
-            logger.error(f"[ERRORE INSERIMENTO MISURAZIONE] {e}")
             return False
 
     def inserisci_dati_sensore(self, sensore : DatiSensoreInIngresso) -> bool:
@@ -229,6 +232,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
+            cursor.execute("BEGIN IMMEDIATE")
             cursor.execute(query.INSERISCI_SENSORE, (sensore.id_sensore.upper(),
                                                      sensore.descrizione,
                                                      sensore.tipo,

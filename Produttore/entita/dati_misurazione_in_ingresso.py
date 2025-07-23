@@ -107,7 +107,7 @@ class DatiMisurazioneInIngressoUmidita(DatiMisurazioneInIngresso):
     """
     valore: float = Field(..., description="Valore dell'umidità rilevata")
     tipo: Literal[TipoSensore.UMIDITA] = Field(
-        default=TipoSensore.JOYSTICK,
+        default=TipoSensore.UMIDITA,
         description="Tipo di misurazioni. Necessario per identificare l'istanza corretta."
     )
 
@@ -142,9 +142,6 @@ class DatiMisurazioneInIngressoGiroscopio(DatiMisurazioneInIngresso):
             "y": self.y,
             "z": self.z
         }
-
-    from pydantic import Field
-    from typing import Literal
 
 class DatiMisurazioneInIngressoAccelerometro(DatiMisurazioneInIngresso):
     """

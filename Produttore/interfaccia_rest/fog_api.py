@@ -14,7 +14,7 @@ i modelli di misurazione in ingresso e dati sensore in ingresso servono solo al 
 non al cloud provider
 """
 from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, \
-    DatiMisurazioneInIngressoUmidita
+    DatiMisurazioneInIngressoUmidita, DatiMisurazioneInIngressoGiroscopio, DatiMisurazioneInIngressoAccelerometro
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from task_manager import avvia_task_periodici
 
@@ -59,8 +59,9 @@ Con discriminator="tipo", FastAPI:
 - se vale "temperatura", usa MisurazioneInIngressoTemperatura altrimenti
 - valida il resto del contenuto (i campi) in base al modello di classe selezionato
 """
-MisurazioneInIngresso = Annotated[Union[DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, DatiMisurazioneInIngressoUmidita],
-                         Body(discriminator="tipo")]
+MisurazioneInIngresso = Annotated[Union[DatiMisurazioneInIngressoJoystick,
+DatiMisurazioneInIngressoGiroscopio,
+DatiMisurazioneInIngressoAccelerometro],Body(discriminator="tipo")]
 @app.post("/misurazioni", summary="Registra una misurazione", response_model=dict)
 async def registra_misurazione(misurazione: MisurazioneInIngresso):
     """
@@ -86,9 +87,8 @@ async def registra_misurazione(misurazione: MisurazioneInIngresso):
     }
     return risposta
 
-
 def main():
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
     main()
