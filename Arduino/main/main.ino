@@ -30,13 +30,16 @@ void setup() {
   registraSensore("JOY001", "Joystick", calcolaFrequenzaHz(periodoJoystick));
   registraSensore("ACC001", "Accelerometro", calcolaFrequenzaHz(periodoAcc));
   registraSensore("GYR001", "Giroscopio", calcolaFrequenzaHz(periodoGyro));
-  
+
+  delay(10000);
+  Serial.print("dopo la pausa");
+
   // Aspetta 10 secondi per essere sicuro che il DB abbia committato le tre transazioni distinte
   // e poi parte il loop
-  delay(10000);
 }
 
 void loop() {
+  
   // Letture + invio misurazioni
   gestisciJoystick(periodoJoystick, "JOY001");
   gestisciAccelerometro(periodoAcc, "ACC001");

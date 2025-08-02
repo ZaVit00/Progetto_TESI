@@ -22,9 +22,10 @@ class GestoreDatabase:
     def __init__(self, sola_lettura: bool = False):
         if sola_lettura:
             # Connessione in sola lettura (URI necessaria)
-            self.conn = sqlite3.connect(f"file:{DBPATH}?mode=ro", uri=True, timeout=10)
+            self.conn = sqlite3.connect(f"file:{DBPATH}?mode=ro", uri=True)
         else:
-            self.conn = sqlite3.connect(DBPATH)
+            # time out per le transazioni
+            self.conn = sqlite3.connect(DBPATH, timeout=10)
             self.crea_tabelle()
 
         self.conn.row_factory = sqlite3.Row
@@ -160,13 +161,10 @@ class GestoreDatabase:
 
         try:
             cursor = self.conn.cursor()
-            cursor.execute("BEGIN IMMEDIATE")  # Transazione atomica
+            #cursor.execute("BEGIN IMMEDIATE")  # Transazione atomica
 
-            # 1. Verifica esistenza del sensore
-            try:
-                self.verifica_esistenza_sensore(id_sensore)
-            except ValueError as ve:
-                logger.warning(f"[MISURAZIONE RIFIUTATA] {ve}")
+            if not self.verifica_esistenza_sensore(id_sensore):
+                logger.warning(f"[MISURAZIONE RIFIUTATA] Sensore '{id_sensore}' non registrato.")
                 self.conn.rollback()
                 return False
 
@@ -232,7 +230,7 @@ class GestoreDatabase:
         """
         try:
             cursor = self.conn.cursor()
-            cursor.execute("BEGIN IMMEDIATE")
+            #cursor.execute("BEGIN IMMEDIATE")
             cursor.execute(query.INSERISCI_SENSORE, (sensore.id_sensore.upper(),
                                                      sensore.descrizione,
                                                      sensore.tipo,

@@ -44,7 +44,7 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
         raise HTTPException(status_code=500, detail="Errore nella registrazione del sensore.")
 
     logger.info(f"Sensore registrato correttamente: {dati_sensore.id_sensore}")
-    #logger.debug("Frequenza media sensori dentro FOG API: {freq_media}")
+    logger.info(f"Registrazione completata per il sensore {dati_sensore.id_sensore}, aggiorno soglia batch...")
     aggiorna_soglia_batch()
 
     return {
