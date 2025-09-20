@@ -10,7 +10,6 @@ load_dotenv()
 # -------------------------
 # Chiavi API e credenziali
 # -------------------------
-
 # Chiave API per autenticare il nodo produttore verso il cloud provider.
 API_KEY_PRODUTTORE = os.getenv("API_KEY_PRODUTTORE")
 
@@ -106,8 +105,7 @@ REGEX_ID_SENSORE = r"(" + "|".join(PREFIX_VALIDI_SENSORE) + r")\d{3}"
 # COSTANTI BATCH
 # K_BATCH_SCALING Costante moltiplicativa per scalare la dimensione del batch
 # serve per aumentare la dimensione del batch in modo artificiale
-
-K_BATCH_SCALING = 8
-FATTORE_SCALAMENTO_FREQUENZA = 8    # aumenta l'esponente prima di calcolare il batch
-SOGLIA_BATCH_MINIMA = 127            # fallback (es. 2^7 - 1)
+K_BATCH_SCALING = 8 #2^3
+FATTORE_SCALAMENTO_FREQUENZA = 8    # aumenta l'argomento del logaritmo prima di calcolare il batch
+SOGLIA_BATCH_MINIMA = 255            # fallback per batch di dimensioni minime (es. 2^8 - 1 = 255)
 

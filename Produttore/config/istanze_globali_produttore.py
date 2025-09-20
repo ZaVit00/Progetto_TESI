@@ -12,14 +12,3 @@ scrittore_blockchain = ScrittoreBlockchain(PROVIDER_BLOCKCHAIN_URL, abi, indiriz
 # Istanza globale del database del produttore (sqlite)
 gestore_db = GestoreDatabase()
 
-# Configurazione globale del logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
-)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-
-
-

@@ -17,7 +17,7 @@ class DatiMisurazioneInIngresso(BaseModel, ABC):
     - l’instanziazione automatica della sottoclasse corretta, in base al tipo di sensore.
 
     ⚠️ Nota importante:
-    Il campo 'tipo' deve essere presente nel JSON in ingresso.
+    Il campo 'tipo' deve essere presente nel JSON della misurazione in ingresso.
     Anche se apparentemente ridondante, è fondamentale per consentire a FastAPI di discriminare
     tra i diversi tipi di misurazioni (parsing discriminato).
     """
@@ -27,14 +27,15 @@ class DatiMisurazioneInIngresso(BaseModel, ABC):
     def dati_misurazione_to_dict(self) -> dict:
         """
         Restituisce un dizionario con i dati specifici della misurazione_in_ingresso.
-        Deve essere implementato da ogni sottoclasse.
+        Deve essere implementato da ogni sottoclasse poiché i dati della misurazione
+        sono specifici a seconda del sensore che stiamo modellando.
         """
         pass
 
     def estrai_dati_misurazione(self) -> str:
         """
-        Estrae e normalizza i dati effettivi della misurazione:
-        - Rimuove 'id_sensore' (metadata)
+        Estrae e normalizza i dati EFFETTIVI della misurazione:
+        - Rimuove 'id_sensore' (metadata superfluo)
         - Normalizza gli zeri float (0.0, -0.0, -0.000 → 0)
         - Arrotonda tutti i float a 6 cifre decimali
         - Ordina le chiavi e restituisce una stringa JSON compatta
@@ -43,14 +44,20 @@ class DatiMisurazioneInIngresso(BaseModel, ABC):
         # Normalizzazione (IMPORTANTISSIMO) di tutti i valori float equivalenti a zero
         for key, value in d.items():
             if isinstance(value, float) and abs(value) == 0.0:
-                #normalizza a 0
+                #normalizza a 0 valori come 0.000
                 d[key] = 0
-            else:
-                d[key] = round(value, 6)  # Arrotonda a 6 cifre decimali
+            elif isinstance(value, float):
+                d[key] = round(value, 6)
+            elif isinstance(value, bool):
+                #Normalizzazione dei booleani
+                # 1 = true, 0 = false
+                d[key] = 1 if value else 0
 
-        # Serializzazione ordinata e compatta per uso coerente (es. hashing, confronto)
+        # Serializzazione ordinata e compatta per uso coerente (es. Hashing, confronto)
         return serializza_dict(d)
 
+
+# === implementazioni di DatiMisurazioneInIngresso ===#
 
 
 class DatiMisurazioneInIngressoJoystick(DatiMisurazioneInIngresso):

@@ -3,8 +3,8 @@ from typing import Tuple
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
-from istanze_globali import gestore_db
-from istanze_globali import scrittore_blockchain
+from istanze_globali_produttore import gestore_db
+from istanze_globali_produttore import scrittore_blockchain
 from merkle_tree import MerkleTree
 from modelli_dati import PacchettoBatchMisurazioni
 

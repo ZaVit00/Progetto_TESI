@@ -7,9 +7,6 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/sensore_simulato" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/utils" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/interfaccia_rest" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/interfaccia_rest/utils" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/stato_ricezione_batch" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/entita/misurazione_in_ingresso" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/IPFSclient" isTestSource="false" />
@@ -19,11 +16,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Produttore/ipfs" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Produttore/interfaccia_rest/task" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/config" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Classi_comuni/entita" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/auth" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/database" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Cloud_Service_Provider/entita" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Classi_comuni" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Classi_comuni/config" isTestSource="false" />
@@ -42,6 +35,13 @@
       <sourceFolder url="file://$MODULE_DIR$/Classi_comuni/utils" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Verificatore/IO" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Verificatore/entita" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/auth" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/config" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/database" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/entita" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/interfaccia_rest" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Cloud_service_provider/interfaccia_rest/utils" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

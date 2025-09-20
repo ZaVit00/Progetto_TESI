@@ -6,7 +6,7 @@ from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE,
 class DatiSensoreInIngresso(BaseModel):
     """
     Modello che rappresenta un sensore generico registrabile nel sistema fog.
-    Il tipo del sensore (joystick, temperatura, ecc.) viene dedotto automaticamente
+    Il tipo del sensore (joystick, temperatura, etc) viene dedotto automaticamente
     dal prefisso dell'ID del sensore, a meno che non venga specificato esplicitamente.
     """
     id_sensore: str = Field(..., description="Identificatore del sensore. "
@@ -31,6 +31,8 @@ class DatiSensoreInIngresso(BaseModel):
         - L'ID viene automaticamente convertito in maiuscolo
         """
         v = v.upper()
+        #Validazione dell'id_sensore da inserire
+        #in caso contrario FastAPI non crea l'istanza
         if not re.fullmatch(REGEX_ID_SENSORE, v):
             raise ValueError("id_sensore non rispetta il formato previsto (es. JOY001, TEMP042, HUM123)")
         return v

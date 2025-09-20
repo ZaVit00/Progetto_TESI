@@ -1,7 +1,7 @@
 import logging
 import requests
 from costanti_produttore import API_KEY_PRODUTTORE
-from istanze_globali import gestore_db
+from istanze_globali_produttore import gestore_db
 logger = logging.getLogger(__name__)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 

@@ -3,7 +3,7 @@ import json
 import logging
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from gestione_batch import gestisci_batch_completo
-from istanze_globali import gestore_db
+from istanze_globali_produttore import gestore_db
 from modelli_dati import DatiListaSensori
 from utils.api_cloud import invia_payload
 logger = logging.getLogger(__name__)
@@ -16,13 +16,11 @@ async def task_invio_sensori(intervallo: int = 60):
 
     while True:
         logger.info("[SENSORI] Controllo sensori da inviare...")
-
         # Ottiene dal DB la lista dei sensori che non hanno ancora ricevuto conferma dal cloud
         lista_sensori: DatiListaSensori = gestore_db.ottieni_sensori_non_conferma_ricezione()
 
         if not lista_sensori.sensori:
             logger.info("[SENSORI] Nessun sensore da inviare.")
-
         else:
             try:
                 logger.debug(f"[SENSORI] Tentativo invio gruppo sensori ({len(lista_sensori.sensori)} sensori)...")

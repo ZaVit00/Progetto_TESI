@@ -47,7 +47,7 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
     # ------------------------- METODI DI SUPPORTO INTERNI -------------------------
-    def aggiorna_soglia(self, nuova_soglia: int) -> bool:
+    def aggiorna_soglia_chiusura_batch(self, nuova_soglia: int) -> bool:
         """
         Aggiorna la soglia del batch attivo.
         Se il batch ha già raggiunto (o superato) la nuova soglia, viene chiuso.
@@ -161,8 +161,8 @@ class GestoreDatabase:
 
         try:
             cursor = self.conn.cursor()
-            #cursor.execute("BEGIN IMMEDIATE")  # Transazione atomica
-
+            # 1. Verifica l'esistenza del sensore associato alla misurazione
+            # Se assente il sensore, vi è una violazione di foreign key
             if not self.verifica_esistenza_sensore(id_sensore):
                 logger.warning(f"[MISURAZIONE RIFIUTATA] Sensore '{id_sensore}' non registrato.")
                 self.conn.rollback()

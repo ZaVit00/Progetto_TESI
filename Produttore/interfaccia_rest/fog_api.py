@@ -5,22 +5,26 @@ from datetime import datetime
 from typing import Union, Annotated
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
-from istanze_globali import gestore_db
-from gestione_soglia_batch import aggiorna_soglia_batch
+from pydantic import Field
+
+from costanti_comuni import TipoServizio
+from istanze_globali_produttore import gestore_db
+from gestione_soglia_batch import aggiorna_soglia_chiusura_batch
+from registro_log import setup_logger
 
 """
 Import dei modelli di misurazione_in_ingresso specifici
 i modelli di misurazione in ingresso e dati sensore in ingresso servono solo al fog node e
 non al cloud provider
 """
-from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoTemperatura, \
-    DatiMisurazioneInIngressoUmidita, DatiMisurazioneInIngressoGiroscopio, DatiMisurazioneInIngressoAccelerometro
+from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoAccelerometro, \
+    DatiMisurazioneInIngressoGiroscopio
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
 from task_manager import avvia_task_periodici
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger = setup_logger(TipoServizio.PRODUTTORE, level=logging.DEBUG)
 
+#Funzione che viene eseguita all'avvio dell'applicazione
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Avvio dei task periodici per invio dati sensori, invio payload al cloud,"
@@ -29,12 +33,13 @@ async def lifespan(app: FastAPI):
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
+    #chiusura della connesione del database sqlite (dati_fog_node.sqlite)
     gestore_db.chiudi_connessione()
 
 # Istanzia l'app FastAPI con supporto al lifecycle
 app = FastAPI(lifespan=lifespan)
 
-@app.post("/sensori", summary="Registra un sensore", response_model=dict)
+@app.post("/sensore", summary="Registra un sensore", response_model=dict)
 async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
     """
     Endpoint per la registrazione di un sensore.
@@ -45,25 +50,36 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
 
     logger.info(f"Sensore registrato correttamente: {dati_sensore.id_sensore}")
     logger.info(f"Registrazione completata per il sensore {dati_sensore.id_sensore}, aggiorno soglia batch...")
-    aggiorna_soglia_batch()
+
+    """
+    Passo cruciale: aggiornamento della soglia dinamica di chiusura batch.
+    Ogni volta che un nuovo sensore viene registrato, comunica la propria frequenza di invio dati.
+    Questa informazione modifica la soglia di chiusura dei batch, che deve quindi essere ricalcolata
+    per mantenere coerente la dimensione/tempo dei batch rispetto al numero e alla frequenza dei sensori attivi.
+    """
+    aggiorna_soglia_chiusura_batch() # STEP CRUCIALE GUARDA BENE
 
     return {
         "status": "sensore registrato",
-        "id": dati_sensore.id_sensore
+        "id": dati_sensore.id_sensore,
+        "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y"),
+        "timestamp_iso": datetime.now().isoformat()
     }
 
 """
-Con discriminator="tipo", FastAPI:
-- legge il Body ed estrae il campo "tipo" dal JSON in ingresso
+Con Field(discriminator="tipo"), FastAPI:
+- legge il Field Tipo ed estrae il campo "tipo" dal JSON in ingresso
 - se vale "joystick", usa MisurazioneInIngressoJoystick 
-- se vale "temperatura", usa MisurazioneInIngressoTemperatura altrimenti
+- se vale "accelerometro", usa MisurazioneInIngressoAccelerometro
+- se vale "giroscopio", usa MisurazioneInIngressoGiroscopio
+- possibile estensione per future misurazioni di sensori differenti (importante riutilizzare la stessa sintassi)
 - valida il resto del contenuto (i campi) in base al modello di classe selezionato
 """
-MisurazioneInIngresso = Annotated[Union[DatiMisurazioneInIngressoJoystick,
+misurazioni_accettate = Union[DatiMisurazioneInIngressoJoystick,
 DatiMisurazioneInIngressoGiroscopio,
-DatiMisurazioneInIngressoAccelerometro],Body(discriminator="tipo")]
-@app.post("/misurazioni", summary="Registra una misurazione", response_model=dict)
-async def registra_misurazione(misurazione: MisurazioneInIngresso):
+DatiMisurazioneInIngressoAccelerometro]
+@app.post("/misurazione", summary="Registra una misurazione", response_model=dict)
+async def registra_misurazione(misurazione: misurazioni_accettate = Field(discriminator="tipo")):
     """
     Endpoint per ricevere e salvare una misurazione proveniente da un sensore registrato.
     La misurazione viene associata al batch attivo o ne crea uno nuovo se necessario.
