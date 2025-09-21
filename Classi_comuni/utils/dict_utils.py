@@ -12,6 +12,18 @@ def serializza_dict(d: dict) -> str:
 
     return string_json
 
+def serializza_dict_pretty(d: dict) -> str:
+    #Serializza il dizionario in una stringa JSON ordinata con indent = 2 per consentire
+    #una visualizzazione migliore del JSON
+    string_json = json.dumps(
+        d,
+        indent=2,
+        sort_keys=True,  # Ordina le chiavi alfabeticamente
+        separators=(",", ":")  # Rimuove gli spazi tra chiavi e valori → output compatto
+    )
+
+    return string_json
+
 def canonizza_dict(d: dict) -> dict:
     """
     Canonizza un dizionario JSON:

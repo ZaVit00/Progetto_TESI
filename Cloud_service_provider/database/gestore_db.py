@@ -23,6 +23,7 @@ from dict_utils import serializza_dict
 from modelli_dati import DatiBatch
 from modelli_metadati import MetaDatiBatchPayload
 from registro_log import setup_logger
+
 logger = setup_logger(TipoServizio.CLOUD, module=__name__, level=logging.DEBUG)
 
 

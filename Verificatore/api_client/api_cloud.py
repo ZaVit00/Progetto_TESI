@@ -3,10 +3,14 @@ from typing import Dict
 import requests
 from Verificatore.config.costanti_verificatore import API_KEY_VERIFICATORE, \
     ENDPOINT_MAPPA_ID_HASH, ENDPOINT_METADATA_MISURAZIONE_SENSORE
+from costanti_comuni import TipoServizio
 from costanti_verificatore import ENDPOINT_METADATA_BATCH
 from modelli_metadati import MetaDatiMisurazioneSensorePayload, MetaDatiBatchPayload
+from registro_log import setup_logger
 
 headers = {"X-API-Key": API_KEY_VERIFICATORE}
+logger = setup_logger(TipoServizio.VERIFICATORE, module=__name__, level=logging.DEBUG)
+
 #disattivo il logger della libreria usata da request
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -15,14 +19,12 @@ def richiedi_mappa_id_hash_batch(id_batch: int) -> dict[int, str]:
     """
     Richiede al Cloud Provider la mappa ID → hash delle foglie (batch + misurazioni)
     per un determinato batch. Questa mappa viene usata dal nodo verificatore per
-    verificare l'integrità tramite i Merkle Path.
-
+    verificare l'integrità tramite il processo di verifica dell'integrità che coinvolge i
+    Merkle Path (Processo noto come Merkle Proof)
     Args:
         id_batch: ID del batch da verificare.
-
     Returns:
         Dizionario con ID (int) come chiavi e hash foglia (str) come valori.
-
     Raises:
         ValueError: in caso di errore nella risposta del server.
     """

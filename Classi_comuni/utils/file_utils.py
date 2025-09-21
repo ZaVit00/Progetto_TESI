@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 from io import BytesIO
 from typing import Optional
-
 from Classi_comuni.utils.hashing_utils import Hashing
 from costanti_verificatore import DIFFERENZE_RISCONTRATE, METADATI_ANOMALIE, ESITO_ANALISI_INTEGRITA
 

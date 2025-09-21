@@ -1,7 +1,10 @@
 import logging
 from typing import List
 
-logger = logging.getLogger(__name__)
+from costanti_comuni import TipoServizio
+from registro_log import setup_logger
+
+logger = setup_logger(TipoServizio.VERIFICATORE, module=__name__, level=logging.DEBUG)
 
 def acquisisci_input_id_batch(lista_id_batch: List[int]) -> int:
     """

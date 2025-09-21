@@ -1,9 +1,12 @@
 import json
+import logging
 from typing import Dict
 from Classi_comuni.merkle_tree import PathCompatto
-from Verificatore.entita.modelli_verificatore import RisultatoVerifica
-from costanti import MAPPING_CHIAVI_DIFFERENZE
+from costanti_comuni import TipoServizio
+from registro_log import setup_logger
+from tipi_verifica import RisultatoVerifica
 
+logger = setup_logger(TipoServizio.VERIFICATORE, module=__name__, level=logging.DEBUG)
 
 def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathCompatto]:
     """
@@ -22,25 +25,43 @@ def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathComp
     """
     try:
         # Caricamento della stringa JSON in un dict Python
-        diz = json.loads(stringa_json)
-        #dizionario vuoto
-        paths: Dict[int, PathCompatto] = {}
+        diz: dict = json.loads(stringa_json)
+
+        if not isinstance(diz, dict) or not diz:
+            raise ValueError("Il JSON dei Merkle Path è vuoto o non è un oggetto valido.")
+
+        merkle_paths: Dict[int, PathCompatto] = {}
 
         for key_string, values in diz.items():
-            # Converti la stringa chiave in un intero (es. "0" → 0)
-            id_foglia = int(key_string)
-            # Crea un nuovo oggetto PathCompatto
-            path = PathCompatto()
-            # Imposta la direzione (es. "00101")
-            path.imposta_lista_direzione(values["dir"])
-            # Imposta la lista di hash fratelli nell'esatto ordine
-            path.imposta_hash_fratelli(values["hash"])
-            # Aggiungi al dizionario finale
-            paths[id_foglia] = path
+            try:
+                # Converti la stringa chiave in un intero (es. "0" → 0)
+                id_foglia = int(key_string)
 
-        return paths
+                # Verifica la struttura attesa
+                if not isinstance(values, dict):
+                    raise TypeError(f"Valore non valido per la foglia {key_string}: atteso un dict.")
 
-    except (ValueError, KeyError, TypeError) as e:
+                direzioni = values.get("dir")
+                hash_fratelli = values.get("hash")
+
+                if direzioni is None or hash_fratelli is None:
+                    raise KeyError(f"Mancano campi 'dir' o 'hash' per la foglia {key_string}.")
+
+                # Crea e popola il PathCompatto
+                merkle_path = PathCompatto()
+                merkle_path.imposta_lista_direzione(direzioni)
+                merkle_path.imposta_hash_fratelli(hash_fratelli)
+
+                # Aggiungi al diz finale
+                merkle_paths[id_foglia] = merkle_path
+
+            except Exception as e:
+                logger.error(f"[ERRORE] Foglia {key_string}: {e}")
+                raise
+
+        return merkle_paths
+
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
         # Genera errore dettagliato in caso di formato inaspettato
         raise ValueError(f"Errore nella deserializzazione dei Merkle Path da JSON: {e}")
 

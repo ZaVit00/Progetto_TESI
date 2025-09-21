@@ -1,19 +1,33 @@
 from typing import List
-
+from tabulate import tabulate
 from modelli_metadati import MetaDatiBatchPayload
 
 
-def stampa_tabella_batch(batch_list: List[MetaDatiBatchPayload]) -> None:
+def stampa_tabella_batch(batch_list: List[MetaDatiBatchPayload]):
     """
     Stampa i metadati dei batch disponibili in formato tabellare (output utente).
+    Usa la libreria 'tabulate' per una visualizzazione più chiara.
     """
-    print("\n📦 Lista batch disponibili:")
-    header = f"{'ID':<6} {'Timestamp':<25} {'# Misurazioni':<15}"
-    print(header)
-    print("-" * len(header))
+    if not batch_list:
+        print("⚠ Nessun batch attualmente disponibile nel sistema.")
+        return
 
-    for b in batch_list:
-        print(f"{b.id_batch:<6} {b.timestamp_creazione:<25} {b.numero_misurazioni:<15}")
+    # Prepara i dati come lista di liste
+    tabella = [
+        [b.id_batch, b.timestamp_creazione, b.numero_misurazioni]
+        for b in batch_list
+    ]
+
+    # Stampa tabella con intestazioni
+    print("\nLista batch disponibili:")
+    print(
+        tabulate(
+            tabella,
+            headers=["ID", "Timestamp", "# Misurazioni"],
+            tablefmt="pretty"
+        )
+    )
+
 
 def stampa_risultato_verifica(integro: bool) -> None:
     """

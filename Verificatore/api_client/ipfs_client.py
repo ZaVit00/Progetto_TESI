@@ -3,7 +3,6 @@ from io import BytesIO
 import requests
 from costanti_verificatore import URL_FILEBASE_IPFS
 
-
 def ottieni_file_da_ipfs(cid: str) -> str:
     """
     Scarica un file da IPFS (tramite Filebase) e restituisce una stringa JSON.

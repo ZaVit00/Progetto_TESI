@@ -51,6 +51,14 @@ class ModelliHashabili(ModelliSerializzabili):
         """
         return Hashing.calcola_hash(self.to_json())
 
+    def uguale_a(self, altro: "ModelliHashabili") -> bool:
+        """
+        Ritorna True se l'istanza corrente è uguale a un'altra,
+        confrontando i rispettivi hash
+        (sostanzialmente se sono la stessa istanza)
+        """
+        return self.to_hash() == altro.to_hash()
+
     def differenze_con(self, altro: "ModelliHashabili") -> dict:
         """
         Confronta l'istanza corrente di ModelliHashabili con un'altra istanza di ModelliHashabili
