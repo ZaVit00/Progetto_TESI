@@ -9,6 +9,6 @@ abi, indirizzo = inizializza_configurazione_blockchain()
 scrittore_blockchain = ScrittoreBlockchain(PROVIDER_BLOCKCHAIN_URL, abi, indirizzo, ACCOUNT_ADDRESS_BLOCKCHAIN,
                                            PRIVATE_KEY_BLOCKCHAIN)
 
-# Istanza globale del database del produttore (sqlite)
+# Istanza globale del database del produttore (SQLITE)
 gestore_db = GestoreDatabase()
 

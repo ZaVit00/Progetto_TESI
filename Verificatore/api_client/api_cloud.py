@@ -4,7 +4,7 @@ import requests
 from Verificatore.config.costanti_verificatore import API_KEY_VERIFICATORE, \
     ENDPOINT_MAPPA_ID_HASH, ENDPOINT_METADATA_MISURAZIONE_SENSORE
 from costanti_verificatore import ENDPOINT_METADATA_BATCH
-from modelli_metadati import MetaDatiMisurazioneSensore, MetaDatiBatch
+from modelli_metadati import MetaDatiMisurazioneSensorePayload, MetaDatiBatchPayload
 
 headers = {"X-API-Key": API_KEY_VERIFICATORE}
 #disattivo il logger della libreria usata da request
@@ -35,7 +35,7 @@ def richiedi_mappa_id_hash_batch(id_batch: int) -> dict[int, str]:
     mappa_str = response.json()
     return {int(k): v for k, v in mappa_str.items()}
 
-def richiedi_metadata_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiMisurazioneSensore]:
+def richiedi_metadata_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiMisurazioneSensorePayload]:
     """
     Richiede al Cloud Provider i metadati, dati non sensibili, delle misurazioni associate
     agli ID specificati. Questo metodo viene utilizzato dal verificatore dopo aver
@@ -46,7 +46,7 @@ def richiedi_metadata_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiM
         lista_id: Lista di ID delle misurazioni anomale.
 
     Returns:
-        Lista di oggetti `MetaDatiMisurazioneSensore`.
+        Lista di oggetti `MetaDatiMisurazioneSensorePayload`.
 
     Raises:
         ValueError: in caso di errore nella risposta del server.
@@ -55,10 +55,10 @@ def richiedi_metadata_misurazione_sensore(lista_id: list[int]) -> list[MetaDatiM
     if response.status_code != 200:
         raise ValueError(f"Errore nella richiesta: {response.status_code} - {response.text}")
 
-    return [MetaDatiMisurazioneSensore(**item) for item in response.json()]
+    return [MetaDatiMisurazioneSensorePayload(**item) for item in response.json()]
 
 
-def richiedi_metadata_batch(id_batch: int) -> MetaDatiBatch:
+def richiedi_metadata_batch(id_batch: int) -> MetaDatiBatchPayload:
     """
     Richiede al Cloud Provider i metadati non sensibili del batch specificato.
     Utilizzato per ottenere informazioni generali (timestamp, id, ecc.) senza
@@ -68,7 +68,7 @@ def richiedi_metadata_batch(id_batch: int) -> MetaDatiBatch:
         id_batch: ID del batch da interrogare.
 
     Returns:
-        Oggetto `MetaDatiBatch` corrispondente.
+        Oggetto `MetaDatiBatchPayload` corrispondente.
 
     Raises:
         ValueError: in caso di errore nella risposta del server.
@@ -80,16 +80,16 @@ def richiedi_metadata_batch(id_batch: int) -> MetaDatiBatch:
 
     response.raise_for_status()
     batch : Dict = response.json()
-    return MetaDatiBatch(**batch)
+    return MetaDatiBatchPayload(**batch)
 
-def richiedi_tutti_metadata_batch() -> list[MetaDatiBatch]:
+def richiedi_tutti_metadata_batch() -> list[MetaDatiBatchPayload]:
     """
     Richiede al Cloud Provider la lista completa dei metadati dei batch memorizzati.
     Utile per mostrare lo storico dei batch disponibili, senza accedere ai contenuti
     sensibili.
 
     Returns:
-        Lista di oggetti `MetaDatiBatch`.
+        Lista di oggetti `MetaDatiBatchPayload`.
 
     Raises:
         ValueError: in caso di errore nella risposta del server.
@@ -101,4 +101,4 @@ def richiedi_tutti_metadata_batch() -> list[MetaDatiBatch]:
         raise ValueError(f"Errore nella richiesta: {response.status_code} - {response.text}")
 
     lista_batch = response.json()
-    return [MetaDatiBatch(**batch) for batch in lista_batch]
+    return [MetaDatiBatchPayload(**batch) for batch in lista_batch]

@@ -1,4 +1,4 @@
-from Classi_comuni.entita.modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore  # usa i tuoi modelli Pydantic reali
+from Classi_comuni.entita.modelli_metadati import MetaDatiBatchPayload, MetaDatiMisurazioneSensorePayload  # usa i tuoi modelli Pydantic reali
 from typing import TypedDict, Dict
 
 # --- Tipi ausiliari per la verifica --- #

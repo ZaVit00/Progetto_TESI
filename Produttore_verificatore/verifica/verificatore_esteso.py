@@ -15,7 +15,7 @@ from Produttore_verificatore.config.istanze_globali import gestore_db
 # Modelli dei dati utilizzati
 from modelli_dati import (
     DatiBatch,
-    DatiMisurazioneSensore, DatiMisurazione, DatiSensore,
+    DatiMisurazioneSensorePayload, DatiMisurazione, DatiSensore,
 )
 # Utility per l’elaborazione e il confronto dei dati
 from recupero_dati_utils import (
@@ -92,7 +92,7 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"Dati batch locale ottenuti: {batch}")
         return batch
 
-    def _recupera_dati_cloud_misurazione_sensore(self, id_mis_alterati: List[int]) -> List[DatiMisurazioneSensore]:
+    def _recupera_dati_cloud_misurazione_sensore(self, id_mis_alterati: List[int]) -> List[DatiMisurazioneSensorePayload]:
         """
         Recupera dal cloud tutte le misurazioni alterate (insieme ai dati del sensore associato).
         """
@@ -100,13 +100,13 @@ class VerificatoreEsteso(Verificatore):
             raise ValueError("Nessuna misurazione alterata. Nessun dato da recuperare.")
 
         logger.info("Recupero misurazioni alterate + dati sensori dal cloud")
-        misurazioni_sensori: List[DatiMisurazioneSensore] = (
+        misurazioni_sensori: List[DatiMisurazioneSensorePayload] = (
             richiedi_dati_cloud_completi_misurazioni(id_mis_alterati)
         )
         logger.debug(f"Misurazioni + sensore associato ricevuti dal cloud \n: {misurazioni_sensori}")
         return misurazioni_sensori
 
-    def _recupera_dati_locali_misurazione_sensore(self) -> List[DatiMisurazioneSensore]:
+    def _recupera_dati_locali_misurazione_sensore(self) -> List[DatiMisurazioneSensorePayload]:
         """
         Ricostruisce localmente solo le misurazioni alterate,
         combinando il payload salvato e i dati dei sensori dal database.
@@ -134,7 +134,7 @@ class VerificatoreEsteso(Verificatore):
         logger.debug(f"ID sensori estratti: {lista_id_sensori}")
 
         # Ricostruisce le misurazioni complete (dati + sensore)
-        misurazioni_ricostruite : list[DatiMisurazioneSensore] = ricostruisci_misurazioni_sensore(lista_dati_misurazioni, lista_dati_sensori)
+        misurazioni_ricostruite : list[DatiMisurazioneSensorePayload] = ricostruisci_misurazioni_sensore(lista_dati_misurazioni, lista_dati_sensori)
         logger.debug(f"Misurazioni ricostruite localmente: {misurazioni_ricostruite}")
         return misurazioni_ricostruite
 
@@ -171,8 +171,8 @@ class VerificatoreEsteso(Verificatore):
             id_mis_alterati: list[int] = self.ottieni_id_misurazioni_alterate()
 
             # Recupera le versioni locali e cloud delle sole misurazioni alterate
-            mis_locale: list[DatiMisurazioneSensore] = self._recupera_dati_locali_misurazione_sensore()
-            mis_cloud: list[DatiMisurazioneSensore] = self._recupera_dati_cloud_misurazione_sensore(id_mis_alterati)
+            mis_locale: list[DatiMisurazioneSensorePayload] = self._recupera_dati_locali_misurazione_sensore()
+            mis_cloud: list[DatiMisurazioneSensorePayload] = self._recupera_dati_cloud_misurazione_sensore(id_mis_alterati)
 
             # Confronta ogni misurazione + sensore associato
             diff_misurazioni_sensori: dict = confronta_dati_misurazioni_sensori(

@@ -1,54 +1,22 @@
 import logging
 from typing import Tuple
+from costanti_comuni import TipoServizio
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
 from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
 from istanze_globali_produttore import gestore_db
 from istanze_globali_produttore import scrittore_blockchain
 from merkle_tree import MerkleTree
-from modelli_dati import PacchettoBatchMisurazioni
+from modelli_dati import BatchPayload
+from registro_log import setup_logger
 
-# Logger del modulo
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
-    """
-    Costruisce il Merkle Tree a partire dalla mappa ID → hash (con ID 0 per il batch) già ordinata,
-    e restituisce:
-      - la Merkle Root
-      - i Merkle Path in formato JSON (stringa)
-    """
-    # Estrazione ordinata delle chiavi (ID foglie) e degli hash
-    lista_id = list(mappa_id_hash.keys())
-    lista_hash = list(mappa_id_hash.values())
-
-    # Costruzione del Merkle Tree
-    merkle_tree = MerkleTree(lista_hash, lista_id)
-    merkle_root = merkle_tree.costruisci_albero()
-
-    logger.debug(f"Merkle Root calcolata: {merkle_root}")
-
-    # Esportazione dei Merkle Path in formato JSON
-    merkle_path_json = merkle_tree.ottieni_merkle_paths_JSON()
-
-    return merkle_root, merkle_path_json
+logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)
 
 
-def carica_merkle_path_ipfs(merkle_path: str):
-    client = IpfsClient()
-    #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
-    # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
-    #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
-    cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
-    return cid
-
-
-def gestisci_batch_completo(id_batch: int) -> bool:
+def elabora_batch_completo(id_batch: int) -> bool:
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
-    1. Estrae i dati del batch dal DB (tupla batch + tuple misurazione inner join sensore)
+    1. Estrae i dati del batch dal DB (tupla batch inner join tuple misurazione inner join sensore)
     2. Costruisce il payload (modelli Pydantic).
     3. Serializza il payload in JSON.
     4. Costruisce Merkle Tree e Merkle Path.
@@ -65,13 +33,16 @@ def gestisci_batch_completo(id_batch: int) -> bool:
     # === Costruzione del payload ===
     payload = CostruttorePayload()
     payload.estrai_dati_da_query(dati_query)
-    payload_da_inviare: PacchettoBatchMisurazioni = payload.costruisci_payload()
-    payload_json = payload_da_inviare.to_json()
+    #payload da inviare al cloud
+    payload_da_inviare: BatchPayload = payload.costruisci_payload()
+    payload_json : str = payload_da_inviare.to_json()
+
     # === Costruzione Merkle Tree e Path ===
     # Estrazione della mappa id → hash (ordinata all'interno del metodo stesso)
     merkle_root, merkle_path = costruisci_merkle_tree(payload.ottieni_mappa_id_foglie())
-    # === Upload su IPFS ===
     try:
+        # === Upload su IPFS ===
+        # Cid ottenuto in seguito all'upload del file
         cid = carica_merkle_path_ipfs(merkle_path)
         #IPFS OK → aggiorna subito i metadata nel DB
         gestore_db.aggiorna_metadata_batch(id_batch, merkle_root, cid, payload_json)
@@ -98,4 +69,40 @@ def gestisci_batch_completo(id_batch: int) -> bool:
         )
         return False
     # Tutto ok nell'elaborazione
+    logger.debug(f"[elabora_batch_completo] Batch {id_batch} elaborato con successo")
     return True
+
+
+def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
+    """
+    Costruisce il Merkle Tree a partire dalla mappa ID → hash (con ID 0 per il batch)
+    già ordinata,
+    e restituisce:
+      - la Merkle Root
+      - i Merkle Path in formato JSON (stringa)
+    L'hash corrisponde alla foglia su cui si base l'albero di merkle
+    """
+    # Estrazione ordinata delle chiavi (ID foglie) e degli hash
+    lista_id = list(mappa_id_hash.keys())
+    lista_hash = list(mappa_id_hash.values())
+
+    # Costruzione del Merkle Tree
+    merkle_tree = MerkleTree(lista_hash, lista_id)
+    merkle_root = merkle_tree.costruisci_albero()
+
+    logger.debug(f"Merkle Root calcolata: {merkle_root}")
+
+    # Esportazione dei Merkle Path in formato JSON
+    merkle_path_json : str = merkle_tree.ottieni_merkle_paths_json()
+
+    return merkle_root, merkle_path_json
+
+
+def carica_merkle_path_ipfs(merkle_path: str):
+    client = IpfsClient()
+    #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
+    # dalla classe IPFS in modo che sia univoco in IPFS
+    nome_file: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
+    #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
+    cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
+    return cid

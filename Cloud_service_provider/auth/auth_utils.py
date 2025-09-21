@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, Depends
-from Cloud_Service_Provider.config.istanze_globali import API_KEYS
-from Cloud_Service_Provider.entita.utente_api import UtenteAPI
+from Cloud_service_provider.config.istanze_globali import API_KEYS
+from Cloud_service_provider.entita.utente_api import UtenteAPI
 
 
 def ottieni_utente(request: Request) -> UtenteAPI:
@@ -24,6 +24,9 @@ def richiede_permesso_verifica(utente: UtenteAPI = Depends(ottieni_utente)) -> U
 
 def richiede_permesso_verifica_estesa(utente: UtenteAPI = Depends(ottieni_utente)) -> UtenteAPI:
     #NB solo il produttore può effettuare la verifica estesa
+    #Per verifica estesa intendiamo una differenza 1 a 1 tra dato originale conservato nel
+    #produttore e dato ottenuto dal cloud. Vista la sensibilità dei dati solo un ruolo privilegiato
+    #può accedere ai dati in chiaro.
     if not utente.permesso_verifica_estesa():
         raise HTTPException(status_code=403, detail="Permessi insufficienti per effettuare la verifica estesa.")
     return utente

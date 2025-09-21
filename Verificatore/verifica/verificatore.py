@@ -9,7 +9,7 @@ from Verificatore.config.istanze_globali import lettore_blockchain
 from Verificatore.verifica.verificatore_utils import carica_merkle_paths_da_stringa_json, \
     ottieni_report_metadati_anomalie
 from Verificatore.entita.modelli_verificatore import DettagliVerifica, StrutturaVerifica, RisultatoVerifica
-from modelli_metadati import MetaDatiBatch, MetaDatiMisurazioneSensore
+from modelli_metadati import MetaDatiBatchPayload, MetaDatiMisurazioneSensorePayload
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class Verificatore:
 
             # Verifica
             path_foglia = self.merkle_paths[foglia_id]
-            esito_verifica = MerkleTree.verifica_singola_foglia(
+            esito_verifica = MerkleTree.verifica_integrita_foglia(
                 foglia_hash, path_foglia, self.merkle_root_immutabile
             )
 
@@ -233,7 +233,7 @@ class Verificatore:
 
     # --- METODI PER VISUALIZZARE I METADATI DEL BATCH E DELLE MISURAZIONI EVENTUALMENTE COMPROMESSI --- #
 
-    def _recupera_metadati_batch(self) -> MetaDatiBatch:
+    def _recupera_metadati_batch(self) -> MetaDatiBatchPayload:
         """
         Recupera i metadati completi del batch identificato da `self.id_batch`.
         Questo metodo viene invocato solo se il batch risulta alterato (foglia ID 0 non integra),
@@ -241,13 +241,13 @@ class Verificatore:
         """
         return richiedi_metadata_batch(self.id_batch)
 
-    def _recupera_metadati_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensore]:
+    def _recupera_metadati_misurazione_sensore(self) -> list[MetaDatiMisurazioneSensorePayload]:
         """
         Recupera i metadati completi delle sole misurazioni alterate.
         Utilizza il metodo `ottieni_id_misurazioni_alterate()` per filtrare gli ID delle
         misurazioni che risultano effettivamente compromesse **senza** errori strutturali.
 
-        Restituisce una lista di oggetti `MetaDatiMisurazioneSensore`, ciascuno dei quali
+        Restituisce una lista di oggetti `MetaDatiMisurazioneSensorePayload`, ciascuno dei quali
         contiene sia i metadati della misurazione che quelli del sensore che l'ha generata.
         """
         id_list = self.ottieni_id_misurazioni_alterate()
@@ -271,8 +271,8 @@ class Verificatore:
         # Recupera i metadati delle misurazioni, se alterate
         if self.misurazioni_alterate():
             try:
-                metadati_mis_sens: List[MetaDatiMisurazioneSensore] = self._recupera_metadati_misurazione_sensore()
-                # Costruisci il dizionario con chiave = id_misurazione, valore = oggetto MetaDatiMisurazioneSensore
+                metadati_mis_sens: List[MetaDatiMisurazioneSensorePayload] = self._recupera_metadati_misurazione_sensore()
+                # Costruisci il dizionario con chiave = id_misurazione, valore = oggetto MetaDatiMisurazioneSensorePayload
                 metadata_dict = {
                     m.metadati_misurazione.id_misurazione: m.to_dict()
                     for m in metadati_mis_sens

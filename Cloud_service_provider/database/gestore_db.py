@@ -1,12 +1,10 @@
 import logging
 from typing import List
-
 import psycopg2
 from psycopg2 import Error as Psycopg2Error
 from psycopg2.extras import RealDictCursor
-
 from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione
-from Cloud_Service_Provider.database.query import (
+from Cloud_service_provider.database.query import (
     CREA_TABELLA_SENSORE,
     CREA_TABELLA_BATCH,
     CREA_TABELLA_MISURAZIONE,
@@ -20,12 +18,13 @@ from Cloud_Service_Provider.database.query import (
     OTTIENI_DATA_BATCH,
     OTTIENI_TUTTI_METADATA_BATCH
 )
+from costanti_comuni import TipoServizio
 from dict_utils import serializza_dict
 from modelli_dati import DatiBatch
-from modelli_metadati import MetaDatiBatch
+from modelli_metadati import MetaDatiBatchPayload
+from registro_log import setup_logger
+logger = setup_logger(TipoServizio.CLOUD, module=__name__, level=logging.DEBUG)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
 
 class GestoreDatabase:
     """
@@ -63,7 +62,7 @@ class GestoreDatabase:
 
     def inserisci_lista_sensori(self, lista_sensori: List[DatiSensore]) -> List[str]:
         """
-        Inserisce una lista di sensori nel database in un'unica operazione batch.
+        Inserisce una lista di sensori nel database in un'unica operazione.
         Durante l'inserimento, blocca anche le tabelle batch e misurazione.
         In questo modo si aspetta che tutti gli inserimenti di tuple vadano
         a buon fine. Evita problemi di integrità referenziale
@@ -92,6 +91,7 @@ class GestoreDatabase:
         """
         Inserisce un nuovo batch nel database.
         Restituisce True se l'inserimento ha avuto successo, False altrimenti.
+        #Questa è la tupla del batch
         """
         try:
             self.cursor.execute(
@@ -122,10 +122,11 @@ class GestoreDatabase:
             logger.error(f"Errore nell'inserimento batch delle misurazioni: {e}")
             return False
 
-    def ottieni_data_batch(self, id_batch) -> DatiBatch | None:
+    def ottieni_dati_batch(self, id_batch) -> DatiBatch | None:
         """
         Estrae la riga completa del batch indicato (potenzialmente manomesso).
         Restituisce un oggetto DatiBatch o None se non trovato.
+        #Tupla del batch
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
@@ -154,7 +155,7 @@ class GestoreDatabase:
     def ottieni_dati_batch_misurazioni_sensori(self, id_batch: int) -> list[dict]:
         """
         Recupera tutte le misurazioni associate al batch specificato, ordinate per ID.
-        Utile per la ricostruzione del Merkle Tree.
+        Utilità: ricostruzione merkle tree.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
@@ -165,21 +166,21 @@ class GestoreDatabase:
             logger.error(f"[QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
-    def ottieni_metadata_batch(self, id_batch) -> MetaDatiBatch | None:
+    def ottieni_metadata_batch(self, id_batch) -> MetaDatiBatchPayload | None:
         """
         Estrae i metadati del batch richiesto.
-        Restituisce un oggetto MetaDatiBatch o None.
+        Restituisce un oggetto MetaDatiBatchPayload o None.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(OTTIENI_METADATA_BATCH, (id_batch,))
             riga = cursor.fetchone()
-            return MetaDatiBatch(**riga) if riga else None
+            return MetaDatiBatchPayload(**riga) if riga else None
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-    def ottieni_tutti_metadata_batch(self) -> list[MetaDatiBatch]:
+    def ottieni_tutti_metadata_batch(self) -> list[MetaDatiBatchPayload]:
         """
         Estrae i metadati di TUTTI i batch presenti nel sistema.
         """
@@ -187,7 +188,7 @@ class GestoreDatabase:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(OTTIENI_TUTTI_METADATA_BATCH)
             righe = cursor.fetchall()
-            return [MetaDatiBatch(**r) for r in righe]
+            return [MetaDatiBatchPayload(**r) for r in righe]
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI TUTTI BATCH] {e}")
             return []

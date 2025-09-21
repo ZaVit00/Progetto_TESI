@@ -2,27 +2,26 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Union, Annotated
+from typing import Union
 import uvicorn
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from pydantic import Field
-
 from costanti_comuni import TipoServizio
 from istanze_globali_produttore import gestore_db
 from gestione_soglia_batch import aggiorna_soglia_chiusura_batch
 from registro_log import setup_logger
+from task_manager import avvia_task_periodici
 
 """
 Import dei modelli di misurazione_in_ingresso specifici
 i modelli di misurazione in ingresso e dati sensore in ingresso servono solo al fog node e
-non al cloud provider
+non al cloud provider (Il fog node gestisce solo la comunicazione interna tra sensori e nodo fog)
 """
 from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoAccelerometro, \
     DatiMisurazioneInIngressoGiroscopio
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
-from task_manager import avvia_task_periodici
 
-logger = setup_logger(TipoServizio.PRODUTTORE, level=logging.DEBUG)
+logger = setup_logger(TipoServizio.PRODUTTORE, module=__name__, level=logging.DEBUG)
 
 #Funzione che viene eseguita all'avvio dell'applicazione
 @asynccontextmanager
@@ -48,20 +47,18 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
         logger.error(f"Errore nella registrazione del sensore {dati_sensore.id_sensore}")
         raise HTTPException(status_code=500, detail="Errore nella registrazione del sensore.")
 
-    logger.info(f"Sensore registrato correttamente: {dati_sensore.id_sensore}")
     logger.info(f"Registrazione completata per il sensore {dati_sensore.id_sensore}, aggiorno soglia batch...")
-
     """
     Passo cruciale: aggiornamento della soglia dinamica di chiusura batch.
     Ogni volta che un nuovo sensore viene registrato, comunica la propria frequenza di invio dati.
     Questa informazione modifica la soglia di chiusura dei batch, che deve quindi essere ricalcolata
     per mantenere coerente la dimensione/tempo dei batch rispetto al numero e alla frequenza dei sensori attivi.
     """
-    aggiorna_soglia_chiusura_batch() # STEP CRUCIALE GUARDA BENE
+    aggiorna_soglia_chiusura_batch() # step cruciale da guardare bene
 
     return {
         "status": "sensore registrato",
-        "id": dati_sensore.id_sensore,
+        "sensore": dati_sensore.id_sensore,
         "ricevuto_alle": datetime.now().strftime("%H:%M:%S - %d/%m/%Y"),
         "timestamp_iso": datetime.now().isoformat()
     }

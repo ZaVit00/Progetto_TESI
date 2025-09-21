@@ -1,23 +1,24 @@
 from typing import Dict, List
 from pydantic import Field
 from Classi_comuni.utils.dict_utils import canonizza_dict, serializza_dict
-from modelli import ModelliHashabili
+from modelli_astratti import ModelliHashabili
 
 
 class DatiSensore(ModelliHashabili):
     """
     Modello che rappresenta i dati di un sensore memorizzati nel sistema.
     Attenzione: questa classe è distinta dalla classe `DatiSensoreInIngresso`, che viene usata
-    solo durante la fase di registrazione iniziale del sensore presso il fog node.
+    solo durante la fase di registrazione iniziale del sensore presso il fog node (produttore)
 
     In particolare:
     - `DatiSensoreInIngresso` contiene anche la frequenza di invio dei dati (frequenza_hz),
       necessaria per il calcolo dinamico della soglia di batch, ma non trasmessa al cloud e non
-      coinvolta nel processo di calcolo del merkle tree;
+      coinvolta nel processo di calcolo del merkle tree e quindi mantenuta solo internamente nel
+      database del produttore.
 
     - `DatiSensore` rappresenta il modello persistente e condivisibile dei dati del sensore,
       privo di informazioni locali interne (come la frequenza) e che viene utilizzato per serializzare,
-      salvare e trasmettere i dati verso il cloud
+      salvare e trasmettere i dati verso il cloud provider.
     """
     id_sensore: str = Field(..., description="Identificatore del sensore."
                                              "Deve essere nel formato JOY001, TEMP042, HUM123 ecc.")
@@ -32,8 +33,8 @@ class DatiMisurazione(ModelliHashabili):
     """
     Rappresenta una singola misurazione arricchita con metadati interni, generata da un sensore.
 
-    Questa classe differisce da `DatiMisurazioneInIngresso`, che rappresenta il dato grezzo ricevuto
-    direttamente dal sensore tramite una richiesta HTTP e contenuto JSON.
+    Questa classe differisce da `DatiMisurazioneInIngresso`, che rappresenta il dato grezzo
+    ricevuto dal fog node (produttore) nella rete interna.
 
     Il processo di elaborazione interno al fog node arricchisce la misurazione con informazioni aggiuntive,
     necessarie per la tracciabilità, la gestione in batch e la verifica dell’integrità.
@@ -46,8 +47,8 @@ class DatiMisurazione(ModelliHashabili):
     Questi dati, o volendo metadati, non sono presenti nella misurazione in ingresso che
     non deve essere a conoscenza
     dello schema del database (`DatiMisurazioneInIngresso`).
-    Questi dati aggiunti dal fog node sono essenziali per il funzionamento del sistema anti-manomissione e per la successiva trasmissione
-    verso il cloud provider.
+    Questi dati aggiunti dal fog node sono essenziali per il funzionamento del sistema anti-manomissione
+    e per la successiva trasmissione verso il cloud provider.
     """
     id_misurazione: int = Field(..., title="ID Misurazione", description="Identificativo univoco della misurazione")
     id_sensore: str = Field(..., description="Identificativo del sensore che ha generato la misurazione")
@@ -87,7 +88,8 @@ class DatiBatch(ModelliHashabili):
     timestamp_creazione: str = Field(..., description="Data e ora di creazione del batch")
     numero_misurazioni: int = Field(..., description="Numero totale di misurazioni nel batch")
 
-class PacchettoBatchMisurazioni(ModelliHashabili):
+# === MODELLI PER TRASMISSIONE DI DATI
+class BatchPayload(ModelliHashabili):
     """
     Rappresenta il payload completo da inviare al cloud provider per ogni batch di misurazioni.
     Il payload è composto da:
@@ -97,11 +99,14 @@ class PacchettoBatchMisurazioni(ModelliHashabili):
     definita nel fog node al momento dell'esecuzione.
     Questa struttura compatta consente al cloud di validare sia il batch che le misurazioni associate,
     e rappresenta l'unità fondamentale per la trasmissione e la verifica dell'integrità.
+    Viene denotata con il termine 'BatchPayload' ad indicare il ruolo logico del batch
+    come un raggruppamento di misurazioni.
     """
     batch: DatiBatch = Field(..., title="Batch", description="Metadata del batch")
     misurazioni: List[DatiMisurazione] = Field(..., title="Lista di Misurazioni", description="Lista delle misurazioni associate al batch")
 
-class DatiListaSensori(ModelliHashabili):
+
+class DatiListaSensoriPayload(ModelliHashabili):
     """
     Rappresenta un insieme di sensori attualmente noti o registrati nel sistema.
     Questa classe viene utilizzata per inviare o ricevere una lista completa di sensori,
@@ -116,7 +121,7 @@ class DatiListaSensori(ModelliHashabili):
     )
 
 
-class DatiMisurazioneSensore(ModelliHashabili):
+class DatiMisurazioneSensorePayload(ModelliHashabili):
     """
     Rappresenta l'associazione tra una misurazione e i dati del sensore che l'ha generata.
 

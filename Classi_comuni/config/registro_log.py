@@ -2,24 +2,35 @@ from costanti_comuni import TipoServizio
 import logging
 import os
 
-def setup_logger(service: TipoServizio,
-                 level: int = logging.INFO,
-                 log_to_file: bool = False,
-                 output_dir: str = "./logs") -> logging.Logger:
+import logging
+import os
+from costanti_comuni import TipoServizio
+
+
+def setup_logger(
+        service: TipoServizio,
+        module: str = __name__,
+        level: int = logging.INFO,
+        log_to_file: bool = False,
+        output_dir: str = "./logs"
+) -> logging.Logger:
     """
-    Crea e restituisce un logger dedicato a un servizio.
+    Crea e restituisce un logger dedicato a un servizio e a un modulo.
+
     :param service: uno dei valori di TipoServizio (Enum)
+    :param module: nome del modulo Python (tipicamente __name__)
     :param level: livello di logging (default INFO)
     :param log_to_file: se True salva anche su file
     :param output_dir: cartella dei log
     """
-    service_name = service.value  # recupera la stringa dall'enumerativi
-    logger = logging.getLogger(service_name)
+    service_name = service.value
+    logger_name = f"{service_name}.{module}"
+    logger = logging.getLogger(logger_name)
     logger.setLevel(level)
 
     if not logger.handlers:
         formatter = logging.Formatter(
-            f"%(asctime)s [{service_name}] [%(levelname)s] %(message)s"
+            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
         )
 
         # Console handler

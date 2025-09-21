@@ -1,14 +1,18 @@
 import logging
 import sqlite3
 from datetime import datetime
+
+from costanti_comuni import TipoServizio
 from costanti_produttore import DBPATH, SOGLIA_BATCH_MINIMA
 from database import query
 from database.query import AGGIORNA_CONFERMA_RICEZIONE_SENSORI
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
-from modelli_dati import DatiSensore, DatiListaSensori, DatiBatch
+from modelli_dati import DatiSensore, DatiListaSensoriPayload, DatiBatch
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from registro_log import setup_logger
+
+logger = setup_logger(TipoServizio.PRODUTTORE, level=logging.DEBUG)
+
 
 """
 Classe che gestisce tutte le operazioni sul database locale SQLite.
@@ -47,12 +51,12 @@ class GestoreDatabase:
             logger.error(f"QUERY - CREAZIONE TABELLE] {e}")
 
     # ------------------------- METODI DI SUPPORTO INTERNI -------------------------
-    def aggiorna_soglia_chiusura_batch(self, nuova_soglia: int) -> bool:
+    def aggiorna_soglia_batch(self, nuova_soglia: int) -> bool:
         """
-        Aggiorna la soglia del batch attivo.
+        Aggiorna la soglia di chiusura del batch attivo se presente
         Se il batch ha già raggiunto (o superato) la nuova soglia, viene chiuso.
         Se non esiste alcun batch attivo, ne viene creato uno con la soglia fornita.
-        Operazione eseguita in modo atomico.
+        Operazione eseguita in modo atomico con l'apertura di una transazione.
         """
         if not isinstance(nuova_soglia, int) or nuova_soglia <= 0:
             raise ValueError("La soglia deve essere un intero positivo.")
@@ -119,12 +123,16 @@ class GestoreDatabase:
         Restituisce l'ID del batch attivo esistente oppure dell'eventuale nuovo batch creato.
 
         Questo metodo copre due situazioni:
-        1) Il batch precedente è stato chiuso (ha raggiunto la soglia).
-        2) Il sistema è stato appena avviato e non esiste alcuna tupla nella tabella batch.
+        1) Il batch precedente è stato chiuso -> esiste almeno una tupla esistente nel database
+        (che ha raggiunto la soglia).
+        2) Il sistema è stato appena avviato e non esiste alcuna tupla nella tabella batch ->
+            la tupla del batch va creata all'atto iniziale.
 
         Nota: la soglia viene aggiornata prima dell'arrivo della prima misurazione,
-        perché è calcolata durante la registrazione del sensore. Questo garantisce che
-        esista già una soglia valida anche in fase iniziale.
+        perché è calcolata durante la registrazione del sensore quando il sensore
+        comunica la propria frequenza di invio. Questo garantisce che
+        esista già una soglia valida anche in fase iniziale, prima ancora di accogliere la
+        prima misurazione nel sistema.
         """
         try:
             cursor = self.conn.cursor()
@@ -156,9 +164,10 @@ class GestoreDatabase:
         Inserisce una nuova misurazione associandola al batch attivo.
         Se la soglia è raggiunta, chiude il batch corrente e ne crea uno nuovo
         con la stessa soglia, continuando l'inserimento.
+        :param id_sensore: ID del sensore che ha generato la misurazione.
+        :param dati: Dati effettivi della misurazione normalizzata in formato JSON compatto
         """
         timestamp_locale = datetime.now().isoformat()
-
         try:
             cursor = self.conn.cursor()
             # 1. Verifica l'esistenza del sensore associato alla misurazione
@@ -172,13 +181,17 @@ class GestoreDatabase:
             cursor.execute(query.OTTIENI_BATCH_ATTIVO)
             batch_attivo = cursor.fetchone()
 
+            #non ci sono batch attivi quindi dobbiamo crearlo
+            #può accadere perché l'ultima misurazione inserita ha comportato la chisura del batch attivo
             if not batch_attivo:
                 logger.info("[NO BATCH ATTIVO] Nessun batch attivo, ne creo uno nuovo.")
                 # Recupera la soglia dell’ultimo batch inserito (fallback su soglia minima)
                 cursor.execute(query.OTTIENI_SOGLIA_ULTIMO_BATCH)
                 risultato = cursor.fetchone()
+                #fallback in caso di errori logici da parte del programmatore
                 soglia_attuale = risultato["soglia_misurazioni"] if risultato else SOGLIA_BATCH_MINIMA
 
+                #crea il nuovo batch
                 id_batch = self.inserisci_batch_se_necessario(soglia_attuale)
                 if id_batch == -1:
                     self.conn.rollback()
@@ -221,7 +234,7 @@ class GestoreDatabase:
                 logger.error("[LOCK] Transazione già aperta. Potenziale sequenza di chiamate errata.")
             else:
                 logger.error(f"[ERRORE INSERIMENTO MISURAZIONE] {e}")
-            self.conn.rollback()
+            #self.conn.rollback()
             return False
 
     def inserisci_dati_sensore(self, sensore : DatiSensoreInIngresso) -> bool:
@@ -364,8 +377,6 @@ class GestoreDatabase:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI, (id_batch,))
             righe = cursor.fetchall()
-            #.fetchall() restituisce una lista di sqlite3.Row, che sembrano dizionari, ma non lo sono al 100%.
-            # Se serve una lista di dizionari veri, fai righe = [dict(r) for r in cursor.fetchall()].
             return [dict(riga) for riga in righe]
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA DATI BATCH] {e}")
@@ -381,48 +392,52 @@ class GestoreDatabase:
         la elaborazione periodica dei batch completi.
         """
         if not self.conn:
+            #gestisce un POTENZIALE problema di race condition all'avvio del sistema
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
             return []
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_ID_BATCH_COMPLETI_DA_ELABORARE)
             risultati = cursor.fetchall()
-            #estrai solo i primi elementi e li inserisci in una lista
-            return list(riga[0] for riga in risultati)
+            #estrai solo gli id_batch e li inserisci in una lista
+            return list(riga["id_batch"] for riga in risultati)
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA BATCH NON INVIATI] {e}")
             return []
 
-    def ottieni_sensori_non_conferma_ricezione(self) -> DatiListaSensori:
+    def ottieni_sensori_non_conferma_ricezione(self) -> DatiListaSensoriPayload:
         """
         Estrae i sensori registrati localmente che non hanno ancora ricevuto
-        conferma di registrazione da parte del cloud provider.
-        Restituisce un oggetto DatiListaSensori.
+        conferma di ricezione da parte del cloud provider.
+        Restituisce un oggetto DatiListaSensoriPayload.
         """
         if not self.conn:
+            #Gestisce un POTENZIALE problema di race condition all'avvio del sistema
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
-            return DatiListaSensori(sensori=[])
-
+            return DatiListaSensoriPayload(sensori=[])
         try:
             cursor = self.conn.cursor()
             cursor.execute(query.OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE)
             righe = cursor.fetchall()
             lista = [DatiSensore(**r) for r in righe]
-            return DatiListaSensori(sensori=lista)
+            return DatiListaSensoriPayload(sensori=lista)
         except sqlite3.Error as e:
             logger.error(f"LETTURA SENSORI NON CONFERMATI COME RICEVUTI {e}")
-            return DatiListaSensori(sensori=[])
+            return DatiListaSensoriPayload(sensori=[])
 
     def ottieni_payload_batch_pronti_per_invio(self) -> list[tuple[int, str]]:
         """
         Metodo che viene utilizzato dalla classe che gestisce
         il reinvio dei batch completi, il cui payload JSON è pronto per l'invio.
         Restituisce solo i payload dei batch completi (completo = 1)
-        ma non ancora inviati (inviato = 0). Essendo esecuzioni concorrenti la connessione al database
+        ma non ancora inviati (inviato = 0).
+        Essendo esecuzioni concorrenti la connessione al database
         potrebbe non essere stata ancora stabilita al momento dell'esecuzione del metodo.
         Se la connessione non è stata stabilita restituisce una lista vuota.
+        Nota: in questo caso batch denota la singola tupla del database
         """
         if not self.conn:
+            #gestisce un POTENZIALE problema di race condition all'avvio del sistema
             logger.warning("[AVVISO] Connessione al database non attiva. Nessuna query di retry eseguita.")
             return []
         try:
@@ -524,6 +539,7 @@ class GestoreDatabase:
             return False
 
     # ------------------------- METODI DI ELIMINAZIONE -------------------------
+    #Non utilizzato ma previsto
     def elimina_misurazioni_batch(self, id_batch: int) -> bool:
         """
         Elimina tutte le misurazioni associate a un determinato

@@ -3,7 +3,7 @@ from typing import List
 import requests
 from Produttore_verificatore.config.costanti import ENDPOINT_DATI_BATCH, API_KEY_VERIFICATORE_ESTESO
 from costanti import ENDPOINT_DATI_MISURAZIONE_SENSORE
-from modelli_dati import DatiBatch, DatiMisurazioneSensore
+from modelli_dati import DatiBatch, DatiMisurazioneSensorePayload
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def richiedi_dati_cloud_batch(id_batch: int) -> DatiBatch:
         raise
 
 
-def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMisurazioneSensore]:
+def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMisurazioneSensorePayload]:
     """
     Richiede al cloud provider le misurazioni alterate (con sensore associato)
     corrispondenti alla lista di ID fornita, tramite POST.
@@ -52,8 +52,8 @@ def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMi
         # Converte la risposta in lista di dizionari
         lista_dati_dict = response.json()
         logger.debug(f"Risposta ricevuta: {lista_dati_dict}")
-        # Converte ogni elemento della lista in un oggetto DatiMisurazioneSensore
-        return [DatiMisurazioneSensore(**elem) for elem in lista_dati_dict]
+        # Converte ogni elemento della lista in un oggetto DatiMisurazioneSensorePayload
+        return [DatiMisurazioneSensorePayload(**elem) for elem in lista_dati_dict]
     except (ValueError, TypeError) as e:
         logger.error(f"Errore nel parsing della risposta JSON: {e}")
         raise

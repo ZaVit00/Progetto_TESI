@@ -4,7 +4,7 @@ import json
 from types import MappingProxyType
 from dotenv import load_dotenv
 
-from Cloud_Service_Provider.database.gestore_db import GestoreDatabase
+from Cloud_service_provider.database.gestore_db import GestoreDatabase
 from utente_api import UtenteAPI
 
 # === Percorsi ===
@@ -47,9 +47,3 @@ _api_keys_dict = {
 
 # Rendi il dizionario immutabile
 API_KEYS = MappingProxyType(_api_keys_dict)
-
-# Configurazione globale del logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s'
-)

@@ -32,9 +32,9 @@ def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathComp
             # Crea un nuovo oggetto PathCompatto
             path = PathCompatto()
             # Imposta la direzione (es. "00101")
-            path.set_direzione(values["dir"])
+            path.imposta_lista_direzione(values["dir"])
             # Imposta la lista di hash fratelli nell'esatto ordine
-            path.set_hash_fratelli(values["hash"])
+            path.imposta_hash_fratelli(values["hash"])
             # Aggiungi al dizionario finale
             paths[id_foglia] = path
 

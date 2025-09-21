@@ -1,9 +1,9 @@
 from typing import List
 
-from modelli_metadati import MetaDatiBatch
+from modelli_metadati import MetaDatiBatchPayload
 
 
-def stampa_tabella_batch(batch_list: List[MetaDatiBatch]) -> None:
+def stampa_tabella_batch(batch_list: List[MetaDatiBatchPayload]) -> None:
     """
     Stampa i metadati dei batch disponibili in formato tabellare (output utente).
     """

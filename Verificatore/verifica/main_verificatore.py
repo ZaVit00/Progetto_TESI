@@ -7,7 +7,7 @@ from Verificatore.api_client.api_cloud import richiedi_tutti_metadata_batch
 from Verificatore.verifica.verificatore import Verificatore
 from Classi_comuni.utils.file_utils import salva_risultato_verifica_su_file
 from Verificatore.entita.modelli_verificatore import RisultatoVerifica
-from modelli_metadati import MetaDatiBatch
+from modelli_metadati import MetaDatiBatchPayload
 from verificatore_esteso import VerificatoreEsteso
 from verificatore_utils import ottieni_report_anomalie, ottieni_report_metadati_anomalie, ottieni_report_differenze
 from Classi_comuni.utils.dict_utils import serializza_dict
@@ -65,7 +65,7 @@ def verifica_batch(id_batch: int, verificatore: Verificatore, base_dir : str) ->
     )
 
 def ottieni_scelta_id_batch_da_utente() -> int:
-    lista_dati_batch: list[MetaDatiBatch] = richiedi_tutti_metadata_batch()
+    lista_dati_batch: list[MetaDatiBatchPayload] = richiedi_tutti_metadata_batch()
     stampa_tabella_batch(lista_dati_batch)
     id_batch: int = acquisisci_input_id_batch([b.id_batch for b in lista_dati_batch])
     return id_batch

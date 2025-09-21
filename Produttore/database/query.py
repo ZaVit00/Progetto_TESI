@@ -75,6 +75,7 @@ OTTIENI_BATCH_ATTIVO = """
 """
 
 # Estrae tutte le misurazioni di un batch, includendo anche i metadata del batch stesso
+# e le informazione del sensore che ha generato la misurazione
 OTTIENI_DATI_BATCH_MISURAZIONI_SENSORI = """
     SELECT
         m.id_misurazione,
@@ -265,14 +266,16 @@ La pipeline di elaborazione può fallire in due punti critici:
 1. Durante il salvataggio del Merkle Path su IPFS
 2. Durante il salvataggio della Merkle Root e del CID IPFS su blockchain
 
-Se si verifica un errore in uno di questi passaggi, il batch viene marcato come **non elaborabile**
-(`elaborabile = 0`). In questo caso, l'invio del payload viene automaticamente bloccato da questa query,
+Se si verifica un errore in uno di questi passaggi, 
+il batch viene marcato come **non elaborabile**
+(`elaborabile = 0`). In questo caso, l'invio del payload viene automaticamente bloccato 
+da questa query,
 evitando che vengano propagati dati inconsistenti.
 
 Inoltre, per garantire l'integrità referenziale nel database del cloud provider,
 la query seleziona solo i batch i cui sensori associati sono già stati confermati 
 (conferma_ricezione = 1). Questo previene errori a cascata legati a riferimenti 
-verso sensori non ancora presenti nel database remoto.
+verso sensori non ancora presenti nel database del cloud provider.
 Nota: eventuali errori di integrità (es. chiave esterna non trovata) non sono 
 da considerarsi errori applicativi, ma possono derivare da ritardi fisiologici 
 nella sincronizzazione tra il nodo produttore e il cloud, non completamente controllabili.

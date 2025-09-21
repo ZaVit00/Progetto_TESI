@@ -3,7 +3,7 @@ import logging
 from typing import List
 
 from Produttore_verificatore.config.istanze_globali import gestore_db
-from modelli_dati import DatiBatch, DatiMisurazione, DatiSensore, DatiMisurazioneSensore
+from modelli_dati import DatiBatch, DatiMisurazione, DatiSensore, DatiMisurazioneSensorePayload
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +70,14 @@ def filtra_misurazioni_alterate(payload_dict: dict, id_alterati: set[int]) -> Li
 
 def ricostruisci_misurazioni_sensore(
         misurazioni: List[DatiMisurazione],
-        lista_dati_sensori: List[DatiSensore]) -> List[DatiMisurazioneSensore]:
+        lista_dati_sensori: List[DatiSensore]) -> List[DatiMisurazioneSensorePayload]:
     """
-    Ricostruisce oggetti `DatiMisurazioneSensore`, associando ogni misurazione
+    Ricostruisce oggetti `DatiMisurazioneSensorePayload`, associando ogni misurazione
     con il sensore corrispondente, in base al campo `id_sensore`.
     """
     # Crea una mappa: id_sensore → DatiSensore
     mappa_sensori: dict[str, DatiSensore] = {s.id_sensore: s for s in lista_dati_sensori}
-    lista_risultato: List[DatiMisurazioneSensore] = []
+    lista_risultato: List[DatiMisurazioneSensorePayload] = []
 
     for mis in misurazioni:
         id_sensore = mis.id_sensore
@@ -85,7 +85,7 @@ def ricostruisci_misurazioni_sensore(
             raise ValueError(f"Sensore con ID '{id_sensore}' non trovato tra quelli disponibili (BUG)")
 
         sensore = mappa_sensori[id_sensore]
-        lista_risultato.append(DatiMisurazioneSensore(dati_misurazione=mis.model_dump(), dati_sensore=sensore.model_dump()))
+        lista_risultato.append(DatiMisurazioneSensorePayload(dati_misurazione=mis.model_dump(), dati_sensore=sensore.model_dump()))
         logger.debug(f"Lista di misurazioni-sensori ottenuti dal cloud {lista_risultato}")
 
     return lista_risultato
@@ -112,15 +112,15 @@ def confronta_dati_misurazioni(m1: DatiMisurazione, m2: DatiMisurazione) -> dict
 
 def confronta_dati_misurazioni_sensori(
     id_mis_alterati: list[int],
-    mis_locale: List[DatiMisurazioneSensore],
-    mis_cloud: List[DatiMisurazioneSensore]) -> dict:
+    mis_locale: List[DatiMisurazioneSensorePayload],
+    mis_cloud: List[DatiMisurazioneSensorePayload]) -> dict:
     """
     Confronta tutte le misurazioni alterate tra locale e cloud.
 
     Restituisce un dizionario con ID della misurazione come chiave
     e differenze nei dati del sensore e della misurazione come valore.
     """
-    # Crea dizionari: id_misurazione → DatiMisurazioneSensore
+    # Crea dizionari: id_misurazione → DatiMisurazioneSensorePayload
     mappa_locale = {m.dati_misurazione.id_misurazione: m for m in mis_locale}
     mappa_cloud = {m.dati_misurazione.id_misurazione: m for m in mis_cloud}
 

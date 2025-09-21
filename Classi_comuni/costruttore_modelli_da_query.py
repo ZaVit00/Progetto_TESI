@@ -5,23 +5,19 @@ from modelli_dati import DatiSensore
 from modelli_metadati import MetaDatiMisurazione, MetaDatiSensore
 from Classi_comuni.utils.hashing_utils import Hashing
 
-class EstrattoreDatiQuery:
+class CostruttoreModelliDaQuery:
     """
     Classe responsabile della trasformazione dei risultati SQL in oggetti Pydantic
     """
     @staticmethod
-    def estrai_dati_da_query(risultati_query: List[Dict]) -> Tuple[DatiBatch, List[DatiMisurazione], Dict[int, str], str]:
+    def costruisci_modelli_da_query(risultati_query: List[Dict]) -> Tuple[DatiBatch, List[DatiMisurazione], Dict[int, str], str]:
         """
         Estrae i dati da una query INNER JOIN tra batch, misurazioni e sensori, e restituisce:
         - Oggetto DatiBatch
         - Lista di oggetti DatiMisurazione
-        - Lista di oggetti DatiSensore
-        - Dizionario {id_misurazione: hash concatenato sensore+misurazione}
+        - Dizionario {id_misurazione: hash concatenato tupla sensore + misurazione}
         - Hash del batch (prima foglia del Merkle Tree)
         """
-        if not risultati_query:
-            raise ValueError("La query non ha restituito risultati. Verifica gli ID passati.")
-
         misurazioni: List[DatiMisurazione] = []
 
         #mappa intero (id_misurazione) --> hash (misurazione inner join sensore)
@@ -32,15 +28,15 @@ class EstrattoreDatiQuery:
         prima_riga = risultati_ordinati[0]
         # dalla prima riga dei risultati estraggo la tupla corrispondente al batch
         # risultato sql --> DatiBatch
-        batch : DatiBatch = EstrattoreDatiQuery.costruisci_dati_batch_da_query(prima_riga)
-        # hash dell'istanza
+        batch : DatiBatch = CostruttoreModelliDaQuery.costruisci_dati_batch_da_query(prima_riga)
+        # hash dell'istanza del batch
         hash_batch = batch.to_hash()
 
         for riga in risultati_ordinati:
             # risultato sql --> DatiMisurazione
-            dati_misurazione : DatiMisurazione = EstrattoreDatiQuery.costruisci_dati_misurazione_da_query(riga)
+            dati_misurazione : DatiMisurazione = CostruttoreModelliDaQuery.costruisci_dati_misurazione_da_query(riga)
             # risultato sql --> DatiSensore
-            dati_sensore : DatiSensore = EstrattoreDatiQuery.costruisci_dati_sensore_da_query(riga)
+            dati_sensore : DatiSensore = CostruttoreModelliDaQuery.costruisci_dati_sensore_da_query(riga)
             misurazioni.append(dati_misurazione)
             hash_concat = Hashing.hash_concat(
                 dati_sensore.to_hash(),
@@ -56,7 +52,7 @@ class EstrattoreDatiQuery:
         Costruisce un oggetto DatiMisurazione da una riga SQL.
         Esegue anche il parsing del campo 'dati' se è una stringa JSON.
         """
-        EstrattoreDatiQuery._verifica_campi(riga, ["id_misurazione", "id_batch", "id_sensore", "timestamp", "dati"])
+        CostruttoreModelliDaQuery._verifica_campi(riga, ["id_misurazione", "id_batch", "id_sensore", "timestamp", "dati"])
 
         if isinstance(riga["dati"], str):
             try:
@@ -77,7 +73,7 @@ class EstrattoreDatiQuery:
         """
         Costruisce un oggetto DatiSensore da una riga SQL.
         """
-        EstrattoreDatiQuery._verifica_campi(riga, ["id_sensore", "tipo", "descrizione"])
+        CostruttoreModelliDaQuery._verifica_campi(riga, ["id_sensore", "tipo", "descrizione"])
         return DatiSensore(
             id_sensore=riga["id_sensore"],
             tipo=riga["tipo"],
@@ -89,7 +85,7 @@ class EstrattoreDatiQuery:
         """
         Costruisce un oggetto DatiBatch dalla prima riga della query.
         """
-        EstrattoreDatiQuery._verifica_campi(riga, ["id_batch", "timestamp_creazione", "numero_misurazioni"])
+        CostruttoreModelliDaQuery._verifica_campi(riga, ["id_batch", "timestamp_creazione", "numero_misurazioni"])
         return DatiBatch(
             id_batch=riga["id_batch"],
             timestamp_creazione=riga["timestamp_creazione"],
@@ -101,7 +97,7 @@ class EstrattoreDatiQuery:
         """
         Costruisce un oggetto MetaDatiMisurazione da una riga SQL.
         """
-        EstrattoreDatiQuery._verifica_campi(riga, ["id_misurazione", "id_batch", "timestamp"])
+        CostruttoreModelliDaQuery._verifica_campi(riga, ["id_misurazione", "id_batch", "timestamp"])
         return MetaDatiMisurazione(
             id_misurazione=riga["id_misurazione"],
             id_batch=riga["id_batch"],
@@ -113,7 +109,7 @@ class EstrattoreDatiQuery:
         """
         Costruisce un oggetto MetaDatiSensore da una riga SQL.
         """
-        EstrattoreDatiQuery._verifica_campi(riga, ["id_sensore", "tipo"])
+        CostruttoreModelliDaQuery._verifica_campi(riga, ["id_sensore", "tipo"])
         return MetaDatiSensore(
             id_sensore=riga["id_sensore"],
             tipo=riga["tipo"]

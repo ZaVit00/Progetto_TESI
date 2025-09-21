@@ -5,7 +5,7 @@ from costanti_produttore import SOGLIA_BATCH_MINIMA, FATTORE_SCALAMENTO_FREQUENZ
 from istanze_globali_produttore import gestore_db
 from registro_log import setup_logger
 
-logger = setup_logger(TipoServizio.PRODUTTORE, level=logging.DEBUG)
+logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)
 
 """
 FATTORE_SCALAMENTO_FREQUENZA (non necessariamente potenza di due)->
@@ -31,7 +31,7 @@ def aggiorna_soglia_chiusura_batch() -> None:
    1. Si ottiene la frequenza media dei sensori attualmente memorizzati nel Database con
       query SQL;
    2. Si applica un fattore di scalamento continuo (FATTORE_SCALAMENTO_FREQUENZA) per
-      aumentare l'argomento di log2 e ottenere batch più capienti al crescere del carico.
+      aumentare l'argomento di log2 e ottenere un argomento più grande
    3. Si moltiplica 2^risultato del logaritmo per K_BATCH_SCALING, che è una potenza di due,
       così da garantire che la soglia finale sia della forma (2^n * K) - 1, compatibile con la struttura
       binaria del Merkle Tree utilizzata. Il - 1 è necessario perché ogni batch contiene sempre
@@ -61,11 +61,11 @@ def aggiorna_soglia_chiusura_batch() -> None:
 
     # 4. Calcola l'esponente per ottenere la potenza di due più vicina in alto
     esponente = math.ceil(math.log2(frequenza_scalata))
-    potenza_due = 2 ** esponente
+    potenza_due = 2 ** esponente #2^n
 
     # 5. Applica K_BATCH_SCALING (sempre potenza di due) per aumentare la capacità
     #    del batch senza modificare l'esponente calcolato sopra.
-    #    Risultato finale = (2^esponente * K) - 1 → compatibile con Merkle Tree binario.
+    #    Risultato finale = (2^esponente * 2^k) - 1 → compatibile con Merkle Tree binario.
     nuova_soglia = (potenza_due * K_BATCH_SCALING) - 1
     logger.debug(f"[Soglia Batch] Soglia calcolata: {nuova_soglia} (2^{esponente} * {K_BATCH_SCALING} - 1)")
 
@@ -75,7 +75,8 @@ def aggiorna_soglia_chiusura_batch() -> None:
     logger.debug(f"[Soglia Batch] Soglia finale (dopo controllo minimo {SOGLIA_BATCH_MINIMA}): {soglia_finale}")
 
     # 7. Aggiorna il batch attivo (se esiste) con la nuova soglia
-    esito_aggiornamento: bool = gestore_db.aggiorna_soglia_chiusura_batch(soglia_finale)
+    # Passo cruciale da osservare bene
+    esito_aggiornamento: bool = gestore_db.aggiorna_soglia_batch(soglia_finale)
 
     # 8. Log di esito finale
     if esito_aggiornamento:

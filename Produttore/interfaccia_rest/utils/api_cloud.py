@@ -1,8 +1,12 @@
 import logging
 import requests
+
+from costanti_comuni import TipoServizio
 from costanti_produttore import API_KEY_PRODUTTORE
 from istanze_globali_produttore import gestore_db
-logger = logging.getLogger(__name__)
+from registro_log import setup_logger
+
+logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.CRITICAL)
 
 
@@ -40,16 +44,20 @@ def elabora_conferma_ricezione_cloud(risposta: dict) -> bool:
     """
     Elabora la risposta ricevuta dal cloud e aggiorna la conferma nel database locale.
     Restituisce True se la conferma è valida e gestita correttamente.
+    In questo caso il cloud può avere due tipologie di conferma ricezione:
+    1) id_sensori -> se nel JSON ricevuto compare questo campo significa che il cloud sta
+        riscontrando la corretta ricezione di un gruppo di sensori
+    2) id_batch -> se nel JSON compare questo campo significa che il cloud sta
+        riscontrando un gruppo di misurazioni ricevute correttamente e che
+        corrispondono a un batch (significato logico del batch)
     """
     if not risposta or not risposta.get("conferma_ricezione"):
         logger.warning(f"[CLOUD] Nessuna conferma ricevuta o struttura non valida: {risposta}")
         return False
 
-    id_sensori = risposta.get("id_sensori", [])
-
+    id_sensori = risposta.get("id_sensori", []) #estrae la lista di sensori se presenti
     if id_sensori:
         return gestore_db.aggiorna_conferma_ricezione_sensori(id_sensori)
-
     elif "id_batch" in risposta:
         return gestore_db.aggiorna_conferma_ricezione_batch(risposta["id_batch"])
 

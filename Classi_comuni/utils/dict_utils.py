@@ -5,7 +5,7 @@ def serializza_dict(d: dict) -> str:
     # 1. Serializza il dizionario in una stringa JSON ordinata
     string_json = json.dumps(
         d,
-        indent=2,
+        #indent=2,
         sort_keys=True,  # Ordina le chiavi alfabeticamente
         separators=(",", ":")  # Rimuove gli spazi tra chiavi e valori → output compatto
     )

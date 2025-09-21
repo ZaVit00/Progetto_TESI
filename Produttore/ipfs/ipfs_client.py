@@ -3,9 +3,11 @@ import logging
 import boto3
 import botocore.exceptions
 from Classi_comuni.utils.file_utils import genera_contenuto_gzip, genera_nome_file
+from costanti_comuni import TipoServizio
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID, ENDPOINT_S3_FILEBASE
+from registro_log import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(TipoServizio.PRODUTTORE, module=__name__, level=logging.CRITICAL)
 
 #disabilito i logger delle librerie esterne
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
@@ -29,7 +31,7 @@ Il metodo `head_object` di boto3 restituisce un dizionario con informazioni dett
 sull'oggetto memorizzato nel bucket. Tra le varie chiavi restituite, è presente 'Metadata',
 che contiene un ulteriore dizionario con i metadata personalizzati dell'oggetto.
 Filebase, nel caso di file caricati sulla rete IPFS tramite il suo endpoint S3-compatibile,
-inserisce automaticamente in 'Metadata' una chiave denominata 'ipfs-hash', il cui valore è
+inserisce automaticamente in 'Metadata' una chiave denominata 'cid', il cui valore è
 il CID IPFS associato al contenuto caricato. Accediamo a tale valore tramite:
 risposta["Metadata"]["cid"]
 Questo è possibile solo se l'oggetto è presente nel bucket dell'utente autenticato,
@@ -63,7 +65,7 @@ class IpfsClient:
             else:
                 logger.debug(f"Bucket '{nome_bucket}' già esistente.")
         except botocore.exceptions.ClientError as e:
-            logger.error(f"❌ Errore nella verifica/creazione del bucket: {e}")
+            logger.error(f"Errore nella verifica/creazione del bucket: {e}")
             raise ErroreCaricamentoIPFS("Errore durante la creazione o verifica del bucket.")
 
     def carica_stringa_json(self, nome_bucket: str, stringa_json: str, comprimi_dimensione: bool = False) -> str:
@@ -107,13 +109,13 @@ class IpfsClient:
         Recupera il CID IPFS associato a un file precedentemente caricato nel proprio bucket Filebase.
         Una volta caricato un file, filebase non restituisce direttamente il cid univoco associato al file
         caricato. È Necessario quindi interrogare tramite API filebase per ottenere i metadati di un certo file
-        (individuato univocamente dal suo nome). Tra i metadati restituiti troviamo il campo ipfs-hash che corrisponde
+        (individuato univocamente dal suo nome). Tra i metadati restituiti troviamo il campo 'cid' che corrisponde
         al cid del file. Il cid è tutto ciò che è sufficiente per recuperare un file nella rete IPFS
         ⚠️ Attenzione:
         Questo metodo funziona solo per file:
-        - che sono stati caricati nel tuo bucket Filebase (via API compatibile S3),
+        - che sono stati caricati nel nostro bucket Filebase (via API compatibile S3),
         - di cui conosci il nome esatto (object key),
-        - e per cui Filebase ha generato il metadata 'ipfs-hash' nei metadata dell'oggetto.
+        - e per cui Filebase ha generato il metadata 'cid' nei metadata dell'oggetto.
         ❌ Non può essere usato per ottenere il CID da file arbitrari su IPFS o caricati da altri utenti.
         """
         try:
