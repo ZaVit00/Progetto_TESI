@@ -21,4 +21,4 @@ URL_FILEBASE_IPFS = "https://ipfs.filebase.io/ipfs/"
 # Costanti per indicare i nomi dei file
 DIFFERENZE_RISCONTRATE = "differenze_riscontrate.json"
 METADATI_ANOMALIE = "metadata_anomalie.json"
-ESITO_ANALISI_INTEGRITA = "esito_analisi_integrita"
+ESITO_ANALISI_INTEGRITA = "esito_analisi_integrita" # l'estensione viene aggiunta dopo nel codice

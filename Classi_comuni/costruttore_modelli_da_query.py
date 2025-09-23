@@ -2,7 +2,7 @@ import json
 from typing import List, Dict, Tuple
 from Classi_comuni.entita.modelli_dati import DatiBatch, DatiMisurazione
 from modelli_dati import DatiSensore
-from modelli_metadati import MetaDatiMisurazione, MetaDatiSensore
+from modelli_metadati import MetadatiMisurazione, MetadatiSensore
 from Classi_comuni.utils.hashing_utils import Hashing
 
 class CostruttoreModelliDaQuery:
@@ -27,15 +27,15 @@ class CostruttoreModelliDaQuery:
         risultati_ordinati = sorted(risultati_query, key=lambda r: r["id_misurazione"])
         prima_riga = risultati_ordinati[0]
         # dalla prima riga dei risultati estraggo la tupla corrispondente al batch
-        # risultato sql --> DatiBatch
+        # risultato_verifica sql --> DatiBatch
         batch : DatiBatch = CostruttoreModelliDaQuery.costruisci_dati_batch_da_query(prima_riga)
         # hash dell'istanza del batch
         hash_batch = batch.to_hash()
 
         for riga in risultati_ordinati:
-            # risultato sql --> DatiMisurazione
+            # risultato_verifica sql --> DatiMisurazione
             dati_misurazione : DatiMisurazione = CostruttoreModelliDaQuery.costruisci_dati_misurazione_da_query(riga)
-            # risultato sql --> DatiSensore
+            # risultato_verifica sql --> DatiSensore
             dati_sensore : DatiSensore = CostruttoreModelliDaQuery.costruisci_dati_sensore_da_query(riga)
             misurazioni.append(dati_misurazione)
             hash_concat = Hashing.hash_concat(
@@ -93,24 +93,24 @@ class CostruttoreModelliDaQuery:
         )
 
     @staticmethod
-    def costruisci_metadati_misurazione_da_query(riga: dict) -> MetaDatiMisurazione:
+    def costruisci_metadati_misurazione_da_query(riga: dict) -> MetadatiMisurazione:
         """
-        Costruisce un oggetto MetaDatiMisurazione da una riga SQL.
+        Costruisce un oggetto MetadatiMisurazione da una riga SQL.
         """
         CostruttoreModelliDaQuery._verifica_campi(riga, ["id_misurazione", "id_batch", "timestamp"])
-        return MetaDatiMisurazione(
+        return MetadatiMisurazione(
             id_misurazione=riga["id_misurazione"],
             id_batch=riga["id_batch"],
             timestamp=riga["timestamp"]
         )
 
     @staticmethod
-    def costruisci_metadati_sensore_da_query(riga: dict) -> MetaDatiSensore:
+    def costruisci_metadati_sensore_da_query(riga: dict) -> MetadatiSensore:
         """
-        Costruisce un oggetto MetaDatiSensore da una riga SQL.
+        Costruisce un oggetto MetadatiSensore da una riga SQL.
         """
         CostruttoreModelliDaQuery._verifica_campi(riga, ["id_sensore", "tipo"])
-        return MetaDatiSensore(
+        return MetadatiSensore(
             id_sensore=riga["id_sensore"],
             tipo=riga["tipo"]
         )

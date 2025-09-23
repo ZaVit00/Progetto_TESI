@@ -1,11 +1,14 @@
 import logging
 from web3 import Web3
 from web3.exceptions import ContractLogicError
-from costanti_comuni import PERCORSO_ABI, PERCORSO_INDIRIZZO_CONTRATTO
+from costanti_comuni import PERCORSO_ABI, PERCORSO_INDIRIZZO_CONTRATTO, TipoServizio
 from Classi_comuni.utils.file_utils import verifica_esistenza_file, carica_json, carica_file_testuale
+from registro_log import setup_logger
 
-# Logger configurato per questo modulo
-logger = logging.getLogger(__name__)
+logger = setup_logger(TipoServizio.GESTORE_BLOCKCHAIn, module=__name__, level=logging.DEBUG)
+#disabilito il logger della libreria web3
+logging.getLogger("web3.providers.HTTPProvider").setLevel(logging.CRITICAL)
+logging.getLogger("web3.manager.RequestManager").setLevel(logging.CRITICAL)
 
 # ========== FUNZIONI DI SUPPORTO NELLO STESSO FILE PER COMODITA ==========
 def _carica_abi() -> dict:
@@ -40,11 +43,10 @@ def inizializza_configurazione_blockchain() -> tuple[dict, str]:
 
 
 # ========== CLASSI PRINCIPALI ==========
-
 class LettoreBlockchain:
     """
     Classe base per accedere in sola lettura al contratto smart su blockchain.
-    IL Verificatore accedere sempre in sola lettura
+    IL Verificatore accedere sempre in sola lettura alla blockchain.
     """
 
     def __init__(self, provider_url: str, abi: dict, indirizzo_contratto: str):
@@ -76,20 +78,22 @@ class LettoreBlockchain:
 class ScrittoreBlockchain(LettoreBlockchain):
     """
     Estende LettoreBlockchain per consentire scritture.
-    IL produttore accede sia in scrittura che in lettura
+    IL produttore accede sia in scrittura che in lettura ma
+    ha bisogno di un account address e di una private key per poter firmare le transazioni su
+    ganache. Il lettore non ha bisogno di account e private key poiché accede solo in lettura
     """
 
     def __init__(self, provider_url: str, abi: dict, indirizzo_contratto: str, account: str, private_key: str):
         super().__init__(provider_url, abi, indirizzo_contratto)
         self.account = self.web3.to_checksum_address(account)
         self.private_key = private_key
-        logger.debug("ScrittoreBlockchain inizializzato.")
+        logger.info("ScrittoreBlockchain inizializzato.")
 
     def scrivi_valore(self, id_batch: int, merkle_root: str, cid_ipfs: str) -> str:
         """
         Scrive un nuovo batch nella blockchain.
         """
-        logger.info(f"Scrittura batch ID {id_batch} nella blockchain...")
+        logger.debug(f"Scrittura batch ID {id_batch} nella blockchain...")
 
         try:
             nonce = self.web3.eth.get_transaction_count(self.account)
@@ -99,7 +103,6 @@ class ScrittoreBlockchain(LettoreBlockchain):
                 "gas": 300000,
                 "gasPrice": self.web3.to_wei("20", "gwei")
             })
-
             signed_tx = self.web3.eth.account.sign_transaction(tx, self.private_key)
             tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             logger.info(f"Batch scritto correttamente. TX Hash: {tx_hash.hex()}")

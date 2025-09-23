@@ -8,7 +8,7 @@
       <jdbc-url>jdbc:postgresql://localhost:5432/dati_cloud</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="dati_fog_node" uuid="c25bd8cd-b505-47af-8b04-00ce3eec1c4d">
+    <data-source source="LOCAL" name="dati_nodo_fog" uuid="c25bd8cd-b505-47af-8b04-00ce3eec1c4d">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>

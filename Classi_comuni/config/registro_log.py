@@ -7,6 +7,17 @@ import os
 from costanti_comuni import TipoServizio
 
 
+import logging
+import os
+from enum import Enum
+
+class TipoServizio(Enum):
+    PRODUTTORE = "Produttore"
+    CLOUD = "Cloud"
+    VERIFICATORE = "Verificatore"
+    VERIFICATORE_ESTESO = "VerificatoreEsteso"
+
+
 def setup_logger(
         service: TipoServizio,
         module: str = __name__,
@@ -28,22 +39,29 @@ def setup_logger(
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
 
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
-        )
+    # ✅ Pulisce eventuali handler esistenti per evitare duplicazioni
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-        # Console handler
-        ch = logging.StreamHandler()
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
+    )
 
-        # File handler opzionale
-        if log_to_file:
-            os.makedirs(output_dir, exist_ok=True)
-            log_path = os.path.join(output_dir, f"{service_name.lower()}.log")
-            fh = logging.FileHandler(log_path, encoding="utf-8")
-            fh.setFormatter(formatter)
-            logger.addHandler(fh)
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    # File handler opzionale
+    if log_to_file:
+        os.makedirs(output_dir, exist_ok=True)
+        log_path = os.path.join(output_dir, f"{service_name.lower()}.log")
+        fh = logging.FileHandler(log_path, encoding="utf-8")
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+    # Evita propagazione al root logger
+    logger.propagate = False
 
     return logger
+

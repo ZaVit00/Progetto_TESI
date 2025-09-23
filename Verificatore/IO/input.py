@@ -1,6 +1,5 @@
 import logging
 from typing import List
-
 from costanti_comuni import TipoServizio
 from registro_log import setup_logger
 

@@ -1,0 +1,37 @@
+{
+  "metadati_misurazioni":{
+    "766":{
+      "metadati_misurazione":{
+        "id_batch":4,
+        "id_misurazione":766,
+        "timestamp":"2025-09-22T17:06:46.094236"
+      },
+      "metadati_sensore":{
+        "id_sensore":"TEMP003",
+        "tipo":"generico"
+      }
+    },
+    "767":{
+      "metadati_misurazione":{
+        "id_batch":4,
+        "id_misurazione":767,
+        "timestamp":"2025-09-22T17:06:46.300518"
+      },
+      "metadati_sensore":{
+        "id_sensore":"TEMP009",
+        "tipo":"generico"
+      }
+    },
+    "769":{
+      "metadati_misurazione":{
+        "id_batch":4,
+        "id_misurazione":769,
+        "timestamp":"2025-09-22T17:06:46.583833"
+      },
+      "metadati_sensore":{
+        "id_sensore":"JOY006",
+        "tipo":"generico"
+      }
+    }
+  }
+}

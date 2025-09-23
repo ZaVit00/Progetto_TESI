@@ -242,7 +242,7 @@ class MerkleTree:
             foglia_hash (str): L'hash della foglia da verificare.
             path (PathCompatto): Il Merkle Path compatto associato alla foglia.
                                  Contiene direzioni ("0"/"1") e hash dei fratelli.
-            merkle_root_prevista (str): La Merkle Root memorizzata su blockchain, con cui confrontare il risultato.
+            merkle_root_prevista (str): La Merkle Root memorizzata su blockchain, con cui confrontare il risultato_verifica.
 
         Returns:
             bool: True se la foglia è integra (la root ricostruita corrisponde a quella attesa),

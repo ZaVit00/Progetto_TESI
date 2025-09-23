@@ -21,3 +21,4 @@ class TipoServizio(str, Enum):
     VERIFICATORE = "Verificatore"
     CLOUD = "Cloud_Service_Provider"
     PRODUTTORE_VERIFICATORE = "Produttore_Verificatore"
+    GESTORE_BLOCKCHAIn = "Gestore_blockchain"

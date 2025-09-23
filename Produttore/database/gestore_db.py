@@ -53,45 +53,56 @@ class GestoreDatabase:
     # ------------------------- METODI DI SUPPORTO INTERNI -------------------------
     def aggiorna_soglia_batch(self, nuova_soglia: int) -> bool:
         """
-        Aggiorna la soglia di chiusura del batch attivo se presente
-        Se il batch ha già raggiunto (o superato) la nuova soglia, viene chiuso.
-        Se non esiste alcun batch attivo, ne viene creato uno con la soglia fornita.
-        Operazione eseguita in modo atomico con l'apertura di una transazione.
+        “Il sistema consente solo upgrade della soglia e blocca i downgrade.
+        Questa scelta architetturale garantisce consistenza dei dati: un batch non può trovarsi in uno
+        stato incoerente in cui il numero di misurazioni già raccolte superi la nuova soglia inferiore.
+        Tale decisione segue un principio conservativo: meglio rifiutare un’operazione potenzialmente
+        dannosa che introdurre complessità e casi ambigui nella logica di gestione dei batch.”
         """
         if not isinstance(nuova_soglia, int) or nuova_soglia <= 0:
+            #controllo di sicurezza
             raise ValueError("La soglia deve essere un intero positivo.")
 
         try:
             cursor = self.conn.cursor()
-            # inizio della transazione
-            cursor.execute("BEGIN IMMEDIATE")
+            cursor.execute("BEGIN IMMEDIATE") # inizio della transazione
 
             # Verifica se esiste un batch attivo (non completo)
             cursor.execute(query.OTTIENI_BATCH_ATTIVO)
             risultato = cursor.fetchone()
-            # verifica se esiste un batch attivo
             if risultato:
-                if risultato["soglia_misurazioni"] == nuova_soglia:
+                #esiste un batch attivo
+                soglia_attuale = risultato["soglia_misurazioni"] #soglia attuale del batch attivo
+                num_mis_attuale = risultato["numero_misurazioni"] #numero misurazioni attuale
+
+                #caso uguale
+                if soglia_attuale == nuova_soglia:
+                    #le soglie sono uguali quindi non necessito di fare modifiche
                     logger.debug(f"La soglia è già impostata a {nuova_soglia}, nessuna modifica necessaria.")
-                    return True  # niente da aggiornare
+                    return True  # niente da modificare
 
-                # Batch attivo con differenze sul campo soglia_misurazioni vs nuova_soglia trovato → aggiorna la soglia
-                cursor.execute("""
-                               UPDATE batch
-                               SET soglia_misurazioni = ?
-                               WHERE completo = 0
-                               """, (nuova_soglia,))
+                #caso downgrade
+                if nuova_soglia < soglia_attuale:
+                    #Problema serio in caso di downgrade della soglia.
+                    #Evento possibile e per precauzione vietato.
+                    logger.warning(
+                        f"Richiesto downgrade della soglia da {soglia_attuale} a {nuova_soglia}. "
+                        "Operazione ignorata per garantire consistenza."
+                    )
+                    return True #niente da modificare
 
-                # Se il numero di misurazioni è già maggiore o uguale alla nuova soglia → chiudi il batch
-                cursor.execute("""
-                               UPDATE batch
-                               SET completo = 1
-                               WHERE completo = 0
-                                 AND numero_misurazioni >= soglia_misurazioni
-                               """)
+                # Caso upgrade: nuova soglia > soglia_attuale
+                # Nessun problema di inconsistenza tra i blocchi di misurazioni
+                if nuova_soglia > soglia_attuale:
+                    # Aggiorna la soglia del batch attivo
+                    cursor.execute("""
+                                   UPDATE batch
+                                   SET soglia_misurazioni = ?
+                                   WHERE completo = 0
+                                   """, (nuova_soglia,))
+
                 self.conn.commit()
                 logger.info(f"Soglia aggiornata a {nuova_soglia} e batch eventualmente chiuso.")
-
             else:
                 # Nessun batch attivo presente → creane uno nuovo con la soglia indicata
                 self.inserisci_batch_se_necessario(nuova_soglia)

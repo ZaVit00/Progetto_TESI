@@ -129,18 +129,29 @@ class DatiMisurazioneSensorePayload(ModelliHashabili):
     Non viene usata durante l'invio dei dati dal fog node al cloud provider, dove i flussi di registrazione
     sono separati:
     - i sensori vengono registrati in modo indipendente;
-    - tutte le misurazioni (con la relativa tupla del batch) seguono un canale distinto.
+    - tutte le misurazioni (con la relativa tupla del batch) seguono un canale distinto. Ovviamente non è
+    necessario spedire insieme alle misurazioni, le informazioni del sensore che lo ha prodotto perché queste
+    sono già memorizzate all'interno del database del cloud provider e inviate dal fog node insieme alle informazioni
+    di altri sensori in blocco. Quindi prima inviamo le informazioni sui sensori e dopo possiamo inviare le misurazioni
+    che avranno il campo id_sensore su cui è definito il vincolo di integrità referenziale.
 
     Tuttavia, in fase di verifica, è fondamentale controllare non solo la correttezza della misurazione,
-    ma anche che il sensore associato non sia stato manomesso. Ad esempio, una misurazione potrebbe
+    ma anche che le informazioni associate al sensore non siano state manomesse.
+    Ad esempio, una misurazione potrebbe
     sembrare valida, ma essere stata associata a un sensore con tipo alterato (es. da "umidità" a "joystick").
-    Questo tipo di alterazione la possiamo considerare dal punto di vista semantico. La misurazione cambia la sua semantica
+    Questo tipo di alterazione la possiamo considerare dal punto di vista semantico.
+    La misurazione cambia la sua semantica
     essendo quest'ultima riferita al sensore che ha prodotto la misurazione.
 
     Per questo motivo, durante la verifica, viene effettuata una `INNER JOIN` tra le tabelle
-    delle misurazioni e dei sensori sul campo `id_sensore` (chiave esterna). Il risultato di questa
+    delle misurazioni e dei sensori sul campo `id_sensore` (chiave esterna). Il risultato_verifica di questa
     associazione viene incapsulato in questa classe, che consente di confrontare la tupla estesa
     (misurazione + sensore) con la versione originale posseduta dal produttore dei dati.
+
+    Ovviamente per poter essere possibile nella fase di creazione della merkle root lato produttore
+    dobbiamo tenere conto che esiste la tupla del batch e ogni tupla di misurazioni è accompagnata dalla tupla
+    del sensore. Solo in questo modo siamo in grado di determinare anomalie sulla tupla misurazione + sensore.
+    In caso di progettazione diversa, questo non sarebbe stato possibile.
 
     Questa struttura è necessaria per:
     - generare e confrontare l’hash della tupla completa (incluso il sensore);

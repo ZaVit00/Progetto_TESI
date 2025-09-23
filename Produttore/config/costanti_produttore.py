@@ -90,7 +90,7 @@ ENDPOINT_S3_FILEBASE = "https://s3.filebase.com"
 # Percorso assoluto del file SQLite che contiene i dati locali del fog node.
 # Il file si trova nella root del progetto (due livelli sopra questo script).
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DBPATH = os.path.join(BASE_DIR, "dati_fog_node.sqlite")
+DBPATH = os.path.join(BASE_DIR, "dati_nodo_fog.sqlite")
 
 # =========================
 # VALIDAZIONE ID SENSORE

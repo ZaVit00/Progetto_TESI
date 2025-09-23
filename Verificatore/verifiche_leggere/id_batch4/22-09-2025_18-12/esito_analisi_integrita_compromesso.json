@@ -1,0 +1,31 @@
+{
+  "anomalie_integrita":{
+    "766":{
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA",
+      "tipo":"misurazione"
+    },
+    "767":{
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA",
+      "tipo":"misurazione"
+    },
+    "769":{
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA",
+      "tipo":"misurazione"
+    }
+  },
+  "anomalie_strutturali":{
+    "id_aggiunti":[],
+    "id_mancanti":[
+      770
+    ]
+  },
+  "id_batch":4,
+  "numero_anomalie_integrita":3,
+  "numero_anomalie_strutturali":1
+}

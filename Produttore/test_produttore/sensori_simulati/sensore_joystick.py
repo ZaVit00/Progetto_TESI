@@ -3,9 +3,10 @@ import threading
 import time
 import requests
 import costanti_produttore
+from costanti_produttore import TipoSensore
 
-ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
-ENDPOINT_SENSORE = "http://localhost:8000/sensori"
+ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazione"
+ENDPOINT_SENSORE = "http://localhost:8000/sensore"
 
 def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0,
                    ripetizioni: int = 300, intervallo: float = 1.0, frequenza_hz: float = 1.0):
@@ -24,7 +25,7 @@ def simula_sensore(id_sensore: str, descrizione: str, ritardo_iniziale: float = 
     for i in range(ripetizioni):
         dati = {
             "id_sensore": id_sensore.upper(),
-            "tipo": costanti_produttore.TIPO_SENSORE_JOYSTICK,
+            "tipo": TipoSensore.JOYSTICK.value,
             "x": round(random.uniform(-1, 1), 2),
             "y": round(random.uniform(-1, 1), 2),
             "pressed": random.choice([True, False])

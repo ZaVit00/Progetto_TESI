@@ -22,7 +22,7 @@ from Cloud_service_provider.config.istanze_globali import gestore_db
 # Classe utente con controllo permessi
 from Cloud_service_provider.entita.utente_api import UtenteAPI
 # Utility per elaborazione dei payload ricevuti
-from Cloud_service_provider.interfaccia_rest.utils.cloud_api_utils import (
+from cloud_api_utils import (
     elabora_pacchetto_batch_misurazioni,
     recupera_metadati_misurazione_sensore,
     recupera_dati_misurazione_sensore
@@ -32,7 +32,7 @@ from cloud_api_utils import costruisci_mappa_id_hash_foglie
 from costanti_comuni import TipoServizio
 # Modelli Pydantic specifici del cloud
 from modelli_dati import DatiMisurazioneSensorePayload
-from modelli_metadati import MetaDatiMisurazioneSensorePayload, MetaDatiBatchPayload
+from modelli_metadati import MetadatiMisurazioneSensorePayload, MetadatiBatchPayload
 from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.CLOUD, module=__name__, level=logging.DEBUG)
@@ -52,7 +52,7 @@ app = FastAPI(lifespan=lifespan)
 # Questi endpoint sono utilizzati dal nodo produttore per inviare
 # al cloud i sensori registrati e i batch (raggruppamento di misurazioni)
 @app.post("/sensori")
-def registra_lista_sensori(payload: DatiListaSensoriPayload, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
+def ricevi_lista_sensori(payload: DatiListaSensoriPayload, utente: UtenteAPI = Depends(richiede_permesso_scrittura)):
     """
     Inserisce una lista di nuovi sensori nel DB.
     Restituisce conferma e gli ID generati.
@@ -123,47 +123,6 @@ def ottieni_mappa_id_hash_foglie(id_batch: int, utente: UtenteAPI = Depends(rich
         logger.error(f"[ERRORE GET /batch] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-"""
-=== METODI PER OTTENERE I METADATI NON SENSIBILI ===
-Quando il verificatore rileva un’anomalia,
-può richiedere al cloud i metadati (informazioni non sensibili)
-relativi ai batch e alle misurazioni inner join sensore sospette, così da avere
-una prima valutazione “ad alto livello” della situazione.
-
-Importante: anche questi metadati potrebbero essere stati
-manomessi lungo il percorso. Solo il produttore, che conserva
-i dati originali non alterati, è in grado di stabilire con certezza
-quali modifiche siano effettivamente avvenute.
-"""
-@app.post("/metadata/misurazione-sensore", response_model=list[MetaDatiMisurazioneSensorePayload])
-def ottieni_metadata_misurazione_sensore(lista_id_mis: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    """
-    Restituisce i metadati (non sensibili) di sensore e misurazione per ID specificati.
-    Usato per mostrare info leggibili su dati potenzialmente alterati.
-    """
-    ris_query : List[MetaDatiMisurazioneSensorePayload]= recupera_metadati_misurazione_sensore(lista_id_mis)
-    if not ris_query:
-        raise HTTPException(status_code=404, detail="Misurazioni non trovate")
-    return ris_query
-
-@app.get("/metadata/batch/{id_batch}", response_model=MetaDatiBatchPayload)
-def ottieni_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    """
-    Restituisce i metadati del batch richiesto (non include le misurazioni).
-    """
-    ris_query : MetaDatiBatchPayload = gestore_db.ottieni_metadata_batch(id_batch)
-    if not ris_query:
-        raise HTTPException(status_code=404, detail="Batch non trovato")
-    return ris_query
-
-@app.get("/metadata/batch", response_model=list[MetaDatiBatchPayload])
-def ottieni_tutti_metadata_batch(utente: UtenteAPI = Depends(richiede_permesso_verifica)):
-    #restituisce l'elenco di metadati dei batch attualmente memorizzati nel sistema
-    ris_query: MetaDatiBatchPayload = gestore_db.ottieni_tutti_metadata_batch()
-    if not ris_query:
-        raise HTTPException(status_code=404, detail="Nessun Batch attualmente memorizzato nel sistema")
-    return ris_query
-
 
 # METODI UTILIZZATI UNICAMENTE DAL PRODUTTORE CHE DISPONE DEI DATI ORIGINALI
 # PER LA VERIFICA ESTESA (determinare le differenze campo per campo esattamente)
@@ -188,6 +147,49 @@ def ricostruisci_dati_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_
     ris_query : DatiBatch = gestore_db.ottieni_dati_batch(id_batch)
     if not ris_query:
         raise HTTPException(status_code=404, detail="Batch non trovato")
+    return ris_query
+
+"""
+=== METODI PER OTTENERE I METADATI (informazioni NON SENSIBILI sui dati memorizzati) ===
+Quando il verificatore rileva un’anomalia,
+può richiedere al cloud i metadati (informazioni non sensibili)
+relativi alla tupla del batch e alle misurazioni (e le informazioni sul sensore che ha prodotto la misurazione) 
+sospette, così da avere una prima valutazione “ad alto livello” della situazione.
+
+Importante: anche questi metadati potrebbero essere stati
+manomessi. Solo il produttore, che conserva
+i dati originali NON alterati, è in grado di stabilire con certezza
+quali modifiche siano effettivamente avvenute ma il verificatore può solo determinare
+l'anomalia di integrità (coerentemente con il principio della separazione dei ruoli)
+"""
+@app.post("/metadata/misurazione-sensore", response_model=list[MetadatiMisurazioneSensorePayload])
+def ottieni_metadata_misurazione_sensore(lista_id_mis: List[int], utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    """
+    Restituisce i metadati (non sensibili) di sensore e misurazione per ID specificati.
+    Usato per mostrare info leggibili su dati potenzialmente alterati
+    su una misurazione + sensore che lo ha prodotto.
+    """
+    ris_query : List[MetadatiMisurazioneSensorePayload]= recupera_metadati_misurazione_sensore(lista_id_mis)
+    if not ris_query:
+        raise HTTPException(status_code=404, detail="Misurazioni non trovate")
+    return ris_query
+
+@app.get("/metadata/batch/{id_batch}", response_model=MetadatiBatchPayload)
+def ottieni_metadata_batch(id_batch: int, utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    """
+    Restituisce i metadati del batch richiesto (non include le misurazioni).
+    """
+    ris_query : MetadatiBatchPayload = gestore_db.ottieni_metadata_batch(id_batch)
+    if not ris_query:
+        raise HTTPException(status_code=404, detail="Batch non trovato")
+    return ris_query
+
+@app.get("/metadata/batch", response_model=list[MetadatiBatchPayload])
+def ottieni_tutti_metadata_batch(utente: UtenteAPI = Depends(richiede_permesso_verifica)):
+    #restituisce l'elenco di metadati dei batch attualmente memorizzati nel sistema
+    ris_query: MetadatiBatchPayload = gestore_db.ottieni_tutti_metadata_batch()
+    if not ris_query:
+        raise HTTPException(status_code=404, detail="Nessun Batch attualmente memorizzato nel sistema")
     return ris_query
 
 

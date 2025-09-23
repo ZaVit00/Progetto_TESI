@@ -12,7 +12,6 @@ from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)
 
-
 def elabora_batch_completo(id_batch: int) -> bool:
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
@@ -23,7 +22,8 @@ def elabora_batch_completo(id_batch: int) -> bool:
     5. Salva Merkle Path su IPFS.
     6. Aggiorna DB con metadata (merkle root, cid ipfs).
     7. Salva su blockchain la tripla merkle root, cid ipfs, id batch.
-    8. Salva hash della transazione blockchain nel DB come log futuro/debug
+    8. Salva hash della transazione blockchain nel DB per determinare
+    la transazione corrispondente al salvataggio (id_batch, cid, merkle_root) un dato batch
     """
     dati_query = gestore_db.ottieni_dati_batch_misurazioni_sensori(id_batch)
     if not dati_query:
@@ -98,11 +98,11 @@ def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
     return merkle_root, merkle_path_json
 
 
-def carica_merkle_path_ipfs(merkle_path: str):
+def carica_merkle_path_ipfs(merkle_path: str) -> tuple[str, str]:
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione=True)
+    nome_file_caricato: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione = False)
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
-    cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file)
+    cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file_caricato)
     return cid

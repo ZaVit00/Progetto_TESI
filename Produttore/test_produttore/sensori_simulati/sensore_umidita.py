@@ -4,10 +4,11 @@ import time
 import requests
 
 import costanti_produttore
+from costanti_produttore import TipoSensore
 
 # Endpoint del server FastAPI
-ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazioni"
-ENDPOINT_SENSORE = "http://localhost:8000/sensori"
+ENDPOINT_MISURAZIONE = "http://localhost:8000/misurazione"
+ENDPOINT_SENSORE = "http://localhost:8000/sensore"
 
 def simula_sensore_umidita(id_sensore: str, descrizione: str, ritardo_iniziale: float = 0,
                             ripetizioni: int = 300, intervallo: float = 1.0, frequenza_hz: float = 1.0):
@@ -32,7 +33,7 @@ def simula_sensore_umidita(id_sensore: str, descrizione: str, ritardo_iniziale: 
     for i in range(ripetizioni):
         dati = {
             "id_sensore": id_sensore.upper(),
-            "tipo": costanti_produttore.TIPO_SENSORE_UMIDITA,
+            "tipo": TipoSensore.UMIDITA,
             "valore": round(random.uniform(30.0, 90.0), 2)
         }
         try:

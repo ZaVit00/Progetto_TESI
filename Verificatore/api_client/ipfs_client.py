@@ -6,7 +6,8 @@ from costanti_verificatore import URL_FILEBASE_IPFS
 def ottieni_file_da_ipfs(cid: str) -> str:
     """
     Scarica un file da IPFS (tramite Filebase) e restituisce una stringa JSON.
-    Supporta file compressi (gzip) o normali.
+    Supporta file compressi (gzip) o normali a seconda di come è stato caricato il file.
+    Tutto ciò di cui abbiamo bisogno per ottenere un file caricato su IPFS è il suo cid
     """
     url : str = URL_FILEBASE_IPFS + cid
     response = requests.get(url)

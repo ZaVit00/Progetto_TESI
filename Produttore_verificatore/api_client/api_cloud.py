@@ -28,7 +28,7 @@ def richiedi_dati_cloud_batch(id_batch: int) -> DatiBatch:
     except Exception as e:
         # Errore nella conversione della risposta in oggetto DatiBatch
         logger.error(f"[ERRORE PARSING - BATCH] Risposta non valida per DatiBatch: {e}")
-        raise
+        raise RuntimeError
 
 
 def richiedi_dati_cloud_completi_misurazioni(lista_id: List[int]) -> List[DatiMisurazioneSensorePayload]:

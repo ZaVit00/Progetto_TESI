@@ -8,7 +8,6 @@ from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID, ENDPOI
 from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.PRODUTTORE, module=__name__, level=logging.CRITICAL)
-
 #disabilito i logger delle librerie esterne
 logging.getLogger("botocore").setLevel(logging.CRITICAL)
 logging.getLogger("boto3").setLevel(logging.CRITICAL)
@@ -16,7 +15,7 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
 
 #ErroreCaricamento: nella put_object → quando upload fallisce.
-#ErroreRecuperoCID: nella head_object → se ipfs-hash non esiste nei metadata.
+#ErroreRecuperoCID: nella head_object → se ipfs-cid non esiste nei metadata.
 class ErroreCaricamentoIPFS(Exception):
     """Eccezione sollevata quando il caricamento su Filebase/IPFS fallisce."""
     pass
@@ -32,7 +31,7 @@ sull'oggetto memorizzato nel bucket. Tra le varie chiavi restituite, è presente
 che contiene un ulteriore dizionario con i metadata personalizzati dell'oggetto.
 Filebase, nel caso di file caricati sulla rete IPFS tramite il suo endpoint S3-compatibile,
 inserisce automaticamente in 'Metadata' una chiave denominata 'cid', il cui valore è
-il CID IPFS associato al contenuto caricato. Accediamo a tale valore tramite:
+il CID IPFS associato al contenuto caricato tramite filebase. Accediamo a tale valore tramite:
 risposta["Metadata"]["cid"]
 Questo è possibile solo se l'oggetto è presente nel bucket dell'utente autenticato,
 e non può essere fatto su oggetti esterni o appartenenti ad altri account.
@@ -73,6 +72,8 @@ class IpfsClient:
         Carica un file JSON su IPFS (tramite Filebase), usando come nome file
         un hash deterministico del contenuto. Se il caricamento fallisce,
         solleva eccezione personalizzata ErroreCaricamento.
+        Gestisce la compressione del documento in formato gz
+        per risparmiare spazio su filebase.
         """
         self._verifica_o_crea_bucket(nome_bucket)
         nome_file = genera_nome_file(stringa_json, nome_file="merkle_path", ext="json")

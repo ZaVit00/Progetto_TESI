@@ -4,8 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Union
 import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import Field
+from fastapi import FastAPI, HTTPException, Body
 from costanti_comuni import TipoServizio
 from istanze_globali_produttore import gestore_db
 from gestione_soglia_batch import aggiorna_soglia_chiusura_batch
@@ -18,7 +17,7 @@ i modelli di misurazione in ingresso e dati sensore in ingresso servono solo al 
 non al cloud provider (Il fog node gestisce solo la comunicazione interna tra sensori e nodo fog)
 """
 from dati_misurazione_in_ingresso import DatiMisurazioneInIngressoJoystick, DatiMisurazioneInIngressoAccelerometro, \
-    DatiMisurazioneInIngressoGiroscopio
+    DatiMisurazioneInIngressoGiroscopio, DatiMisurazioneInIngressoTemperatura, DatiMisurazioneInIngressoUmidita
 from dati_sensore_in_ingresso import DatiSensoreInIngresso
 
 logger = setup_logger(TipoServizio.PRODUTTORE, module=__name__, level=logging.DEBUG)
@@ -32,7 +31,7 @@ async def lifespan(app: FastAPI):
     yield  # Applicazione avviata
     #operazioni da effettuare alla terminazione dell'applicazione
     logger.info("Chiusura dell'applicazione: chiusura connessione al DB.")
-    #chiusura della connesione del database sqlite (dati_fog_node.sqlite)
+    #chiusura della connesione del database sqlite (dati_nodo_fog.sqlite)
     gestore_db.chiudi_connessione()
 
 # Istanzia l'app FastAPI con supporto al lifecycle
@@ -65,7 +64,7 @@ async def registra_sensore(dati_sensore: DatiSensoreInIngresso):
 
 """
 Con Field(discriminator="tipo"), FastAPI:
-- legge il Field Tipo ed estrae il campo "tipo" dal JSON in ingresso
+- legge il Body ed estrae il campo "tipo" dal JSON in ingresso
 - se vale "joystick", usa MisurazioneInIngressoJoystick 
 - se vale "accelerometro", usa MisurazioneInIngressoAccelerometro
 - se vale "giroscopio", usa MisurazioneInIngressoGiroscopio
@@ -74,16 +73,18 @@ Con Field(discriminator="tipo"), FastAPI:
 """
 misurazioni_accettate = Union[DatiMisurazioneInIngressoJoystick,
 DatiMisurazioneInIngressoGiroscopio,
-DatiMisurazioneInIngressoAccelerometro]
+DatiMisurazioneInIngressoAccelerometro,
+DatiMisurazioneInIngressoTemperatura,
+DatiMisurazioneInIngressoUmidita]
 @app.post("/misurazione", summary="Registra una misurazione", response_model=dict)
-async def registra_misurazione(misurazione: misurazioni_accettate = Field(discriminator="tipo")):
+async def registra_misurazione(mis: misurazioni_accettate = Body(..., discriminator="tipo")):
     """
     Endpoint per ricevere e salvare una misurazione proveniente da un sensore registrato.
     La misurazione viene associata al batch attivo o ne crea uno nuovo se necessario.
     """
-    id_sensore:str = misurazione.id_sensore.upper()
+    id_sensore:str = mis.id_sensore.upper()
     #estraggo un dizionario contenente solo i dati effettivi dalla misurazione separandolo dai metadata
-    dati = misurazione.estrai_dati_misurazione()
+    dati = mis.estrai_dati_misurazione()
     logger.debug(f"Misurazione ricevuta dal sensore {id_sensore}: {dati}")
     successo_operazione = gestore_db.inserisci_misurazione(id_sensore=id_sensore, dati=dati)
     if not successo_operazione:

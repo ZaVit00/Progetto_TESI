@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal, ROUND_HALF_UP
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from costanti_produttore import MAPPING_PREFISSO_TIPO_SENSORE, REGEX_ID_SENSORE, TipoSensore
 
@@ -20,6 +21,14 @@ class DatiSensoreInIngresso(BaseModel):
     )
 
     frequenza_hz: float = Field(..., gt=0, description="Frequenza di invio delle misurazioni (in Hz).")
+
+    @field_validator("frequenza_hz")
+    @classmethod
+    def normalizza_frequenza(cls, v: float) -> float:
+        """
+        Arrotonda a 3 cifre decimali per evitare imprecisioni binarie dei float
+        """
+        return float(Decimal(v).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP))
 
     @field_validator("id_sensore")
     @classmethod

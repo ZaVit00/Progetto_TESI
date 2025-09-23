@@ -21,7 +21,7 @@ from Cloud_service_provider.database.query import (
 from costanti_comuni import TipoServizio
 from dict_utils import serializza_dict
 from modelli_dati import DatiBatch
-from modelli_metadati import MetaDatiBatchPayload
+from modelli_metadati import MetadatiBatchPayload
 from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.CLOUD, module=__name__, level=logging.DEBUG)
@@ -167,21 +167,21 @@ class GestoreDatabase:
             logger.error(f"[QUERY - ESTRAZIONE DATI BATCH] {e}")
             return []
 
-    def ottieni_metadata_batch(self, id_batch) -> MetaDatiBatchPayload | None:
+    def ottieni_metadata_batch(self, id_batch) -> MetadatiBatchPayload | None:
         """
         Estrae i metadati del batch richiesto.
-        Restituisce un oggetto MetaDatiBatchPayload o None.
+        Restituisce un oggetto MetadatiBatchPayload o None.
         """
         try:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(OTTIENI_METADATA_BATCH, (id_batch,))
             riga = cursor.fetchone()
-            return MetaDatiBatchPayload(**riga) if riga else None
+            return MetadatiBatchPayload(**riga) if riga else None
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI BATCH] {e}")
             return None
 
-    def ottieni_tutti_metadata_batch(self) -> list[MetaDatiBatchPayload]:
+    def ottieni_tutti_metadata_batch(self) -> list[MetadatiBatchPayload]:
         """
         Estrae i metadati di TUTTI i batch presenti nel sistema.
         """
@@ -189,7 +189,7 @@ class GestoreDatabase:
             cursor = self.conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute(OTTIENI_TUTTI_METADATA_BATCH)
             righe = cursor.fetchall()
-            return [MetaDatiBatchPayload(**r) for r in righe]
+            return [MetadatiBatchPayload(**r) for r in righe]
         except Psycopg2Error as e:
             logger.error(f"[QUERY - ESTRAZIONE METADATI TUTTI BATCH] {e}")
             return []
