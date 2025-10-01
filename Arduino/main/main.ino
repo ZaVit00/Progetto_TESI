@@ -7,7 +7,7 @@
 // --- Config WiFi e server ---
 const char* WIFI_SSID = "Wind3 HUB - E8E3AA";
 const char* WIFI_PASS = "2910ZaVitDD@@#VZ";
-const char* SERVER_IP  = "192.168.1.27";  // IP del tuo PC
+const char* SERVER_IP  = "192.168.1.208";  // IP del tuo PC che funge da server web
 const int   SERVER_PORT = 8000;
 
 // --- Periodi di campionamento ---

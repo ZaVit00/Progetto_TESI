@@ -101,6 +101,7 @@ OTTIENI_DATI_SENSORI = """
     WHERE id_sensore = ?
 """
 
+
 #  Estrae metadati principali di un batch: ID, timestamp di creazione e numero di misurazioni.
 OTTIENI_DATI_BATCH = """
     SELECT id_batch, timestamp_creazione, numero_misurazioni
@@ -124,6 +125,10 @@ OTTIENI_FREQUENZA_MEDIA_SENSORI = """
    from sensore
 """
 
+OTTIENI_SOMMA_FREQUENZA_SENSORI = """
+   SELECT SUM(frequenza_hz) AS somma_freq
+   from sensore
+"""
 
 OTTIENI_SOGLIA_ULTIMO_BATCH = """
 -- Restituisce la soglia dell'ultimo batch inserito (anche se completato)
@@ -303,3 +308,4 @@ OTTIENI_SENSORI_NON_CONFERMA_RICEZIONE = """
     WHERE conferma_ricezione = 0
     ORDER BY id_sensore ASC
 """
+

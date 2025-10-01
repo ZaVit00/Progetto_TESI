@@ -1,4 +1,5 @@
 import logging
+import math
 import sqlite3
 from datetime import datetime
 
@@ -21,7 +22,7 @@ True/False o una lista vuota in caso di errore.
 Il chiamante è responsabile nel controllare i valori restituiti.
 Tutti gli errori vengono loggati.
 """
-class GestoreDatabase:
+class GestoreDatabaseProduttore:
 
     def __init__(self, sola_lettura: bool = False):
         if sola_lettura:
@@ -73,23 +74,23 @@ class GestoreDatabase:
             if risultato:
                 #esiste un batch attivo
                 soglia_attuale = risultato["soglia_misurazioni"] #soglia attuale del batch attivo
-                num_mis_attuale = risultato["numero_misurazioni"] #numero misurazioni attuale
-
-                #caso uguale
+                #num_mis_attuale = risultato["numero_misurazioni"] #numero misurazioni attuale
                 if soglia_attuale == nuova_soglia:
                     #le soglie sono uguali quindi non necessito di fare modifiche
                     logger.debug(f"La soglia è già impostata a {nuova_soglia}, nessuna modifica necessaria.")
                     return True  # niente da modificare
 
-                #caso downgrade
-                if nuova_soglia < soglia_attuale:
-                    #Problema serio in caso di downgrade della soglia.
-                    #Evento possibile e per precauzione vietato.
-                    logger.warning(
-                        f"Richiesto downgrade della soglia da {soglia_attuale} a {nuova_soglia}. "
-                        "Operazione ignorata per garantire consistenza."
-                    )
-                    return True #niente da modificare
+                # --- Caso downgrade ---
+                # Nota: in condizioni normali, con la funzione scelta, questo evento
+                # NON può verificarsi,
+                # perché la soglia è calcolata in modo monotono crescente (cresce o resta uguale).
+                # Manteniamo il controllo per usi futuri/logging, ma è ridondante.
+                # if nuova_soglia < soglia_attuale:
+                #     logger.warning(
+                #         f"Richiesto downgrade della soglia da {soglia_attuale} a {nuova_soglia}. "
+                #         "Operazione ignorata per garantire consistenza."
+                #     )
+                #     return True # nessuna modifica applicata
 
                 # Caso upgrade: nuova soglia > soglia_attuale
                 # Nessun problema di inconsistenza tra i blocchi di misurazioni
@@ -344,12 +345,32 @@ class GestoreDatabase:
             cursor.execute(query.OTTIENI_FREQUENZA_MEDIA_SENSORI)
             risultato = cursor.fetchone()
             if risultato is None or risultato[0] is None:
-                # logger.warning("Nessuna frequenza trovata nella tabella 'sensore'.")
+                logger.warning("Nessuna frequenza trovata nella tabella 'sensore'.")
                 return 0.0
             return float(risultato[0])
         except sqlite3.Error as e:
             logger.error(f"QUERY - LETTURA FREQUENZA MEDIA SENSORI] {e}")
             return 0.0
+
+    def ottieni_somma_frequenza_sensori(self) -> int:
+        """
+        Calcola e restituisce la somma delle frequenze (in Hz) di tutti i sensori registrati nel sistema.
+        Utile per stimare il tasso medio di produzione dati nel fog node.
+        Returns:
+            int: somma della frequenza (Hz). Se non ci sono sensori, restituisce 0.0.
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query.OTTIENI_SOMMA_FREQUENZA_SENSORI)
+            risultato = cursor.fetchone()
+            if risultato is None or risultato[0] is None:
+                logger.warning("Query somma frequenza - Nessun sensore trovato")
+                return 0
+            somma_freq = float(risultato[0])
+            return math.ceil(somma_freq) #arrotondamento all'intero più vicino
+        except sqlite3.Error as e:
+            logger.error(f"[QUERY - LETTURA FREQUENZA TOTALE SENSORI] {e}")
+            return 0
 
     def ottieni_payload_batch(self, id_batch) -> str | None:
         """
@@ -565,8 +586,3 @@ class GestoreDatabase:
         except sqlite3.Error as e:
             logger.error(f"QUERY - ELIMINAZIONE MISURAZIONI] {e}")
             return False
-
-
-
-
-

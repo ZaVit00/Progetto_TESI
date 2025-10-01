@@ -28,7 +28,7 @@ void registraSensore(const char* id, const char* descrizione, float frequenzaHz)
   String payload = String("{\"id_sensore\":\"") + id + "\",\"descrizione\":\"" +
                    descrizione + "\",\"frequenza_hz\":" + String(frequenzaHz, 2) + "}";
   
-  client->post("/sensori", "application/json", payload);
+  client->post("/sensore", "application/json", payload);
   int statusCode = client->responseStatusCode();
   String response = client->responseBody();
 
@@ -40,7 +40,7 @@ void registraSensore(const char* id, const char* descrizione, float frequenzaHz)
 }
 
 bool inviaMisurazione(const char* jsonPayload) {
-  client->post("/misurazioni", "application/json", jsonPayload);
+  client->post("/misurazione", "application/json", jsonPayload);
   int statusCode = client->responseStatusCode();
   String response = client->responseBody();
 

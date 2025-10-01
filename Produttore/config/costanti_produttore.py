@@ -101,10 +101,6 @@ DBPATH = os.path.join(BASE_DIR, "dati_nodo_fog.sqlite")
 # Esempi validi: JOY001, TEMP123, HUM045, PRESS999
 REGEX_ID_SENSORE = r"(" + "|".join(PREFIX_VALIDI_SENSORE) + r")\d{3}"
 
-# COSTANTI BATCH
-# K_BATCH_SCALING Costante moltiplicativa per scalare la dimensione del batch
-# serve per aumentare la dimensione del batch in modo artificiale
-K_BATCH_SCALING = 8 #2^3
-FATTORE_SCALAMENTO_FREQUENZA = 8    # aumenta l'argomento del logaritmo prima di calcolare il batch
+DURATA_TEMPORALE_FINESTRA_BATCH = 60 #finestra temporale fissata presa in esamine in 60 secondi
 SOGLIA_BATCH_MINIMA = 255            # fallback per batch di dimensioni minime (es. 2^8 - 1 = 255)
-
+SOGLIA_BATCH_MASSIMA =  4095 #fallback per batch di dimensione massime (2^12-1)

@@ -3,6 +3,29 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "id",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "merkleRoot",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "cidIpfs",
+				"type": "string"
+			}
+		],
+		"name": "salvaBatch",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
 			}
@@ -45,29 +68,6 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "id",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "merkleRoot",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "cidIpfs",
-				"type": "string"
-			}
-		],
-		"name": "salvaBatch",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

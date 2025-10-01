@@ -12,7 +12,6 @@ from tipi_verifica import RisultatoVerifica
 from modelli_metadati import MetadatiBatchPayload
 from verificatore_esteso import VerificatoreEsteso
 from verificatore_utils import ottieni_report_anomalie
-from Classi_comuni.utils.dict_utils import serializza_dict
 
 logger = setup_logger(TipoServizio.VERIFICATORE, module=__name__, level=logging.DEBUG)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)

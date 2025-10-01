@@ -27,7 +27,7 @@ from registro_log import setup_logger
 logger = setup_logger(TipoServizio.CLOUD, module=__name__, level=logging.DEBUG)
 
 
-class GestoreDatabase:
+class GestoreDatabaseCloud:
     """
     Classe responsabile della connessione al database PostgreSQL e delle operazioni CRUD
     relative a sensori, misurazioni e batch.
