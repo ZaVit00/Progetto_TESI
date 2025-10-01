@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, Depends
-from Cloud_service_provider.config.istanze_globali import API_KEYS
-from Cloud_service_provider.entita.utente_api import UtenteAPI
+from Cloud_provider.config.istanze_globali import API_KEYS
+from Cloud_provider.entita.utente_api import UtenteAPI
 
 
 def ottieni_utente(request: Request) -> UtenteAPI:

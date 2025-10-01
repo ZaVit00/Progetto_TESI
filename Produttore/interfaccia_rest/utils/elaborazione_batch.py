@@ -88,7 +88,7 @@ def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
 
     # Costruzione del Merkle Tree
     merkle_tree = MerkleTree(lista_hash, lista_id)
-    merkle_root = merkle_tree.costruisci_albero()
+    merkle_root : str = merkle_tree.costruisci_albero()
 
     logger.debug(f"Merkle Root calcolata: {merkle_root}")
 
@@ -98,7 +98,7 @@ def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
     return merkle_root, merkle_path_json
 
 
-def carica_merkle_path_ipfs(merkle_path: str) -> tuple[str, str]:
+def carica_merkle_path_ipfs(merkle_path: str) -> str:
     client = IpfsClient()
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS

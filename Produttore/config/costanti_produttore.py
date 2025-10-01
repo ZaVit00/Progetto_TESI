@@ -1,5 +1,5 @@
 # =========================
-# COSTANTI DI CONFIGURAZIONE
+# COSTANTI DI CONFIGURAZIONE DEL PRODUTTORE
 # =========================
 import os
 from enum import Enum
@@ -42,7 +42,6 @@ ERRORE_HTTP = "ERRORE_HTTP"             # Errore di comunicazione con endpoint H
 # =========================
 # TIPI DI SENSORE
 # =========================
-
 
 # Prefissi validi che identificano le principali categorie di sensori.
 # Ogni ID sensore deve iniziare con uno di questi prefissi (in lettere maiuscole).

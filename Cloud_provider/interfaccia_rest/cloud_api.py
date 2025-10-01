@@ -12,15 +12,15 @@ from Classi_comuni.entita.modelli_dati import (
     BatchPayload, DatiListaSensoriPayload, DatiBatch
 )
 # Middleware di autenticazione e autorizzazione basato sui ruoli API
-from Cloud_service_provider.auth.auth_utils import (
+from Cloud_provider.auth.auth_utils import (
     richiede_permesso_scrittura,
     richiede_permesso_verifica_estesa,
     richiede_permesso_verifica
 )
 # Istanza globale del DB locale (PostgreSQL), usata da tutti i metodi
-from Cloud_service_provider.config.istanze_globali import gestore_db
+from Cloud_provider.config.istanze_globali import gestore_db
 # Classe utente con controllo permessi
-from Cloud_service_provider.entita.utente_api import UtenteAPI
+from Cloud_provider.entita.utente_api import UtenteAPI
 # Utility per elaborazione dei payload ricevuti
 from cloud_api_utils import (
     elabora_pacchetto_batch_misurazioni,

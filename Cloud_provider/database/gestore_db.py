@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2 import Error as Psycopg2Error
 from psycopg2.extras import RealDictCursor
 from Classi_comuni.entita.modelli_dati import DatiSensore, DatiMisurazione
-from Cloud_service_provider.database.query import (
+from Cloud_provider.database.query import (
     CREA_TABELLA_SENSORE,
     CREA_TABELLA_BATCH,
     CREA_TABELLA_MISURAZIONE,

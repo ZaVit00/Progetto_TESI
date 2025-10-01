@@ -12,7 +12,7 @@
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\zazav\Progetto_TESI\Produttore\dati_fog_node.sqlite</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\zazav\Progetto_TESI\Produttore\dati_nodo_fog.sqlite</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>
