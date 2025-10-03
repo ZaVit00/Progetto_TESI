@@ -6,7 +6,7 @@ from typing import Union
 import uvicorn
 from fastapi import FastAPI, HTTPException, Body
 from costanti_comuni import TipoServizio
-from istanze_globali_produttore import gestore_db
+from istanza_globale_db import gestore_db
 from gestione_soglia_batch import aggiorna_soglia_chiusura_batch
 from registro_log import setup_logger
 from task_manager import avvia_task_periodici

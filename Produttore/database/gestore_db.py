@@ -2,7 +2,6 @@ import logging
 import math
 import sqlite3
 from datetime import datetime
-
 from costanti_comuni import TipoServizio
 from costanti_produttore import DBPATH, SOGLIA_BATCH_MINIMA
 from database import query

@@ -8,7 +8,7 @@ PRAGMA_FK = "PRAGMA foreign_keys = ON"
 CREA_TABELLA_SENSORE = """
     CREATE TABLE IF NOT EXISTS sensore (
         id_sensore TEXT PRIMARY KEY,
-        descrizione TEXT NOT NULL,
+        descrizione TEXT DEFAULT NULL,
         tipo TEXT NOT NULL,
         frequenza_hz REAL NOT NULL,
         conferma_ricezione INTEGER DEFAULT 0
@@ -29,11 +29,11 @@ CREA_TABELLA_BATCH = """
     CREATE TABLE IF NOT EXISTS batch (
         id_batch INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp_creazione TEXT NOT NULL,
-        numero_misurazioni INTEGER NOT NULL DEFAULT 0,
+        numero_misurazioni INTEGER DEFAULT 0,
         soglia_misurazioni INTEGER NOT NULL DEFAULT 0,
-        completo INTEGER NOT NULL DEFAULT 0,
-        conferma_ricezione INTEGER NOT NULL DEFAULT 0,
-        elaborabile INTEGER NOT NULL DEFAULT 1,
+        completo INTEGER DEFAULT 0,
+        conferma_ricezione INTEGER DEFAULT 0,
+        elaborabile INTEGER  DEFAULT 1,
         merkle_root TEXT DEFAULT NULL,
         cid_merkle_path TEXT DEFAULT NULL,
         transazione_hash TEXT DEFAULT NULL,

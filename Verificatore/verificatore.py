@@ -139,7 +139,8 @@ class Verificatore:
 
     def _scarica_merkle_path_ipfs(self) -> None:
         logger.info(f"Scarico Merkle Path da IPFS tramite CID {self.cid_merkle_path}")
-        stringa_json = ottieni_file_da_ipfs(self.cid_merkle_path)
+        #ignoro il secondo risultato che è la dimensione del file
+        stringa_json, _ = ottieni_file_da_ipfs(self.cid_merkle_path)
         self.merkle_paths = carica_merkle_paths_da_stringa_json(stringa_json)
 
     def _verifica_struttura(self) -> tuple[list[int], list[int]]:

@@ -4,7 +4,7 @@ import logging
 from config.costanti_produttore import ENDPOINT_CLOUD_SENSORI, ENDPOINT_CLOUD_BATCH
 from costanti_comuni import TipoServizio
 from elaborazione_batch import elabora_batch_completo
-from istanze_globali_produttore import gestore_db
+from istanza_globale_db import  gestore_db
 from modelli_dati import DatiListaSensoriPayload
 from registro_log import setup_logger
 from utils.api_cloud import invia_payload

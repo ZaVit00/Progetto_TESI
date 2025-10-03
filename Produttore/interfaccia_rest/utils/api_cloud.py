@@ -3,7 +3,7 @@ import requests
 
 from costanti_comuni import TipoServizio
 from costanti_produttore import API_KEY_PRODUTTORE
-from istanze_globali_produttore import gestore_db
+from istanza_globale_db  import gestore_db
 from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)

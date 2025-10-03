@@ -2,7 +2,7 @@ import logging
 from web3 import Web3
 from web3.exceptions import ContractLogicError
 from costanti_comuni import PERCORSO_ABI, PERCORSO_INDIRIZZO_CONTRATTO, TipoServizio
-from Classi_comuni.utils.file_utils import verifica_esistenza_file, carica_json, carica_file_testuale
+from Classi_comuni.utils.file_utils import verifica_esistenza_file, carica_contenuto_json_da_file, carica_file_testuale
 from registro_log import setup_logger
 
 logger = setup_logger(TipoServizio.GESTORE_BLOCKCHAIn, module=__name__, level=logging.DEBUG)
@@ -18,7 +18,7 @@ def _carica_abi() -> dict:
     if not verifica_esistenza_file(PERCORSO_ABI):
         raise ValueError("File ABI mancante o vuoto.")
     logger.debug("✅ ABI caricato correttamente da file.")
-    return carica_json(PERCORSO_ABI)
+    return carica_contenuto_json_da_file(PERCORSO_ABI)
 
 
 def _carica_indirizzo_contratto() -> str:

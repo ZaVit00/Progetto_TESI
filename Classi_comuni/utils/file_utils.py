@@ -88,7 +88,7 @@ def carica_file_testuale(percorso_file: str) -> str:
     except Exception as e:
         raise Exception(f"Errore durante la lettura del file '{percorso_file}': {e}")
 
-def carica_json(percorso_file: str) -> dict:
+def carica_contenuto_json_da_file(percorso_file: str) -> dict:
     """
     Carica un file JSON e restituisce un dizionario.
     """

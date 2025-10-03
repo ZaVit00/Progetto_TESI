@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict
 from Classi_comuni.utils.dict_utils import serializza_dict
 from costanti_comuni import TipoServizio
+from dict_utils import serializza_dict_pretty
 from hashing_utils import Hashing
 from registro_log import setup_logger
 logger = setup_logger(TipoServizio.PRODUTTORE, level=logging.WARNING)
@@ -201,7 +202,7 @@ class MerkleTree:
             raise ValueError("Proofs non ancora generate. Costruisci prima l'albero Merkle.")
         return self.merkle_paths
 
-    def ottieni_merkle_paths_json(self) -> str:
+    def ottieni_merkle_paths_json(self, pretty : bool = False) -> str:
         """
         Restituisce una stringa JSON formattata del dizionario dei Merkle Path compatti.
         Utile per la memorizzazione o l'invio su IPFS/Filebase.
@@ -219,8 +220,11 @@ class MerkleTree:
             for id_misurazione, path in self.merkle_paths.items()
         }
 
-        # Serializza il dizionario finale in stringa JSON leggibile
-        return serializza_dict(paths_dict)
+        if pretty:
+            # Serializza il dizionario finale in stringa JSON leggibile agli esseri umani
+            return serializza_dict_pretty(paths_dict)
+        else:
+            return serializza_dict(paths_dict)
 
     def ottieni_merkle_root(self) -> str:
         if self.root is None:

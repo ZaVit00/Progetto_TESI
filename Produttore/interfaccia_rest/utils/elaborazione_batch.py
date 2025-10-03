@@ -3,9 +3,9 @@ from typing import Tuple
 from costanti_comuni import TipoServizio
 from costanti_produttore import BUCKET_MERKLE_PATH, ERRORE_BLOCKCHAIN, ERRORE_IPFS
 from costruttore_payload import CostruttorePayload
-from ipfs_client import IpfsClient, ErroreCaricamentoIPFS, ErroreRecuperoCID
-from istanze_globali_produttore import gestore_db
-from istanze_globali_produttore import scrittore_blockchain
+from ipfs_client import ErroreCaricamentoIPFS, ErroreRecuperoCID
+from istanza_globale_db import gestore_db
+from istanza_globale_ipfs import client_ipfs
 from merkle_tree import MerkleTree
 from modelli_dati import BatchPayload
 from registro_log import setup_logger
@@ -13,6 +13,7 @@ from registro_log import setup_logger
 logger = setup_logger(TipoServizio.PRODUTTORE, module = __name__, level=logging.DEBUG)
 
 def elabora_batch_completo(id_batch: int) -> bool:
+    from istanza_globale_blockchain import scrittore_blockchain
     """
     Gestisce l'intero ciclo di elaborazione di un batch completo:
     1. Estrae i dati del batch dal DB (tupla batch inner join tuple misurazione inner join sensore)
@@ -98,11 +99,13 @@ def costruisci_merkle_tree(mappa_id_hash: dict[int, str]) -> Tuple[str, str]:
     return merkle_root, merkle_path_json
 
 
-def carica_merkle_path_ipfs(merkle_path: str) -> str:
-    client = IpfsClient()
+def carica_merkle_path_ipfs(merkle_path: str, nome_bucket: str = BUCKET_MERKLE_PATH,
+                            comprimi_dimensione : bool = False) -> str:
     #carica l'oggetto stringa su IPFS e restituisce il nome del file generato internamente
     # dalla classe IPFS in modo che sia univoco in IPFS
-    nome_file_caricato: str = client.carica_stringa_json(BUCKET_MERKLE_PATH, merkle_path, comprimi_dimensione = False)
+    nome_file_caricato: str = client_ipfs.carica_stringa_json(nome_bucket, merkle_path,
+                                                              comprimi_dimensione)
+
     #recupera il CID a partire dai metadata del file caricato nel bucket dell'utente
-    cid = client.recupera_cid_file_bucket(BUCKET_MERKLE_PATH, nome_file_caricato)
+    cid = client_ipfs.recupera_cid_file_bucket(nome_bucket, nome_file_caricato)
     return cid
