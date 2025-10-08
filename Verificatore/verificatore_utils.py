@@ -3,8 +3,11 @@ import logging
 from typing import Dict
 from Classi_comuni.merkle_tree import PathCompatto
 from costanti_comuni import TipoServizio
+from file_utils import carica_file_testuale
 from registro_log import setup_logger
 from tipi_verifica import RisultatoVerifica
+import re
+from pathlib import Path
 
 logger = setup_logger(TipoServizio.VERIFICATORE, module=__name__, level=logging.DEBUG)
 
@@ -66,6 +69,34 @@ def carica_merkle_paths_da_stringa_json(stringa_json: str) -> Dict[int, PathComp
         raise ValueError(f"Errore nella deserializzazione dei Merkle Path da JSON: {e}")
 
 
+def estrai_contenuto_merkle_path_file(nome_file: str, cartella: str) -> tuple[int, str] | None:
+    """
+    Se il file rispetta il formato 'merkle_path_<N>.json',
+    restituisce una tupla (numero_foglie, stringa_json).
+    Altrimenti restituisce None.
+
+    :param nome_file: nome del file (es. "merkle_path_1024.json")
+    :param cartella: percorso della cartella (stringa)
+    """
+    # accetta solo file .json
+    if not nome_file.endswith(".json"):
+        return None
+
+        # controlla che sia nel formato atteso
+    match = re.match(r"merkle_path_(\d+)\.json", nome_file)
+    if not match:
+        return None
+
+        # estrai numero di foglie
+    numero_foglie = int(match.group(1))
+    percorso_file = Path(cartella) / nome_file
+
+    # estrai contenuto testuale
+    stringa_json = carica_file_testuale(str(percorso_file))
+
+    return numero_foglie, stringa_json
+
+
 # === Metodi di report ===#
 # Questi metodi lavorano su dizionari distinti prodotti da tre operazioni distinte.
 # - Processo di ottenimento delle anomalie
@@ -110,9 +141,9 @@ def ottieni_report_metadati_anomalie(anomalie: dict) -> str:
         righe.append(f"  - Numero misurazioni: {batch['numero_misurazioni']}\n")
 
     # Misurazioni
-    if "metadati_misurazioni" in anomalie and anomalie["metadata_misurazioni"]:
+    if "metadati_misurazioni" in anomalie and anomalie["metadati_misurazioni"]:
         righe.append("⚠ Misurazioni alterate:")
-        for id_mis, m in anomalie["metadata_misurazioni"].items():
+        for id_mis, m in anomalie["metadati_misurazioni"].items():
             sensore = m["metadati_sensore"]
             mis = m["metadati_misurazione"]
 

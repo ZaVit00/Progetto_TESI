@@ -1,21 +1,15 @@
 import os
-import re
 from matplotlib import pyplot as plt
+from Classi_comuni.utils.formatta_campi import formatta_dimensione
+from analisi_sperimentali.config_analisi import PERCORSO_CARTELLA, BUCKET_TEST, PERCORSO_FILE_DIZ_CID
 from dict_utils import serializza_dict_pretty
 from elaborazione_batch import carica_merkle_path_ipfs
-from file_utils import carica_file_testuale, salva_file_generico, carica_contenuto_json_da_file
-from pathlib import Path
+from file_utils import salva_file_generico, carica_contenuto_json_da_file
 from tabulate import tabulate
 from Verificatore.api_client.ipfs_client import  ottieni_file_da_ipfs
+from verificatore_utils import estrai_contenuto_merkle_path_file
 
-# cartella in cui si trova questo script (analisi_sperimentali)
-SCRIPT_DIR = Path(__file__).resolve().parent
 
-# percorso assoluto alla cartella merkle_paths
-PERCORSO_CARTELLA = SCRIPT_DIR / "merkle_paths"
-
-BUCKET_TEST = "merkle-path-batch-sperimentale"
-PERCORSO_FILE_DIZ_CID = str(PERCORSO_CARTELLA / "dizionario_cid.json")
 
 def caricamento_merkle_paths_ipfs(esegui_upload: bool = False) -> dict:
     """
@@ -36,16 +30,12 @@ def caricamento_merkle_paths_ipfs(esegui_upload: bool = False) -> dict:
 
     # --- LOGICA DI UPLOAD ---
     for nome_file in os.listdir(PERCORSO_CARTELLA):
-        if not nome_file.endswith(".json"):
-            continue #eslcudi file
+        # estrazione del contenuto testuale
+        risultato : tuple [int, str] | None = estrai_contenuto_merkle_path_file(nome_file, str(PERCORSO_CARTELLA))
+        if risultato is None:
+            continue #salta il file
 
-        match = re.match(r"merkle_path_(\d+)\.json", nome_file)
-        if not match:
-            continue #esludi il file
-        numero_foglie = int(match.group(1))
-
-        percorso_file = os.path.join(PERCORSO_CARTELLA, nome_file)
-        merkle_path_str: str = carica_file_testuale(percorso_file)
+        numero_foglie, merkle_path_str = risultato
 
         cid_noncompresso = carica_merkle_path_ipfs(
             merkle_path_str, nome_bucket=BUCKET_TEST, comprimi_dimensione=False
@@ -57,7 +47,7 @@ def caricamento_merkle_paths_ipfs(esegui_upload: bool = False) -> dict:
         risultati[numero_foglie] = (cid_noncompresso, cid_compresso)
         print(f"[OK] {numero_foglie} foglie → Non compresso: {cid_noncompresso}, Compresso: {cid_compresso}")
 
-    # salvo subito il dizionario
+    # salvo il dizionario in un file interno
     salva_file_generico(PERCORSO_FILE_DIZ_CID, serializza_dict_pretty(risultati))
     print("Salvataggio del file effettuato con successo")
     return risultati
@@ -65,13 +55,6 @@ def caricamento_merkle_paths_ipfs(esegui_upload: bool = False) -> dict:
 
 
 def confronta_dimensioni_file_caricati(dizionario_cid: dict):
-    def formatta_dimensione(byte_size: int) -> str:
-        """Ritorna una stringa leggibile in KB o MB a seconda della dimensione."""
-        if byte_size < 1024 * 1024:  # meno di 1 MB
-            return f"{byte_size / 1024:.2f} KB"
-        else:
-            return f"{byte_size / (1024 * 1024):.2f} MB"
-
     risultati_tabella = []
     dict_dimensioni = {}  # nuovo dict: {foglie: (MB_nc, MB_c)}
 
@@ -131,8 +114,8 @@ def main():
     # qui scegli tu: se vuoi forzare un nuovo upload metti True
     dizionario_cid = caricamento_merkle_paths_ipfs(esegui_upload=False)
 
-    print("\nDizionario CID caricato:")
-    for foglie, (cid_nc, cid_c) in sorted(dizionario_cid.items()):
+    print("\nDizionario CID caricato (numero foglie -> (cid NON compresso; cid compresso):")
+    for foglie, (cid_nc, cid_c) in dizionario_cid.items():
         print(f"{foglie} foglie → non compresso={cid_nc}, compresso={cid_c}")
 
     dict_dimensioni = confronta_dimensioni_file_caricati(dizionario_cid)

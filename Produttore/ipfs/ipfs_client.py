@@ -6,7 +6,6 @@ from Classi_comuni.utils.file_utils import genera_contenuto_gzip, genera_nome_fi
 from costanti_comuni import TipoServizio
 from costanti_produttore import AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID, ENDPOINT_S3_FILEBASE
 from registro_log import setup_logger
-
 logger = setup_logger(TipoServizio.PRODUTTORE, module=__name__, level=logging.CRITICAL)
 #disabilito i logger delle librerie esterne
 logging.getLogger("botocore").setLevel(logging.CRITICAL)

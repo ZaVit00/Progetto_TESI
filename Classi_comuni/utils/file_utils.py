@@ -119,3 +119,4 @@ def genera_nome_file(stringa_json: str, nome_file: str, ext: str) -> str:
     full_hash = Hashing.calcola_hash(stringa_json)
     short_hash = full_hash[:8]
     return f"{nome_file}_{short_hash}.{ext}"
+

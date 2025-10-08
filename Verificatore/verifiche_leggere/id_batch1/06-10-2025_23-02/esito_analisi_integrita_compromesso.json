@@ -1,0 +1,17 @@
+{
+  "anomalie_integrita":{
+    "1":{
+      "esito":false,
+      "modifica_strutturale":false,
+      "note":"ANOMALIA RILEVATA",
+      "tipo":"misurazione"
+    }
+  },
+  "anomalie_strutturali":{
+    "id_aggiunti":[],
+    "id_mancanti":[]
+  },
+  "id_batch":1,
+  "numero_anomalie_integrita":1,
+  "numero_anomalie_strutturali":0
+}

@@ -5,8 +5,7 @@ def plot_funzione_soglia_batch(
     durata_finestra_sec: int = 60,
     soglia_minima: int = 255,
     soglia_massima: int = 4095,
-    max_somma_frequenze: int = 200
-) -> None:
+    max_somma_frequenze: int = 200) :
     """
     Plotta l'andamento della soglia batch (2^n - 1) in funzione della somma delle frequenze dei sensori.
     Mostra inoltre una legenda con i valori di soglia minima e massima.
@@ -38,10 +37,8 @@ def plot_funzione_soglia_batch(
     plt.ylabel("Soglia batch (2^n - 1)")
     plt.yticks([2**n - 1 for n in range(8, 13)])  # da 255 a 4095
     plt.grid(True, linestyle='--', linewidth=0.5)
-
     # Legenda accanto al grafico
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-
     plt.tight_layout()
     plt.show()
 

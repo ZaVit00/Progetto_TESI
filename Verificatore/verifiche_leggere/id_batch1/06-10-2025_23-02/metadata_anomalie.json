@@ -1,0 +1,15 @@
+{
+  "metadati_misurazioni":{
+    "1":{
+      "metadati_misurazione":{
+        "id_batch":1,
+        "id_misurazione":1,
+        "timestamp":"2025-10-06T22:55:08.534370"
+      },
+      "metadati_sensore":{
+        "id_sensore":"JOY002",
+        "tipo":"generico"
+      }
+    }
+  }
+}

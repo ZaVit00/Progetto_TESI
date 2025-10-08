@@ -9,14 +9,11 @@ from tabulate import tabulate
 from Classi_comuni.utils.hashing_utils import Hashing
 from Classi_comuni.merkle_tree import MerkleTree
 from Classi_comuni.utils.file_utils import salva_file_generico
-
-NUM_RUN = 5  # numero di run eseguite per ogni dimensione
-# cartella di output nella dir corrente
-OUTPUT_DIR = os.path.join(os.getcwd(), "merkle_paths")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+from Classi_comuni.utils.formatta_campi import formatta_tempo
+from analisi_sperimentali.config_analisi import NUM_RUN, OUTPUT_DIR
 
 
-def genera_foglie(num_foglie: int) -> tuple[list[int], list[str]]:
+def genera_foglie_fittizie(num_foglie: int) -> tuple[list[int], list[str]]:
     """
     Genera due liste parallele:
     - lista degli id (0..n-1)
@@ -27,7 +24,7 @@ def genera_foglie(num_foglie: int) -> tuple[list[int], list[str]]:
     valori_hash = []
     for _ in ids:
         random_str = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-        valori_hash.append(Hashing.calcola_hash(random_str))
+        valori_hash.append(Hashing.calcola_hash(random_str)) #hash
     return ids, valori_hash
 
 
@@ -59,13 +56,13 @@ def misura_tempo_costruzione(dimensioni: list[int], num_run: int = 5):
         merkle_path_salvato = False
 
         for run in range(num_run):
-            ids, foglie_hash = genera_foglie(n)
+            ids, foglie_hash = genera_foglie_fittizie(n)
             merkle_tree = MerkleTree(foglie_hash, ids)
 
             # misura tempo costruzione albero
-            t_iniziale = time.perf_counter()
+            t_iniziale = time.perf_counter() #timer avvio
             merkle_tree.costruisci_albero()
-            t_finale = time.perf_counter()
+            t_finale = time.perf_counter() #timer stop
             tempi.append(t_finale - t_iniziale)
 
             # salvo Merkle Path solo al primo run della specifica dimensione
@@ -83,25 +80,24 @@ def misura_tempo_costruzione(dimensioni: list[int], num_run: int = 5):
 
     return tempi_medi, tempi_median, tempi_std
 
-
-
-def stampa_tabella(dimensioni, tempi_medi, tempi_median, tempi_std, usa_ms=True):
+def stampa_tabella(dimensioni, tempi_medi, tempi_median, tempi_std):
     """
     Stampa una tabella con media, mediana e deviazione standard per ogni dimensione usando tabulate.
+    I tempi vengono sempre formattati automaticamente:
+    - < 1 secondo → in millisecondi
+    - >= 1 secondo → in secondi
     """
+
     rows = []
     for d, m, md, s in zip(dimensioni, tempi_medi, tempi_median, tempi_std):
-        if usa_ms:
-            rows.append([d, f"{m*1000:.3f}", f"{md*1000:.3f}", f"{s*1000:.3f}"])  # ms
-        else:
-            rows.append([d, f"{m:.6f}", f"{md:.6f}", f"{s:.6f}"])  # secondi
+        rows.append([
+            d,
+            formatta_tempo(m),
+            formatta_tempo(md),
+            formatta_tempo(s)
+        ])
 
-    headers = [
-        "# Foglie",
-        f"Media ({'ms' if usa_ms else 's'})",
-        f"Mediana ({'ms' if usa_ms else 's'})",
-        f"Dev Std ({'ms' if usa_ms else 's'})"
-    ]
+    headers = ["# Foglie", "Media", "Mediana", "Dev Std"]
     table = tabulate(rows, headers=headers, tablefmt="grid")
     print(table)
 
@@ -134,11 +130,11 @@ def plot_risultati(dimensioni, tempi_s, usa_ms=True):
     plt.show()
 
 
-def plot_soglie_iniziale(dimensioni, tempi_s, usa_ms=True, max_foglie=2**12, usa_scala_log_y=True):
+def plot_soglie_iniziale(dimensioni, tempi_s, usa_ms=True, max_foglie=2**9, usa_scala_log_y=True):
     """
     Grafico zoomato solo sulla parte iniziale (fino a max_foglie).
     Mostra i tempi in millisecondi o secondi, con scala lineare o logaritmica.
-    max foglie = 4096 = 2^12
+    max foglie = 2**9 = 512
     """
     if usa_ms:
         valori = [t * 1000 for t in tempi_s]
@@ -170,7 +166,6 @@ def plot_soglie_iniziale(dimensioni, tempi_s, usa_ms=True, max_foglie=2**12, usa
     plt.show()
 
 
-
 def main():
     potenze_due = [2**i for i in range(2, 15)]  # da 2^2 fino a 2^14 = 16384 foglie
     print("Avvio esperimenti di costruzione Merkle tree...\n")
@@ -183,8 +178,7 @@ def main():
     plot_soglie_iniziale(potenze_due, tempi_medi)
 
     # stampa tabella con media, mediana, dev std
-    stampa_tabella(potenze_due, tempi_medi, tempi_median, tempi_std, usa_ms=True)
-
+    stampa_tabella(potenze_due, tempi_medi, tempi_median, tempi_std)
 
 if __name__ == "__main__":
     main()
